@@ -178,7 +178,7 @@ export const riverOfForgettingScene: SceneDefinition = {
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);
@@ -350,7 +350,7 @@ export const rebirthScene: SceneDefinition = {
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);

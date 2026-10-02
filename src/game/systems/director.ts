@@ -32,6 +32,7 @@ export class Director {
   private index = 0;
   private withinBeat = 0;
   private total = 0;
+  private lastElapsed = 0;
   private done = false;
   private readonly listeners: ((beat: Beat, index: number) => void)[] = [];
 
@@ -48,6 +49,30 @@ export class Director {
     if (first) {
       listener(first, 0);
     }
+  }
+
+  /**
+   * Advance to an absolute wall-clock time, in seconds since the scene loaded.
+   *
+   * Preferred over `update(delta)`. The game loop clamps its animation delta so
+   * that a backgrounded tab does not resume with one enormous step, and that
+   * clamp is right for animation — but a narrative timeline driven by clamped
+   * deltas runs slow whenever the frame rate drops below the clamp, because
+   * every frame advances the story by less time than actually passed.
+   *
+   * Measured: at roughly 3fps on a software renderer, a 164-second vignette took
+   * over 500 seconds, because each 0.33s frame moved the timeline 0.1s. Pacing
+   * must be a property of the game, not of the machine it is running on.
+   */
+  updateTo(elapsed: number): void {
+    const step = elapsed - this.lastElapsed;
+    this.lastElapsed = elapsed;
+    if (step <= 0) {
+      return;
+    }
+    // A very long step means the tab was hidden. Advance the story by a bounded
+    // amount rather than skipping whole beats the player never saw.
+    this.update(Math.min(step, 1));
   }
 
   update(delta: number): void {

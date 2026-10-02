@@ -372,12 +372,14 @@ export const deathHeartAttackScene: SceneDefinition = {
     let bodyDown = 0;
     let silenceFor = 0;
     let handedOver = false;
-    let heldFor = 0;
+    // Wall-clock, not accumulated delta: the grace had the same frame-rate bug
+    // the beat timeline did, and took 27s instead of 10 on a slow renderer.
+    let holdBeganAt: number | undefined;
     let leaving = false;
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         bulbGlow.update(elapsed, context.camera);
@@ -471,8 +473,8 @@ export const deathHeartAttackScene: SceneDefinition = {
         // leaving them sitting in a dead room past the three-minute mark.
         if (beat.id === 'after' && t >= 1) {
           context.captions.show('Let go.', 8);
-          heldFor += delta;
-          if (!leaving && heldFor >= GRACE_SECONDS) {
+          holdBeganAt ??= elapsed;
+          if (!leaving && elapsed - holdBeganAt >= GRACE_SECONDS) {
             leaving = true;
             void context.takeExit('onward');
           }

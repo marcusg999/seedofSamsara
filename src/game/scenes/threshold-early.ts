@@ -185,7 +185,7 @@ export const pronouncedDeadScene: SceneDefinition = {
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
         setU(air.material, 'uTime', elapsed);
         room.update(delta, elapsed);
@@ -272,7 +272,7 @@ export const buzzingScene: SceneDefinition = {
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
         setU(air.material, 'uTime', elapsed);
         field.drift(delta, elapsed);
@@ -373,7 +373,7 @@ export const outOfBodyScene: SceneDefinition = {
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);
