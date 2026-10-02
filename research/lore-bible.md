@@ -132,7 +132,7 @@ what the strongest reports look like.
 | --- | --- | --- | --- |
 | `L-DMT-01` | In a within-subjects, placebo-controlled, single-blind study, 13 healthy volunteers received intravenous DMT; their experiences were scored on the Greyson NDE scale and compared with 67 age- and gender-matched people reporting actual NDEs. | `TIMMERMANN-2018` | E |
 | `L-DMT-02` | DMT experiences overlapped with actual NDEs on nearly all of the scale's phenomenological features, with the strongest convergence on transcendental and mystical items. | `TIMMERMANN-2018` | E |
-| `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | 
+| `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | `dmt.hyperspace` |
 
 Design note: `L-DMT-02` is the licence for the DMT vignette to lead into the
 same Threshold as the six deaths — the overlap is measured, not asserted. The
@@ -144,6 +144,14 @@ CLAUDE.md § Content rules: the vignette depicts the experience only. This file
 deliberately records no dosing, route or preparation detail, and the scene must
 not either. The study's method is cited above at the level of study design, which
 is what traceability needs — nothing more.
+
+As built, `death.dmt` opens with the experience already beginning. There is no
+object in the room that belongs to one, no action is depicted, and no substance,
+quantity, route or method is named anywhere in the scene, its captions, its
+content notes or its code. What the vignette contains is a carpet, a lamp, a
+window, a half-painted wall and a doorframe with pencil marks on it — which is
+to say a person, which is the only subject the rule leaves and the only one
+worth having.
 
 ## 7. Past lives and birthmarks
 
@@ -287,6 +295,16 @@ Recorded so that nothing invented is later mistaken for sourced.
    awkwardly between Franchezzo's astral plane and the DMT hyperspace of
    `L-DMT-03`. Unassigned for now; collapsing them into one population would be
    a lore decision worth making consciously rather than by accident.
+
+   *Decided, consciously, when `dmt.hyperspace` was built:* the entities in that
+   scene are built from `L-DMT-03` alone, and are **not** Franchezzo's astral
+   population. They are geometric rather than figurative, they share the
+   architecture's own symmetry, and the scene never claims they exist anywhere
+   but there. `L-FRAN-09` stays unassigned. Two sources a century and a
+   tradition apart both reporting non-human company is interesting; it is not
+   evidence that they reported the *same* company, and the game should not spend
+   that coincidence by accident. If the two are ever merged it should be a
+   deliberate choice recorded here, not a side effect of needing a monster.
 6. **The seven vignettes' link to starting attachment.** GAME_BRIEF.md says
    violent and unjust deaths start heavy. `L-PAST-03` shows violent deaths are
    where reported past-life cases cluster, and `L-ARREST-02` shows depth of

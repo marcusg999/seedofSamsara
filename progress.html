@@ -78,7 +78,7 @@
       <h1>Seed of Samsara — Progress</h1>
       <p class="sub">
         What changed, what the critic said, and the current blind-test result per piece.
-        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02 (Council and Life Market).
+        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02 (vignette 7 and the DMT thread).
       </p>
 
       <h2>Gate status</h2>
@@ -88,9 +88,21 @@
           <li>typecheck <b>&check;</b></li>
           <li>lint <b>&check;</b></li>
           <li>build <b>&check;</b></li>
-          <li>playthrough <b>&check;</b> 22 passed, 8 skipped</li>
+          <li>playthrough <b>&check;</b> 22 passed, 8 skipped <em>(as of the previous pass)</em></li>
         </ul>
         <ul class="notes">
+          <li>
+            <strong>The DMT pass has not re-run the full gate.</strong> It was built while a gate run
+            held port 4173, and a second run would have collided with it. What <em>was</em> verified
+            for the three new scenes, on a separate port against a throwaway dev server: typecheck,
+            lint and production build clean; every GLSL program compiled and drew (zero entries in
+            the renderer&rsquo;s own <code>onShaderError</code> log, zero trapped page errors, zero
+            console output beyond the known host ReadPixels notice); all five new exits land where
+            they are declared to; every scene sampled from the real frame buffer well inside the
+            visibility bounds; and no overlay left in the DOM after unload. The numbers are in
+            &ldquo;What changed this pass&rdquo;. The full gate still has to be run before this is
+            called passing.
+          </li>
           <li>
             <strong>The gate now checks that a scene is visible, not merely rendered.</strong>
             All three critics independently reported scenes as blank while the gate called them
@@ -229,6 +241,9 @@
             <tr><td>The guides and the Being of Light</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
             <tr><td>The choice at the border</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
             <tr><td>The life review</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>Vignette 7: the threshold of it (<code>death.dmt</code>)</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>n/a &mdash; new this pass</td></tr>
+            <tr><td>Hyperspace and the entities (<code>dmt.hyperspace</code>)</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>n/a &mdash; new this pass</td></tr>
+            <tr><td>Being sent back (<code>dmt.sent-back</code>)</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>n/a &mdash; new this pass</td></tr>
             <tr><td>Shader &amp; post-processing pipeline</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>n/a</td></tr>
             <tr><td>Audio</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>stills carry no audio</td></tr>
             <tr><td>Controls and camera</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>see limitation below</td></tr>
@@ -260,6 +275,103 @@
       </div>
 
       <h2>What changed this pass</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.6rem">
+          <strong>Scene coverage 23/39 &rarr; 26/39.</strong> Vignette 7 and the thread it opens:
+          <code>death.dmt</code> &rarr; <code>dmt.hyperspace</code> &rarr; <code>dmt.sent-back</code>.
+          Two of the seven deaths are now built, and one of them is the one the player survives.
+        </p>
+        <ul class="notes">
+          <li>
+            <strong>The thread is made of choices, not of watching.</strong> The first decision is
+            live 9 seconds into the vignette; there are six across the three scenes, at 9s, 29s,
+            10s, 26s, 42s and 8s of their own scenes; and no stretch anywhere leaves the player
+            without something to decide for longer than about fifteen seconds. Every one moves
+            karma, harmony, will or attachment, every one has a stated default for a player who
+            says nothing, and every scene&rsquo;s exit is live from its first frame.
+          </li>
+          <li>
+            <strong>The characterisation is the first choice.</strong> The man is established by
+            being asked what he holds on to &mdash; the pencil marks on the doorframe, the hall he
+            never finished, or the window &mdash; rather than by a minute of watching him first.
+            The three options are the three things actually modelled in his flat, the room lights
+            whichever one he picks, and the pick is quoted back at him twice: once by the entities,
+            who ask to see it, and once on his return, when he is handed the whole life back.
+          </li>
+          <li>
+            <strong>The spirit body answers a choice.</strong> Showing the entities what he brought
+            moves karma by +1 and refusing moves it by &minus;1, which crosses a band in
+            <code>systems/spirit-body.ts</code> in either direction: measured at
+            <code>0xc9bcd8</code>/0.78 before, <code>0xffd9a8</code>/0.95 after. The player can see
+            it by looking down on the next frame. Franchezzo&rsquo;s idea used rather than
+            decorated (<code>L-FRAN-03</code>).
+          </li>
+          <li>
+            <strong>Decisions travel between scenes through <code>soul.shards</code></strong> rather
+            than through a new field invented for one vignette. Shards are already the run&rsquo;s
+            record of what it found, already surfaced by the test API, already carried into memories
+            at the river. A replay of the vignette inside the same run clears the <em>decision</em>
+            shards and deliberately keeps the <em>memory</em> ones, so a second pass cannot tell the
+            player they are still holding something they put down a life ago.
+          </li>
+          <li>
+            <strong>The return is written down while he is alive.</strong> Everything else in this
+            game persists by dying, and there is no river between this scene and the rest of his
+            week, so <code>recordUnlock</code> writes the memory and a line of wisdom straight to
+            the incarnation. Which line depends on what he decides to carry back, so the thread
+            that is unlocked is shaped by the choice that unlocked it. Verified durable through the
+            test API.
+          </li>
+          <li>
+            <strong>The raymarcher is built to a budget, not to a resolution.</strong> The fractal
+            is marched into its own render target at a fraction of the canvas and shown on one
+            full-screen quad, so its cost is a number the module controls rather than the size of
+            the window. That fraction adapts to measured wall-clock frame time, starting low and
+            climbing, and the step count and fold depth fall with it. There is one extra render per
+            frame and no extra post-processing pass. On this container&rsquo;s SwiftShader,
+            <code>dmt.hyperspace</code> measures <em>cheaper</em> than either of the two room
+            scenes beside it (p95 50ms against 66ms and 68ms).
+          </li>
+          <li>
+            <strong>Two real bugs in the raymarcher, found by looking at the frame buffer rather
+            than at the code.</strong> First: the distance estimator was so fine-grained that almost
+            every ray ran out of steps before reaching a surface, and the scene rendered as a soft
+            gradient with no architecture in it &mdash; mean luma 20, standard deviation 9.6, not one
+            bright pixel. It compiled, drew, counted frames and passed every check the gate had
+            before this week. The fix was a hollow shell, fewer folds, and domain repetition so the
+            structure is endless &mdash; a camera that drifts for two minutes can no longer leave the
+            fractal behind and stare into empty space. Second: the proximity-glow and silhouette
+            terms were <em>sums</em> over the steps taken, so the picture got brighter whenever the
+            step budget rose. The scene would have brightened because the machine got faster, and
+            flickered while the resolution controller settled. Both are now averages over the budget.
+          </li>
+          <li>
+            <strong>Brightness was budgeted deliberately, in both directions.</strong> Between those
+            two states the scene overshot to mean luma 183 with 100% of sampled pixels bright, which
+            passes the gate&rsquo;s clipping bound and is still a glowing fog. Settled at mean 85,
+            standard deviation 45, 47% bright, 0.00% clipped, with the bloom threshold raised to
+            0.86 so only the near faces of the architecture bloom.
+          </li>
+          <li>
+            <strong>The room he leaves and the room he returns to are the same function.</strong>
+            <code>buildFlat</code> is called by both scenes with one control, <code>fold</code>, and
+            the return runs it backwards. Two separately modelled rooms would have read as two rooms,
+            and the whole weight of the scene is that it is demonstrably the same place, down to the
+            line where the paint stops.
+          </li>
+          <li>
+            <strong>Content rule.</strong> <code>death.dmt</code> opens with the experience already
+            beginning. No object in the room belongs to one, no action is depicted, and no substance,
+            quantity, route or method is named in the scene, its captions, its content notes or its
+            code. The lore bible&rsquo;s § 6 note now records that as built, and § 12.5&rsquo;s open
+            question about where Franchezzo&rsquo;s astral entities belong is answered consciously
+            rather than by accident: the hyperspace entities come from <code>L-DMT-03</code> alone
+            and the two populations are deliberately not merged.
+          </li>
+        </ul>
+      </div>
+
+      <h2>What changed in the previous pass</h2>
       <div class="panel">
         <p style="margin:0 0 0.6rem">
           <strong>Scene coverage 12/39 &rarr; 21/39.</strong> Path A now runs life review &rarr;
@@ -346,11 +458,17 @@
       <h2>Next</h2>
       <div class="panel">
         <ul class="notes">
-          <li><strong>The River of Forgetting and rebirth.</strong> Two scenes, and they close the
-            loop: the cart becomes the opening conditions of the next run, and meta-progression
-            finally has something to carry.</li>
-          <li>Run the critics on the Council and the Market, which nothing has judged yet.</li>
-          <li>Play the economy and tune it. The numbers are in one table for exactly this.</li>
+          <li><strong>Run the full gate on the DMT thread.</strong> It is the one thing this pass
+            could not do. Two journeys that have skipped since the first commit should now run:
+            <code>vignette: death.dmt</code> and <code>the DMT thread: hyperspace and being sent
+            back</code>.</li>
+          <li>Run the critics on the Council, the Market and the DMT thread, none of which has been
+            judged.</li>
+          <li><strong><code>past-life.memory-shard</code>.</strong> <code>dmt.sent-back</code> now
+            declares an exit to it and the incarnation already holds what it would read. It is the
+            only unbuilt target either half of the game points at besides Path B.</li>
+          <li>Play the economy and tune it. The numbers are in one table for exactly this. The DMT
+            thread adds six choices to it and none of them has been balanced against the Market.</li>
         </ul>
       </div>
 

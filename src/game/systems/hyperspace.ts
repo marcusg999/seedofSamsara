@@ -277,28 +277,28 @@ export function hyperspaceField(
 
           // The field the structure stands in. Direction-dependent, so a ray
           // that reaches nothing still lands on something graded.
-          vec3 color = mix(uDeep * 0.45, uDeep * 1.05, 0.5 + 0.5 * ray.y);
+          vec3 color = mix(uDeep * 0.4, uDeep * 0.95, 0.5 + 0.5 * ray.y);
           color += uAccent * 0.12 * pow(max(0.0, 1.0 - abs(ray.y)), 3.0);
 
           // The architecture: tinted by the trap, and holding most of its colour
           // a long way back, so the corridors read as deep rather than fogged.
           vec3 surface = mix(uAccent, uGlow, facet);
-          color = mix(color, surface * (0.26 + 0.6 * (1.0 - depth * 0.6)), hit * 0.92);
+          color = mix(color, surface * (0.2 + 0.48 * (1.0 - depth * 0.6)), hit * 0.92);
 
           // The volume between surfaces.
-          color += surface * density * 0.22 * (1.0 - depth * 0.45);
+          color += surface * density * 0.17 * (1.0 - depth * 0.45);
 
           // Step count is highest where a ray grazes a surface, which is exactly
           // the silhouette — so this is a free edge light along every form.
           // Normalised by the budget for the same reason the density is: this
           // has to say the same thing at 22 steps as at 48.
           float graze = used / max(1.0, float(uSteps));
-          color += uGlow * pow(graze, 3.0) * 0.13;
+          color += uGlow * pow(graze, 3.0) * 0.1;
 
           // Regard. When an entity is attending to the player the whole place
           // leans in slightly, which is the cheapest way to say it is aware.
-          color *= 1.0 + uAttention * 0.22;
-          color += uGlow * uAttention * 0.045;
+          color *= 1.0 + uAttention * 0.16;
+          color += uGlow * uAttention * 0.035;
 
           // A saturating curve. It is what keeps the render target off its
           // ceiling — the architecture's near faces would otherwise clip, and

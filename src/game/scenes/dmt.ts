@@ -23,7 +23,7 @@ import { Director, ease, type Beat } from '../systems/director';
 import { moteField, volumetricGlow } from '../systems/forms';
 import { hyperspaceField } from '../systems/hyperspace';
 import { NOISE, setU } from '../systems/glsl';
-import { Overlay } from '../systems/overlay';
+import { Overlay, type OverlayContent } from '../systems/overlay';
 import { recordUnlock } from '../systems/incarnation';
 
 /**
@@ -36,6 +36,16 @@ import { recordUnlock } from '../systems/incarnation';
  * whole shape of these three scenes is built around that: a man, the place he
  * lives, a journey out of it, and then — this is the part that has to land — the
  * same place again, with him still in it.
+ *
+ * The thread is built out of decisions rather than out of watching. The first
+ * choice is live nine seconds in, there are six in all across the three scenes,
+ * every one of them moves karma, harmony, will or attachment, and the world
+ * answers each: the room lights what he is holding, the architecture opens or
+ * tightens, the entities hold their distance or close in, and the spirit body's
+ * colour and brightness change on the frame after the choice that moves karma
+ * (`L-FRAN-03`). No beat anywhere in the thread leaves the player with nothing
+ * to decide for longer than about fifteen seconds, and every scene's exit is
+ * reachable from its first frame.
  *
  * Lore: `L-DMT-01` and `L-DMT-02` are the licence for this vignette to sit
  * beside the six deaths and to lead into the same Threshold — the overlap with
@@ -75,7 +85,11 @@ import { recordUnlock } from '../systems/incarnation';
  */
 function buildFlat(context: SceneContext): {
   group: Group;
+  /** Where the three things he could hold on to are, in the room. */
+  anchors: { readonly doorframe: Vector3; readonly hall: Vector3; readonly window: Vector3 };
   setFold(fold: number): void;
+  /** Light whatever he has fixed his attention on. `undefined` for nothing. */
+  setHeld(anchor: Vector3 | undefined): void;
   update(delta: number, elapsed: number): void;
 } {
   const { resources, rng } = context;
@@ -402,14 +416,48 @@ function buildFlat(context: SceneContext): {
   dust.points.position.set(0.4, 1.1, -0.8);
   group.add(dust.points);
 
+  // Where in the room the three things he could be holding on to actually are,
+  // so a choice about them can be answered by the room itself rather than only
+  // by a line of text.
+  const anchors = {
+    doorframe: new Vector3(0.68, 1.1, -depth / 2 + 0.14),
+    hall: new Vector3(-1.1, 0.75, -depth / 2 + 0.2),
+    window: new Vector3(-width / 2 + 0.1, 1.5, -0.5),
+  } as const;
+
+  // GAME_BRIEF.md § Platform: the world shows the soul's state. The player's
+  // attention is part of that state here, so when he fixes on one thing the
+  // room lights it: this glow moves to whatever he chose and comes up with the
+  // fold. It is the only light in the room that answers to a decision.
+  const attention = volumetricGlow(resources, {
+    radius: 0.85,
+    color: 0xffd9a8,
+    intensity: 0,
+    softness: 2.5,
+  });
+  attention.mesh.position.copy(anchors.window);
+  group.add(attention.mesh);
+
   let fold = 0;
+  let heldWeight = 0;
 
   return {
     group,
+    anchors,
     setFold(next) {
       fold = Math.min(1, Math.max(0, next));
     },
+    setHeld(anchor: Vector3 | undefined) {
+      if (anchor) {
+        attention.mesh.position.copy(anchor);
+        heldWeight = 1;
+      } else {
+        heldWeight = 0;
+      }
+    },
     update(delta, elapsed) {
+      attention.update(elapsed, context.camera);
+      setU(attention.material, 'uIntensity', heldWeight * (0.5 + fold * 1.1));
       setU(carpetMaterial, 'uTime', elapsed);
       setU(carpetMaterial, 'uFold', fold);
       setU(ringMaterial, 'uTime', elapsed);
@@ -439,41 +487,206 @@ function buildFlat(context: SceneContext): {
   };
 }
 
-// --- vignette 7: the threshold of it -------------------------------------------
+// --- choices, and the state they move ------------------------------------------
 
 /**
- * 110 seconds of authored time, then the closing image holds for
- * `GRACE_SECONDS` and lets go by itself (GAME_BRIEF.md § Act 1, pacing rule).
+ * The thread's choices are made of what is already in the room, and they move
+ * state the game already tracks (GAME_BRIEF.md § Systems): karma, measured as
+ * effect on others; harmony, which rises through release and forgiveness; will,
+ * which Path B spends; and attachment, the weight the death hands to the
+ * afterlife.
  *
- * The first four beats are a man in a room and nothing else happens in them,
- * because the player has to care about him before any of this is worth watching
- * — and because what he is about to be offered is specifically his life back,
- * which is worthless as a gift if we never saw it.
+ * Nothing new is invented to carry a decision between scenes either. What he
+ * held and what he did about it are written into `soul.shards` — the run's
+ * record of what it found — and the later scenes read them back from there.
+ * The alternative would have been a new field on the soul for the sake of one
+ * vignette, which is how state models rot.
  */
-const DMT_BEATS: readonly Beat[] = [
-  { id: 'already-going', seconds: 14, caption: 'Sunday evening. It has already started.' },
-  { id: 'the-room', seconds: 16 },
-  { id: 'the-hall', seconds: 16, caption: 'He started painting the hall in April.' },
-  { id: 'the-doorframe', seconds: 16, caption: 'Pencil marks on the doorframe. One for every birthday.' },
-  { id: 'tuesday', seconds: 12, caption: 'She comes back Tuesday.' },
-  { id: 'breathing', seconds: 14, caption: 'The carpet is breathing. It has always been breathing.' },
-  { id: 'folding', seconds: 14 },
-  { id: 'given-way', seconds: 8 },
-  { id: 'gone', seconds: 1, hold: true },
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+type HeldId = 'doorframe' | 'hall' | 'window';
+
+interface Held {
+  readonly id: HeldId;
+  /** The run's record of this pick. Read back by `dmt.hyperspace` and `dmt.sent-back`. */
+  readonly shard: string;
+  readonly label: string;
+  /** What the pick tells the player about him. This is the characterisation. */
+  readonly caption: string;
+  /** How a later scene refers to it. */
+  readonly phrase: string;
+  readonly attachment: number;
+  readonly harmony: number;
+  readonly will: number;
+}
+
+/**
+ * The first choice of the vignette, and the one the rest of the thread is built
+ * on. A man at the edge of something can hold on to one thing, and which one he
+ * picks is who he is — so the player learns him by choosing for him rather than
+ * by watching him for a minute first.
+ *
+ * The weights are the brief's rule read literally: holding a person is the
+ * heaviest thing you can carry out of a life, unfinished work is drive more than
+ * weight, and letting the room be only a room is the light arrival.
+ */
+const HELD: readonly Held[] = [
+  {
+    id: 'doorframe',
+    shard: 'dmt.held.doorframe',
+    label: 'The marks on the doorframe',
+    caption: 'Eight pencil marks. One for every birthday. She comes back Tuesday.',
+    phrase: 'the pencil marks on the doorframe',
+    attachment: 0.22,
+    harmony: 1,
+    will: 0.05,
+  },
+  {
+    id: 'hall',
+    shard: 'dmt.held.hall',
+    label: 'The hall he never finished',
+    caption: 'He started it in April. The roller is still lying in the tray.',
+    phrase: 'the hall he never finished',
+    attachment: 0.12,
+    harmony: 0,
+    will: 0.25,
+  },
+  {
+    id: 'window',
+    shard: 'dmt.held.window',
+    label: 'The window',
+    caption: 'Somebody two floors down is still awake. That is all, and it is enough.',
+    phrase: 'a lit window two floors down',
+    attachment: -0.06,
+    harmony: 1,
+    will: -0.08,
+  },
 ];
+
+function heldById(id: HeldId): Held {
+  const found = HELD.find((entry) => entry.id === id);
+  if (!found) {
+    throw new Error(`No held option "${id}"`);
+  }
+  return found;
+}
+
+/** What a run already decided, read back out of the shards. */
+function heldFrom(shards: readonly string[]): Held | undefined {
+  return HELD.find((entry) => shards.includes(entry.shard));
+}
+
+/** The second choice: whether he resists the fold or goes with it. */
+const RESISTED = 'dmt.held-on';
+const RELEASED = 'dmt.let-go';
+/** The third: whether he meets what turns toward him. */
+const MET_IT = 'dmt.met-it';
+const LOOKED_AWAY = 'dmt.looked-away';
+/** The fourth: whether he shows it what he was holding. */
+const SHOWED_IT = 'dmt.showed-it';
+const KEPT_IT = 'dmt.kept-it';
+/** The fact of the return, which a player who decides nothing still carries. */
+const RETURN_SHARD = 'dmt.the-architecture';
+const RETURN_WISDOM = 'That there is somewhere the furniture is only a rumour.';
+
+function remember(context: SceneContext, shard: string): void {
+  if (!context.soul.shards.includes(shard)) {
+    context.soul.shards.push(shard);
+  }
+}
+
+/**
+ * Every shard that records a *decision* in this thread, as opposed to a memory.
+ *
+ * `dmt.sent-back` leads back into a life, which can lead through the vignette
+ * again inside the same run, so a second pass would otherwise read the first
+ * pass's answers and tell the player they are holding something they put down a
+ * life ago. These are cleared when `death.dmt` loads.
+ *
+ * `dmt.the-architecture` and the `dmt.carried.*` shards are deliberately NOT in
+ * this list. They are memories, not decisions: they persist across runs through
+ * the incarnation, they are seeded back into `soul.shards` at the start of a
+ * run, and clearing them here would quietly delete what a previous life carried.
+ */
+const DECISION_SHARDS: readonly string[] = [
+  ...HELD.map((entry) => entry.shard),
+  RESISTED,
+  RELEASED,
+  MET_IT,
+  LOOKED_AWAY,
+  SHOWED_IT,
+  KEPT_IT,
+];
+
+function forgetDecisions(context: SceneContext): void {
+  context.soul.shards = context.soul.shards.filter((shard) => !DECISION_SHARDS.includes(shard));
+}
+
+/**
+ * One overlay slot per scene.
+ *
+ * Choices arrive several times in each of these scenes and each one replaces the
+ * last, so a scene must never be able to leave two dialogs stacked on the frame
+ * — and whatever is up must come down when the scene unloads, which is what the
+ * tracker registration here guarantees.
+ */
+function choiceSlot(context: SceneContext): {
+  offer(content: OverlayContent): void;
+  close(): void;
+} {
+  let current: Overlay | undefined;
+  context.resources.onDispose(() => {
+    current?.dispose();
+    current = undefined;
+  });
+  return {
+    offer(content) {
+      current?.dispose();
+      current = new Overlay(content);
+      current.focusFirst();
+    },
+    close() {
+      current?.dispose();
+      current = undefined;
+    },
+  };
+}
 
 /** How long a closing image holds before the scene moves on by itself. */
 const GRACE_SECONDS = 10;
 
+// --- vignette 7: the threshold of it -------------------------------------------
+
+/**
+ * 67 seconds of authored time, then the closing image holds for
+ * `GRACE_SECONDS` and lets go by itself (GAME_BRIEF.md § Act 1, pacing rule).
+ *
+ * The player's first real choice is live 9 seconds in and stays live for 20, and
+ * the second opens the moment the first closes, so from 9s to 56s there is
+ * always something to decide. The ordinary life this vignette has to establish
+ * is established *by* that first choice rather than ahead of it: the three
+ * options are the three things in his flat, and picking one is what tells the
+ * player who he is. Nothing here is watched for a minute before it can be
+ * touched.
+ */
+const DMT_BEATS: readonly Beat[] = [
+  { id: 'already-going', seconds: 9, caption: 'Sunday evening. It has already started.' },
+  { id: 'what-he-holds', seconds: 20 },
+  { id: 'breathing', seconds: 11, caption: 'The carpet is breathing. It has always been breathing.' },
+  { id: 'folding', seconds: 16 },
+  { id: 'given-way', seconds: 8 },
+  { id: 'gone', seconds: 1, hold: true },
+];
+
 /** How far the fold has come, per beat. 0 is an ordinary room. */
 const FOLD_AT: Record<string, [number, number]> = {
-  'already-going': [0, 0.04],
-  'the-room': [0.04, 0.08],
-  'the-hall': [0.08, 0.11],
-  'the-doorframe': [0.11, 0.14],
-  tuesday: [0.14, 0.18],
-  breathing: [0.18, 0.52],
-  folding: [0.52, 0.9],
+  'already-going': [0, 0.05],
+  'what-he-holds': [0.05, 0.16],
+  breathing: [0.16, 0.5],
+  folding: [0.5, 0.9],
   'given-way': [0.9, 1],
   gone: [1, 1],
 };
@@ -498,6 +711,8 @@ export const deathDmtScene: SceneDefinition = {
   ],
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.living;
+    // A fresh pass through the vignette decides for itself.
+    forgetDecisions(context);
     const flat = buildFlat(context);
     context.scene.add(flat.group);
 
@@ -507,6 +722,8 @@ export const deathDmtScene: SceneDefinition = {
         context.captions.show(beat.caption, 7);
       }
     });
+
+    const slot = choiceSlot(context);
 
     // Sitting on the floor with his back to the near wall, looking down the room
     // at the half-painted wall and the doorframe. Eye height is a seated eye.
@@ -534,43 +751,142 @@ export const deathDmtScene: SceneDefinition = {
     context.audio.drone(0.1, 46);
     context.audio.heartbeat(true, 64, 0.3);
 
+    let held: Held | undefined;
+    let resisted: boolean | undefined;
+    let askedHeld = false;
+    let askedFold = false;
     let holdBeganAt: number | undefined;
     let leaving = false;
+
+    /** The first choice. What he fixes on as the room starts to go. */
+    function take(id: HeldId): void {
+      if (held) {
+        return;
+      }
+      const choice = heldById(id);
+      held = choice;
+      remember(context, choice.shard);
+      // The death sets the starting state of the afterlife (GAME_BRIEF.md
+      // § Act 1) — and here the player sets it, by deciding what he carries out
+      // of the room rather than by which death they picked off a menu.
+      context.soul.attachment = clamp01(context.soul.attachment + choice.attachment);
+      context.soul.harmony += choice.harmony;
+      context.soul.will = clamp01(context.soul.will + choice.will);
+      flat.setHeld(flat.anchors[id]);
+      context.captions.show(choice.caption, 9);
+      slot.close();
+    }
+
+    function offerHeld(): void {
+      askedHeld = true;
+      slot.offer({
+        title: 'What does he hold on to?',
+        body:
+          'The room is beginning to go. There are three things in it. Whichever one he keeps '
+          + 'hold of is the one he will be carrying when this opens — and the one he will be '
+          + 'offered back, if he is sent back.',
+        actions: HELD.map((entry) => ({
+          id: entry.id,
+          label: entry.label,
+          onPick: () => {
+            take(entry.id);
+          },
+        })),
+        hint: 'Decide, or the moment passes and he is left looking at the window.',
+      });
+    }
+
+    /** The second choice. Whether he resists the fold or goes with it. */
+    function fold(choice: 'hold' | 'release'): void {
+      if (resisted !== undefined) {
+        return;
+      }
+      resisted = choice === 'hold';
+      if (resisted) {
+        remember(context, RESISTED);
+        context.soul.will = clamp01(context.soul.will + 0.2);
+        context.soul.attachment = clamp01(context.soul.attachment + 0.1);
+        context.captions.show('He braces. It makes no difference and he braces anyway.', 8);
+      } else {
+        remember(context, RELEASED);
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment - 0.1);
+        context.soul.will = clamp01(context.soul.will - 0.05);
+        context.captions.show('He stops holding the room together. It was never him doing that.', 8);
+      }
+      slot.close();
+    }
+
+    function offerFold(): void {
+      askedFold = true;
+      slot.offer({
+        title: 'The room is coming apart.',
+        body:
+          'He can brace against it or stop trying to hold it together. Bracing keeps something '
+          + 'of him for later and takes it out of the next few minutes. Letting go costs him '
+          + 'the handhold and gives him the place he is going.',
+        actions: [
+          { id: 'hold', label: 'Brace', onPick: () => { fold('hold'); } },
+          { id: 'release', label: 'Let it take him', onPick: () => { fold('release'); } },
+        ],
+        hint: 'Decide, or he simply stops deciding, which is its own answer.',
+      });
+    }
 
     return {
       update(delta, elapsed) {
         director.updateTo(elapsed);
         const { beat, t } = director.state;
 
-        const fold = foldFor(beat.id, t);
-        flat.setFold(fold);
+        // --- the choices, on the clock -----------------------------------
+        if (!askedHeld && beat.id === 'what-he-holds') {
+          offerHeld();
+        }
+        if (beat.id === 'breathing' || beat.id === 'folding' || beat.id === 'given-way' || beat.id === 'gone') {
+          if (!held) {
+            // The window. He was looking at it anyway, which is the lightest
+            // thing he could have been carrying, and the hint said so.
+            take('window');
+          }
+          if (!askedFold) {
+            offerFold();
+          }
+        }
+        if ((beat.id === 'given-way' || beat.id === 'gone') && resisted === undefined) {
+          fold('release');
+        }
+
+        // Bracing slows the fold and roughens the lens; letting go hurries it.
+        const resist = resisted === true ? 0.85 : resisted === false ? 1.12 : 1;
+        const foldNow = Math.min(1, foldFor(beat.id, t) * resist);
+        flat.setFold(foldNow);
         flat.update(delta, elapsed);
 
         // The frame does not narrow the way it does in the other vignettes. It
         // widens: the vignette opens, the colour comes up, the lens begins to
         // disagree with itself at the edges, and the room gets brighter rather
         // than dimmer. Nothing here is being taken away.
-        grade.vignette = 0.42 - fold * 0.26;
-        grade.drain = grammar.drain * (1 - fold);
-        grade.aberration = 0.0012 + fold * 0.0055;
-        grade.distortion = 0.022 + fold * 0.075;
-        grade.grain = grammar.grain - fold * 0.05;
-        grade.exposure = 1.3 + fold * 0.14;
-        grade.washAmount = Math.max(0, fold - 0.7) * 0.06;
-        context.post.setBloom(grammar.bloom + fold * 0.6, 0.62, Math.max(0.52, 0.8 - fold * 0.26));
+        const agitation = resisted === true ? 1.3 : 1;
+        grade.vignette = 0.42 - foldNow * 0.26;
+        grade.drain = grammar.drain * (1 - foldNow);
+        grade.aberration = (0.0012 + foldNow * 0.0055) * agitation;
+        grade.distortion = (0.022 + foldNow * 0.075) * agitation;
+        grade.grain = grammar.grain - foldNow * 0.05;
+        grade.exposure = 1.3 + foldNow * 0.14;
+        grade.washAmount = Math.max(0, foldNow - 0.7) * 0.06;
+        context.post.setBloom(grammar.bloom + foldNow * 0.6, 0.62, Math.max(0.52, 0.8 - foldNow * 0.26));
 
         // The body stays where it is and the heart stays calm. This is not a
         // crisis, and nothing about the camera should claim it is.
-        const breath = 60 + fold * 14;
-        context.audio.heartbeat(true, breath, 0.3);
-        context.rig.setPulse(0.1 + fold * 0.16);
-        context.rig.position.set(-0.1, seatedEye - fold * 0.07, 1.75 - fold * 0.25);
+        context.audio.heartbeat(true, 60 + foldNow * 14 + (resisted === true ? 10 : 0), 0.3);
+        context.rig.setPulse(0.1 + foldNow * 0.16);
+        context.rig.position.set(-0.1, seatedEye - foldNow * 0.07, 1.75 - foldNow * 0.25);
 
         // The room loses its top end and gains a whole register underneath it.
-        context.audio.room(0.26 - fold * 0.2, 1100 - fold * 820);
-        context.audio.drone(0.1 + fold * 0.22, 46 - fold * 8, fold * 12);
-        context.audio.shimmer(Math.max(0, fold - 0.2) * 0.5);
-        context.audio.ring(Math.max(0, fold - 0.5) * 0.14, 1700 + fold * 500);
+        context.audio.room(0.26 - foldNow * 0.2, 1100 - foldNow * 820);
+        context.audio.drone(0.1 + foldNow * 0.22, 46 - foldNow * 8, foldNow * 12);
+        context.audio.shimmer(Math.max(0, foldNow - 0.2) * 0.5);
+        context.audio.ring(Math.max(0, foldNow - 0.5) * 0.14, 1700 + foldNow * 500);
 
         if (beat.id === 'gone' && t >= 1) {
           context.captions.show('Let it open.', 8);
@@ -671,25 +987,31 @@ function watcher(
   return { group, material };
 }
 
+
+
+/**
+ * 62 seconds of authored time, with a decision live from 10 seconds in and
+ * never more than one beat away after that: meet it or look away at 10s, show
+ * it what he was holding or keep it at 26s, and the fork itself at 42s, which
+ * stays open until the scene lets go.
+ */
 const HYPERSPACE_BEATS: readonly Beat[] = [
-  { id: 'arrival', seconds: 14 },
-  { id: 'architecture', seconds: 18, caption: 'The architecture keeps deciding what it is.' },
+  { id: 'arrival', seconds: 10 },
   { id: 'noticed', seconds: 16, caption: 'Something turns toward you. It was already here.' },
-  { id: 'attended', seconds: 20, caption: 'It is not surprised by you. You are the surprise.' },
-  { id: 'shown', seconds: 18, caption: 'Not yet. Not you, not yet.' },
-  { id: 'release', seconds: 10 },
+  { id: 'attended', seconds: 16, caption: 'It is not surprised by you. You are the surprise.' },
+  { id: 'shown', seconds: 12, caption: 'Not yet. Not you, not yet.' },
+  { id: 'release', seconds: 8 },
   { id: 'held', seconds: 1, hold: true },
 ];
 
 /**
- * What this crossing would hand to the afterlife if it turned out to be real
- * (GAME_BRIEF.md § Act 1: each death sets the starting state of the afterlife).
- *
- * Light, and deliberately the lightest in the game: nothing here is violent and
- * nothing is unjust, and the person is not fighting it. Recorded as a design
- * choice, not a finding — lore bible § 12.6 flags the whole "worse death,
- * heavier start" curve as unresolved, and `L-ARREST-02` is mild evidence
- * against it.
+ * The floor under the weight this crossing would hand to the afterlife, if it
+ * turned out to be the crossing (GAME_BRIEF.md § Act 1: each death sets the
+ * starting state). Only a floor: the player's choices set the actual figure, and
+ * this exists so that a player who decides nothing at all still arrives
+ * carrying something. Deliberately the lightest in the game — nothing here is
+ * violent, nothing is unjust, and lore bible § 12.6 flags the whole "worse
+ * death, heavier start" curve as unresolved anyway.
  */
 const CROSSING_ATTACHMENT = 0.08;
 
@@ -763,6 +1085,12 @@ export const dmtHyperspaceScene: SceneDefinition = {
       }
     });
 
+    const slot = choiceSlot(context);
+
+    // What he decided in the room, read back out of the run's own record.
+    const held = heldFrom(context.soul.shards);
+    const braced = context.soul.shards.includes(RESISTED);
+
     context.rig.setMode('drifting');
     context.rig.position.set(0, 0, 0);
     context.rig.target.set(0, 0, 0);
@@ -792,18 +1120,70 @@ export const dmtHyperspaceScene: SceneDefinition = {
     context.audio.room(0.04, 300);
     context.audio.heartbeat(false);
 
-    let overlay: Overlay | undefined;
-    let offered = false;
+    let met: boolean | undefined;
+    let showed: boolean | undefined;
+    let askedMeet = false;
+    let askedShow = false;
+    let askedFork = false;
     let handedOver = false;
     let holdBeganAt: number | undefined;
     let leaving = false;
     let lastElapsed = 0;
     const scratch = new Vector3();
 
-    context.resources.onDispose(() => {
-      overlay?.dispose();
-      overlay = undefined;
-    });
+    /**
+     * The third choice. Meeting it is attention paid to something that is
+     * already paying attention to you; looking away is self-possession, and it
+     * costs you nothing except that they come closer anyway.
+     */
+    function meet(choice: boolean): void {
+      if (met !== undefined) {
+        return;
+      }
+      met = choice;
+      if (choice) {
+        remember(context, MET_IT);
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment - 0.05);
+        context.captions.show('You look back at it. It was waiting for exactly that.', 9);
+      } else {
+        remember(context, LOOKED_AWAY);
+        context.soul.will = clamp01(context.soul.will + 0.15);
+        context.captions.show('You keep your eyes on the architecture. They come nearer regardless.', 9);
+      }
+      slot.close();
+    }
+
+    /**
+     * The fourth, and the one the spirit body answers to. Karma is effect on
+     * others (GAME_BRIEF.md § Systems), and handing something of yourself to
+     * something that asked is an effect on another; refusing is also one.
+     *
+     * Both directions cross a karma band in `systems/spirit-body.ts`, so the
+     * glow the player can see by looking down changes colour and brightness on
+     * the frame after the choice — Franchezzo's idea used rather than decorated
+     * (`L-FRAN-03`).
+     */
+    function show(choice: boolean): void {
+      if (showed !== undefined) {
+        return;
+      }
+      showed = choice;
+      if (choice) {
+        remember(context, SHOWED_IT);
+        context.soul.karma += 1;
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment - 0.1);
+        context.captions.show('You hand it over. It turns the thing around, slowly, like a coin.', 10);
+      } else {
+        remember(context, KEPT_IT);
+        context.soul.karma -= 1;
+        context.soul.will = clamp01(context.soul.will + 0.2);
+        context.soul.attachment = clamp01(context.soul.attachment + 0.05);
+        context.captions.show('You keep it. It waits a while, and then stops asking.', 10);
+      }
+      slot.close();
+    }
 
     return {
       update(delta, elapsed) {
@@ -816,16 +1196,90 @@ export const dmtHyperspaceScene: SceneDefinition = {
         const frameSeconds = Math.max(0, elapsed - lastElapsed);
         lastElapsed = elapsed;
 
-        // How far the place has opened out, 0..1 across the whole scene.
-        const open = beat.id === 'arrival'
-          ? ease.out(t) * 0.3
-          : beat.id === 'architecture'
-            ? 0.3 + ease.inOut(t) * 0.3
+        // --- the choices, on the clock -----------------------------------
+        if (!askedMeet && beat.id === 'noticed') {
+          askedMeet = true;
+          slot.offer({
+            title: 'Something is looking at you.',
+            body:
+              'It is not a shape that happens to be facing this way. It has turned, and it is '
+              + 'waiting to see what you do. You can meet it, or you can keep your attention on '
+              + 'the architecture and let it do what it likes.',
+            actions: [
+              { id: 'meet', label: 'Meet it', onPick: () => { meet(true); } },
+              { id: 'look-away', label: 'Look away', onPick: () => { meet(false); } },
+            ],
+            hint: 'Decide, or you will have looked away by default.',
+          });
+        }
+        if (beat.id === 'attended' || beat.id === 'shown' || beat.id === 'release' || beat.id === 'held') {
+          if (met === undefined) {
+            meet(false);
+          }
+          if (!askedShow) {
+            askedShow = true;
+            const what = held?.phrase ?? 'whatever he came in holding';
+            slot.offer({
+              title: 'It wants to see what you brought.',
+              body:
+                `You came in holding ${what}. It is asking for it — not to keep, as far as you `
+                + 'can tell. You can show it, or you can keep it to yourself, and it will not '
+                + 'ask twice.',
+              actions: [
+                { id: 'show', label: 'Show it', onPick: () => { show(true); } },
+                { id: 'keep', label: 'Keep it', onPick: () => { show(false); } },
+              ],
+              hint: 'Decide, or you will have kept it. Look down afterwards: your own light answers.',
+            });
+          }
+        }
+        if (beat.id === 'shown' || beat.id === 'release' || beat.id === 'held') {
+          if (showed === undefined) {
+            show(false);
+          }
+          if (!askedFork) {
+            askedFork = true;
+            slot.offer({
+              title: 'Not yet.',
+              body:
+                'This is the one death you can survive. Being sent back is the classic case, and '
+                + 'it is what happens if you do nothing. Going on leads into the Threshold — the '
+                + 'same one the other six deaths lead into.',
+              actions: [
+                {
+                  id: 'sent-back',
+                  label: 'Be sent back',
+                  onPick: () => {
+                    leaving = true;
+                    void context.takeExit('sent-back');
+                  },
+                },
+                {
+                  id: 'cross-over',
+                  label: 'Go on',
+                  onPick: () => {
+                    leaving = true;
+                    void context.takeExit('cross-over');
+                  },
+                },
+              ],
+              hint: 'Do nothing and you will be sent back.',
+            });
+          }
+        }
+
+        // How far the place has opened out, 0..1 across the whole scene. A man
+        // who braced in the room arrives in a tighter version of it.
+        const opening = braced ? 0.82 : 1;
+        const open = (beat.id === 'arrival'
+          ? ease.out(t) * 0.35
+          : beat.id === 'noticed'
+            ? 0.35 + ease.inOut(t) * 0.3
             : beat.id === 'release'
               ? 0.9 - t * 0.35
               : beat.id === 'held'
                 ? 0.55
-                : 0.6 + Math.min(0.3, t * 0.3);
+                : 0.65 + Math.min(0.25, t * 0.25)) * opening;
 
         // The void around the viewer widens as the place opens, which both reads
         // as the architecture drawing back and keeps the march from ever
@@ -841,18 +1295,22 @@ export const dmtHyperspaceScene: SceneDefinition = {
         );
 
         // --- the entities ---------------------------------------------------
-        const present = beat.id === 'arrival' || beat.id === 'architecture'
+        const present = beat.id === 'arrival'
           ? 0.3 + ease.out(Math.min(1, open * 2.2)) * 0.7
           : 1;
+        // Meeting them buys their regard whatever the player then looks at;
+        // looking away means only the gaze earns it, and they close twice as
+        // fast while it is elsewhere.
+        const regardFloor = met === true ? 0.6 : 0;
+        const closingRate = met === false ? 1 : 0.5;
         let regardTotal = 0;
 
         for (const entry of watchers) {
           entry.angle += entry.drift * delta;
           // Being looked at holds them where they are. Being ignored brings them
           // in. This is the whole mechanic and it is four lines long.
-          const held = 2.9 + entry.regard * 2.6;
-          const closing = (1 - entry.regard) * 0.5 * delta;
-          entry.distance = Math.max(held, entry.distance - closing);
+          const hold = 2.9 + entry.regard * 2.6;
+          entry.distance = Math.max(hold, entry.distance - (1 - entry.regard) * closingRate * delta);
           if (present < 0.2) {
             entry.distance = 8.5;
           }
@@ -868,7 +1326,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
 
           const looking = present > 0.45
             && context.rig.isLookingAt(entry.entity.group.getWorldPosition(scratch), 24);
-          const toward = looking ? 1 : 0;
+          const toward = Math.max(looking ? 1 : 0, regardFloor);
           entry.regard += (toward - entry.regard) * (1 - Math.exp(-2.6 * delta));
           regardTotal += entry.regard;
 
@@ -885,55 +1343,25 @@ export const dmtHyperspaceScene: SceneDefinition = {
 
         motes.drift(delta, elapsed);
 
-        grade.aberration = 0.0045 + attention * 0.003;
-        grade.distortion = 0.06 - open * 0.02;
-        grade.vignette = 0.26 - open * 0.08;
-        context.post.setBloom(0.7 + attention * 0.25, 0.66, 0.86);
+        // Showing it what he brought opens the place out; keeping it tightens
+        // the lens. The world reflects the decision, not just the ledger.
+        const given = showed === true ? 1 : showed === false ? -1 : 0;
+        grade.aberration = 0.0045 + attention * 0.003 - given * 0.0012 + (braced ? 0.0015 : 0);
+        grade.distortion = 0.06 - open * 0.02 - given * 0.008;
+        grade.vignette = 0.26 - open * 0.08 - given * 0.03;
+        context.post.setBloom(0.7 + attention * 0.25 + Math.max(0, given) * 0.2, 0.66, 0.86);
 
         context.audio.shimmer(0.3 + attention * 0.35 + open * 0.15);
         context.audio.drone(0.26 + open * 0.08, 51, 11 + attention * 9);
         context.audio.ring(0.07 + attention * 0.05, 2200);
 
-        // The fork. The entities decide, not the player — but the brief says the
-        // player *may* be sent back, so the choice is offered plainly and the
-        // default is the one the brief calls classic.
-        if (!offered && (beat.id === 'shown' || beat.id === 'release' || beat.id === 'held')) {
-          offered = true;
-          overlay = new Overlay({
-            title: 'Not yet.',
-            body:
-              'This is the one death you can survive. Being sent back is the classic case, '
-              + 'and it is what happens if you do nothing. Going on leads into the Threshold, '
-              + 'the same one the other six deaths lead into.',
-            actions: [
-              {
-                id: 'sent-back',
-                label: 'Be sent back',
-                onPick: () => {
-                  leaving = true;
-                  void context.takeExit('sent-back');
-                },
-              },
-              {
-                id: 'cross-over',
-                label: 'Go on',
-                onPick: () => {
-                  leaving = true;
-                  void context.takeExit('cross-over');
-                },
-              },
-            ],
-            hint: 'Do nothing and you will be sent back.',
-          });
-          overlay.focusFirst();
-        }
-
         // If it does turn out to have been the crossing, the afterlife needs its
-        // opening state set before the Threshold is reached.
+        // opening state set before the Threshold is reached. A floor, not an
+        // override: the choices made it, this only refuses to let it be nothing.
         if (!handedOver && (beat.id === 'release' || beat.id === 'held')) {
           handedOver = true;
-          context.soul.attachment = CROSSING_ATTACHMENT;
-          context.soul.will = 1 - CROSSING_ATTACHMENT * 0.5;
+          context.soul.attachment = Math.max(context.soul.attachment, CROSSING_ATTACHMENT);
+          context.soul.will = Math.min(context.soul.will, 1 - context.soul.attachment * 0.5);
         }
 
         if (beat.id === 'held' && t >= 1) {
@@ -960,19 +1388,85 @@ export const dmtHyperspaceScene: SceneDefinition = {
 
 // --- sent back -----------------------------------------------------------------
 
+/**
+ * 57 seconds, with the scene's own choice live 8 seconds in.
+ *
+ * GAME_BRIEF.md calls this the classic "it is not your time". Whether to come
+ * back at all was the previous scene's fork; what he carries back is this one's,
+ * and it is the decision with the longest reach in the thread, because it is the
+ * only one in the game that is written down while the person is still alive.
+ */
 const SENT_BACK_BEATS: readonly Beat[] = [
-  { id: 'falling-back', seconds: 12 },
+  { id: 'falling-back', seconds: 8 },
   { id: 'the-room-again', seconds: 16, caption: 'Carpet. Window. His own hands.' },
-  { id: 'breath', seconds: 14, caption: 'His heart is going like someone knocking.' },
-  { id: 'kept', seconds: 18, caption: 'He is still here. He gets to stay.' },
-  { id: 'unfinished', seconds: 16, caption: 'The hall is still half-painted. Tuesday is still Tuesday.' },
-  { id: 'carried', seconds: 16, caption: 'Nothing was explained. Everything is different.' },
+  { id: 'kept', seconds: 16, caption: 'He is still here. He gets to stay.' },
+  { id: 'what-he-carries', seconds: 17 },
   { id: 'onward', seconds: 1, hold: true },
 ];
 
-/** What the return leaves behind, and the only thing that outlives it. */
-const RETURN_SHARD = 'dmt.the-architecture';
-const RETURN_WISDOM = 'That you were sent back once, and did not finish the hall that week either.';
+type CarryId = 'finish-it' | 'call-her' | 'say-nothing';
+
+interface Carry {
+  readonly id: CarryId;
+  readonly shard: string;
+  readonly label: string;
+  /** Survives every later run, through `recordUnlock`. */
+  readonly wisdom: string;
+  readonly caption: string;
+  /** Which thing in the room lights up, if any. */
+  readonly anchor: HeldId | undefined;
+  readonly karma: number;
+  readonly harmony: number;
+  readonly will: number;
+  readonly attachment: number;
+}
+
+const CARRY: readonly Carry[] = [
+  {
+    id: 'call-her',
+    shard: 'dmt.carried.her-name',
+    label: 'Call her tonight, not Tuesday',
+    wisdom: 'That Tuesday was a decision, and not a fact.',
+    caption: 'He is going to call her tonight. It is late. He is going to call her anyway.',
+    anchor: 'doorframe',
+    karma: 1,
+    harmony: 1,
+    will: 0,
+    attachment: -0.05,
+  },
+  {
+    id: 'finish-it',
+    shard: 'dmt.carried.the-hall',
+    label: 'Finish the hall',
+    wisdom: 'That the hall was never about the hall.',
+    caption: 'He is going to finish the hall. Not tonight. But he is going to finish it.',
+    anchor: 'hall',
+    karma: 0,
+    harmony: 0,
+    will: 0.25,
+    attachment: 0,
+  },
+  {
+    id: 'say-nothing',
+    shard: 'dmt.carried.in-silence',
+    label: 'Tell nobody',
+    wisdom: 'That some things cannot be handed over, only carried.',
+    caption: 'He will not try to explain this to anyone. It would come out wrong, and it is his.',
+    anchor: undefined,
+    karma: 0,
+    harmony: 0,
+    will: 0.15,
+    attachment: 0.1,
+  },
+];
+
+function carryById(id: CarryId): Carry {
+  const found = CARRY.find((entry) => entry.id === id);
+  if (!found) {
+    throw new Error(`No carry option "${id}"`);
+  }
+  return found;
+}
 
 export const dmtSentBackScene: SceneDefinition = {
   id: 'dmt.sent-back',
@@ -1000,6 +1494,9 @@ export const dmtSentBackScene: SceneDefinition = {
         context.captions.show(beat.caption, 8);
       }
     });
+
+    const slot = choiceSlot(context);
+    const held = heldFrom(context.soul.shards);
 
     // On his back on the carpet where he was sitting, coming up to sitting again
     // over the length of the scene. A mirror of the heart attack's going down,
@@ -1032,24 +1529,74 @@ export const dmtSentBackScene: SceneDefinition = {
     context.audio.ring(0.12, 2100);
     context.audio.heartbeat(true, 118, 0.46);
 
-    let kept = false;
+    let returned = false;
+    let carried: Carry | undefined;
+    let askedCarry = false;
     let holdBeganAt: number | undefined;
     let leaving = false;
+
+    /**
+     * The scene's choice, and the durable one.
+     *
+     * `recordUnlock` writes it to the incarnation, so it survives this run and
+     * every later one — which is what "unlocks an alternate thread" has to mean
+     * if it is to mean anything. There is no river between this scene and the
+     * rest of his life to carry it across, because he did not die.
+     */
+    function carry(id: CarryId): void {
+      if (carried) {
+        return;
+      }
+      const choice = carryById(id);
+      carried = choice;
+      remember(context, choice.shard);
+      context.soul.karma += choice.karma;
+      context.soul.harmony += choice.harmony;
+      context.soul.will = clamp01(context.soul.will + choice.will);
+      context.soul.attachment = clamp01(context.soul.attachment + choice.attachment);
+      flat.setHeld(choice.anchor === undefined ? undefined : flat.anchors[choice.anchor]);
+      context.captions.show(choice.caption, 10);
+      recordUnlock(choice.shard, choice.wisdom);
+      slot.close();
+    }
 
     return {
       update(delta, elapsed) {
         director.updateTo(elapsed);
         const { beat, t } = director.state;
 
+        if (!askedCarry && beat.id !== 'falling-back') {
+          askedCarry = true;
+          const what = held?.phrase ?? 'nothing in particular';
+          slot.offer({
+            title: 'He gets to keep it. All of it.',
+            body:
+              `He went in holding ${what} and he has been handed the whole life back. What he `
+              + 'does about that is the only part of this that is up to him, and it is the part '
+              + 'that outlasts the run.',
+            actions: CARRY.map((entry) => ({
+              id: entry.id,
+              label: entry.label,
+              onPick: () => {
+                carry(entry.id);
+              },
+            })),
+            hint: 'Decide, or he tells nobody, which is what most people do.',
+          });
+        }
+        if ((beat.id === 'what-he-carries' || beat.id === 'onward') && !carried) {
+          carry('say-nothing');
+        }
+
         // One curve runs the whole scene: 1 is still out there, 0 is all the way
         // back in the room. Everything else is a function of it.
         const out = beat.id === 'falling-back'
-          ? 1 - ease.inOut(t) * 0.55
+          ? 1 - ease.inOut(t) * 0.6
           : beat.id === 'the-room-again'
-            ? 0.45 - ease.inOut(t) * 0.33
-            : beat.id === 'breath'
-              ? 0.12 - t * 0.07
-              : Math.max(0, 0.05 - t * 0.05);
+            ? 0.4 - ease.inOut(t) * 0.3
+            : beat.id === 'kept'
+              ? 0.1 - t * 0.06
+              : Math.max(0, 0.04 - t * 0.04);
 
         flat.setFold(out * 0.85);
         flat.update(delta, elapsed);
@@ -1068,7 +1615,7 @@ export const dmtSentBackScene: SceneDefinition = {
         context.rig.setPulse((0.8 - up * 0.5) * Math.pow(1 - phase, 6));
 
         // The grade comes home. Not to `living`'s drabness — to something a
-        // notch warmer and brighter than ordinary, because for an hour
+        // notch warmer and brighter than ordinary, because for a while
         // afterwards the ordinary world is not ordinary (`L-THRESH-09`).
         grade.vignette = 0.2 + up * 0.16;
         grade.aberration = 0.006 - up * 0.0044;
@@ -1084,19 +1631,16 @@ export const dmtSentBackScene: SceneDefinition = {
         context.audio.ring(0.12 * out, 2100);
         context.audio.room(0.08 + up * 0.2, 300 + up * 900);
 
-        // What the return leaves behind. Harmony rises because something was
-        // released rather than held (GAME_BRIEF.md § Systems), the attachment he
-        // carries is almost nothing because he did not die, and the thread is
-        // written down while he is still alive — there is no river between this
-        // scene and the rest of his life to carry it across.
-        if (!kept && (beat.id === 'kept' || beat.id === 'unfinished' || beat.id === 'carried')) {
-          kept = true;
-          context.soul.attachment = 0.05;
+        // The fact of the return, recorded whether or not the player decides
+        // anything about it. Harmony rises because something was let go of
+        // rather than held (GAME_BRIEF.md § Systems), and the weight he carries
+        // is almost nothing, because he did not die.
+        if (!returned && beat.id !== 'falling-back') {
+          returned = true;
+          context.soul.attachment = clamp01(Math.min(context.soul.attachment, 0.1));
           context.soul.will = 1;
           context.soul.harmony += 1;
-          if (!context.soul.shards.includes(RETURN_SHARD)) {
-            context.soul.shards.push(RETURN_SHARD);
-          }
+          remember(context, RETURN_SHARD);
           recordUnlock(RETURN_SHARD, RETURN_WISDOM);
         }
 
