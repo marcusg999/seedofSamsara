@@ -5,6 +5,7 @@ import { pronouncedDeadScene, buzzingScene, outOfBodyScene } from './threshold-e
 import { tunnelScene, lovedOnesScene, beingOfLightScene } from './threshold-light';
 import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
 import { councilScene } from './council';
+import { marketAisleScenes, marketCheckoutScene } from './market';
 
 /**
  * Every scene the game has actually built. The manifest in `../manifest.ts`
@@ -31,6 +32,8 @@ export function createSceneGraph(): SceneGraph {
     choiceScene,
     lifeReviewScene,
     councilScene,
+    ...marketAisleScenes,
+    marketCheckoutScene,
   );
 }
 
@@ -51,4 +54,12 @@ export const SLICE_PATH: readonly string[] = [
   'threshold.choice',
   'light.life-review',
   'light.council',
+  'market.parents',
+  'market.body',
+  'market.gifts',
+  'market.trauma',
+  'market.economics',
+  'market.place',
+  'market.contracts',
+  'market.checkout',
 ];

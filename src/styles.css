@@ -159,3 +159,150 @@ body {
     transition-duration: 1ms;
   }
 }
+
+/* The Life Market. A shelf the player reads, over a scene they can look around. */
+.market {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: min(30rem, 46vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2.25rem 1.75rem;
+  overflow-y: auto;
+  background: linear-gradient(90deg, rgba(8, 7, 14, 0.9) 0%, rgba(8, 7, 14, 0.76) 70%, rgba(8, 7, 14, 0) 100%);
+  color: #e9e5f2;
+}
+
+.market--checkout {
+  inset: 0;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 45%, rgba(10, 8, 18, 0.74), rgba(6, 5, 12, 0.92));
+}
+
+.market__title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+.market__blurb,
+.market__status,
+.market__preview,
+.market__verdict {
+  margin: 0;
+  font-weight: 300;
+  line-height: 1.6;
+  color: #c4bed6;
+}
+
+.market__blurb { font-size: 0.93rem; }
+
+.market__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.4rem 0;
+}
+
+.market__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.1rem 0;
+}
+
+.market__item {
+  appearance: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: #e4dff0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 300;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+  transition: background 220ms ease, border-color 220ms ease;
+}
+
+.market__item:hover,
+.market__item:focus-visible {
+  background: rgba(70, 58, 108, 0.32);
+  border-left-color: rgba(201, 180, 255, 0.7);
+  outline: none;
+}
+
+.market__row[data-selected='true'] .market__item { border-left-color: #c9b4ff; background: rgba(70, 58, 108, 0.26); }
+.market__row[data-taken='true'] .market__name::before { content: '· '; color: #9fe6b4; }
+.market__row[data-locked='true'] .market__name::before { content: '· '; color: #ffb48a; }
+
+.market__price {
+  flex: none;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  color: #8b85a4;
+}
+
+.market__act {
+  align-self: flex-start;
+  appearance: none;
+  border: 1px solid rgba(190, 175, 235, 0.42);
+  background: rgba(30, 24, 48, 0.7);
+  color: #efe9f8;
+  font: inherit;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  padding: 0.38rem 0.85rem;
+  margin-left: 0.6rem;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.market__act:disabled { opacity: 0.45; cursor: default; }
+
+.market__preview {
+  min-height: 2.6rem;
+  font-style: italic;
+  color: #bcb2d8;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.market__preview[data-visible='true'] { opacity: 1; }
+
+.market__status { font-size: 0.82rem; letter-spacing: 0.03em; color: #948da8; }
+
+.market__verdict {
+  max-width: 34rem;
+  font-size: clamp(0.98rem, 2vw, 1.12rem);
+  color: #e4dff0;
+}
+
+.market__manifest {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 300;
+  line-height: 1.8;
+  color: #bcb2d8;
+}
+
+.market__nav { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.5rem; }
+
+.overlay__button--quiet { border-color: rgba(140, 130, 175, 0.3); background: rgba(16, 13, 26, 0.6); }
+
+@media (max-width: 760px) {
+  .market { width: 100%; background: linear-gradient(180deg, rgba(8, 7, 14, 0.92) 55%, rgba(8, 7, 14, 0.5) 100%); }
+}
