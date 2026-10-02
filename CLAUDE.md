@@ -61,4 +61,14 @@ If a test is wrong, fix the test and say why in the commit message.
 - Post-processing stacks are where frame rate dies. Profile before adding a pass.
 - Headless Chromium may fall back to software WebGL. Run the gate with GPU flags
   if available, and don't treat software-render frame times as real performance.
+- The Playwright version determines which Chromium build it requires. A caret
+  range silently resolved to a version whose browser was not the one installed,
+  and the whole gate failed on a missing executable instead of on the game. Pin
+  the Playwright version exactly.
+- Headless Chromium composites a WebGL canvas by reading its framebuffer back,
+  and the driver reports that as a `GPU stall due to ReadPixels` performance
+  warning. It is not ours: a page with nothing but a canvas and `gl.clear`
+  emits it too. Before ever filtering a WebGL warning, prove it is the host's
+  by reproducing it without any of our code — and scope the filter to that one
+  message. Filtering anything we actually caused is weakening the gate.
 - Add to this section every time a mistake is made or narrowly avoided.
