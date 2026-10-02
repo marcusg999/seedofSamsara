@@ -10,6 +10,7 @@ import { AudioEngine } from './systems/audio';
 import { CameraRig } from './systems/camera-rig';
 import { Captions } from './systems/captions';
 import { createPostPipeline, type PostPipeline } from './systems/postfx';
+import { createSpiritBody, type SpiritBody } from './systems/spirit-body';
 
 export interface SceneSnapshot {
   readonly id: string;
@@ -54,6 +55,7 @@ export class Game {
   private readonly audioEngine: AudioEngine;
   private readonly captionLayer: Captions;
   private readonly post: PostPipeline;
+  private readonly spiritBody: SpiritBody;
   /** Owns the pipeline's render targets for the game's whole lifetime. */
   private readonly pipelineTracker = new ResourceTracker();
 
@@ -89,7 +91,11 @@ export class Game {
       this.bundle.scene,
       this.bundle.camera,
       this.pipelineTracker,
+      { softwareRenderer: this.bundle.isSoftwareRenderer() },
     );
+    // Owned by the game rather than by a scene: it belongs to the player, not to
+    // any one place, and it has to survive every transition between them.
+    this.spiritBody = createSpiritBody(this.pipelineTracker);
 
     const onResize = (): void => {
       this.resize();
@@ -121,6 +127,16 @@ export class Game {
 
   get cameraRig(): CameraRig {
     return this.rig;
+  }
+
+  /** How the spirit body currently reads. Reflects karma. */
+  get spiritBodyAppearance(): { color: number; intensity: number } {
+    return this.spiritBody.appearance;
+  }
+
+  /** Whether the current scene carries the spirit body. */
+  get isDiscarnate(): boolean {
+    return this.definition?.discarnate === true;
   }
 
   /** Skip to the end of the current scene's beat, if it has a timeline. */
@@ -274,6 +290,12 @@ export class Game {
       },
     });
 
+    // The scene graph is cleared on every unload, so a discarnate scene has to
+    // take the spirit body back each time it loads.
+    if (definition.discarnate === true) {
+      this.bundle.scene.add(this.spiritBody.group);
+    }
+
     this.definition = definition;
     this.instance = instance;
     this.tracker = tracker;
@@ -316,6 +338,10 @@ export class Game {
       const elapsed = (now - this.sceneLoadedAt) / 1000;
       this.instance.update(delta, elapsed);
       this.rig.update(delta);
+      if (this.definition?.discarnate === true) {
+        // After the rig has moved, so the body is where the player is.
+        this.spiritBody.update(elapsed, this.bundle.camera, this.soul);
+      }
       this.audioEngine.update();
       this.captionLayer.update();
       this.post.commit(elapsed);

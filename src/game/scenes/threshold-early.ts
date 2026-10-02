@@ -138,6 +138,7 @@ export const pronouncedDeadScene: SceneDefinition = {
   id: 'threshold.pronounced-dead',
   title: 'A time, said out loud',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.buzzing' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.dying;
     const air = airShell(context.resources, { radius: 70, ground: grammar.ground, glow: 0x2a2838, density: 1 });
@@ -173,7 +174,7 @@ export const pronouncedDeadScene: SceneDefinition = {
     grade.exposure = 1.5;
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.6, 0.3);
+    context.post.setBloom(grammar.bloom, 0.6, 0.75);
 
     // Voices, heard as shape rather than as speech: a low formant-ish drone with
     // no words in it. Nothing is intelligible, which is the point.
@@ -223,6 +224,7 @@ export const buzzingScene: SceneDefinition = {
   id: 'threshold.buzzing',
   title: 'The sound of it',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.out-of-body' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     // This beat sits between the dying grammar and the out-of-body one, and
     // takes its own lighter ground so the field has something to read against.
@@ -261,7 +263,7 @@ export const buzzingScene: SceneDefinition = {
     grade.exposure = 1.45;
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(0.6, 0.7, 0.24);
+    context.post.setBloom(0.6, 0.7, 0.69);
 
     context.audio.room(0.1, 240);
     context.audio.ring(0.34, 2600);
@@ -286,7 +288,7 @@ export const buzzingScene: SceneDefinition = {
         grade.distortion = 0.09 + intensity * 0.05;
         grade.grain = 0.2 + intensity * 0.06;
         grade.vignette = 0.7 - intensity * 0.12;
-        context.post.setBloom(0.6 + intensity * 0.35, 0.7, 0.24);
+        context.post.setBloom(0.6 + intensity * 0.35, 0.7, 0.69);
         context.rig.setRoll(0.12 + Math.sin(elapsed * 0.7) * 0.03 * intensity);
       },
       beat() {
@@ -314,6 +316,7 @@ export const outOfBodyScene: SceneDefinition = {
   id: 'threshold.out-of-body',
   title: 'From above',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.tunnel' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.outside;
     const air = airShell(context.resources, { radius: 90, ground: grammar.ground, glow: 0x24384a, density: 1 });
@@ -361,7 +364,7 @@ export const outOfBodyScene: SceneDefinition = {
     grade.exposure = 1.3;
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.62, 0.3);
+    context.post.setBloom(grammar.bloom, 0.62, 0.75);
 
     context.audio.room(0.1, 520);
     context.audio.drone(0.15, 52, 2);

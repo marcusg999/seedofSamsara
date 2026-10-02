@@ -105,6 +105,7 @@ export const borderScene: SceneDefinition = {
   id: 'threshold.border',
   title: 'The border',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.choice' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.border;
     const air = airShell(context.resources, { radius: 130, ground: grammar.ground, glow: 0x1d3a44, density: 1 });
@@ -155,7 +156,7 @@ export const borderScene: SceneDefinition = {
     grade.washColor = [0.95, 1, 0.98];
     grade.washAmount = 0.03;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.74, 0.16);
+    context.post.setBloom(grammar.bloom, 0.74, 0.62);
 
     context.audio.drone(0.2, 60, 10);
     context.audio.shimmer(0.22);
@@ -206,6 +207,7 @@ export const choiceScene: SceneDefinition = {
     // plainly instead of leading the player nowhere.
     { id: 'refuse', label: 'Refuse it', to: 'refuse.earthbound' },
   ],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.border;
     const air = airShell(context.resources, { radius: 130, ground: grammar.ground, glow: 0x241f3c, density: 1 });
@@ -244,7 +246,7 @@ export const choiceScene: SceneDefinition = {
     grade.washColor = [1, 0.98, 0.95];
     grade.washAmount = 0.02;
     grade.smear = 0;
-    context.post.setBloom(0.8, 0.72, 0.18);
+    context.post.setBloom(0.8, 0.72, 0.63);
 
     context.audio.drone(0.19, 57, 9);
     context.audio.shimmer(0.2);
@@ -326,6 +328,7 @@ export const lifeReviewScene: SceneDefinition = {
     { id: 'council', label: 'To the Council', to: 'light.council' },
     { id: 'again', label: 'Begin again', to: 'content-notes' },
   ],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.review;
     const air = airShell(context.resources, { radius: 100, ground: grammar.ground, glow: 0x3a2742, density: 1 });
@@ -470,7 +473,7 @@ export const lifeReviewScene: SceneDefinition = {
     grade.washColor = [1, 0.93, 0.86];
     grade.washAmount = 0.02;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.68, 0.22);
+    context.post.setBloom(grammar.bloom, 0.68, 0.67);
 
     context.audio.drone(0.18, 54, 5);
     context.audio.shimmer(0.14);
@@ -531,11 +534,16 @@ export const lifeReviewScene: SceneDefinition = {
         setU(phone.material, 'uIntensity', 1.6 + understanding * 1.8 + Math.sin(elapsed * 1.4) * 0.12);
         tablePool.update(elapsed, context.camera);
         grade.exposure = 1.55 + understanding * 0.12;
-        context.post.setBloom(grammar.bloom + understanding * 0.5, 0.68, 0.22);
+        context.post.setBloom(grammar.bloom + understanding * 0.5, 0.68, 0.67);
         context.audio.shimmer(0.14 + understanding * 0.26);
 
         if (!credited && (beat.id === 'carried' || beat.id === 'wait')) {
           credited = true;
+          // KARMA is the ledger of effect on others as felt in the review, not a
+          // good/evil meter (GAME_BRIEF.md § Systems). The call she did not get
+          // cost her a night, and feeling it from her side is what enters it.
+          context.soul.karma -= 1;
+          // HARMONY rises because the moment was faced rather than passed over.
           context.soul.harmony += 1;
           context.soul.shards.push('review.the-phone-call');
         }

@@ -84,14 +84,15 @@ export function volumetricGlow(
         void main() {
           vec2 centred = vUv - 0.5;
           float r = length(centred) * 2.0;
-          if (r > 1.0) {
-            discard;
-          }
+          // A smoothstep edge rather than a discard: discard is a hard,
+          // unantialiased cutoff and it disables early-Z, which tile-based
+          // mobile GPUs pay for on every glow in the game.
+          float edge = 1.0 - smoothstep(0.88, 1.0, r);
 
           // Halo and core fall off at different rates, which is what separates a
           // body of light from a radial gradient.
-          float halo = pow(1.0 - r, uSoftness);
-          float core = pow(1.0 - r, uSoftness * 3.5) * 1.6;
+          float halo = pow(max(0.0, 1.0 - r), uSoftness);
+          float core = pow(max(0.0, 1.0 - r), uSoftness * 3.5) * 1.6;
 
           // Churn inside the glow, in the sprite's own space.
           float angle = atan(centred.y, centred.x);
@@ -101,7 +102,7 @@ export function volumetricGlow(
           float rays = sin(angle * 7.0 + churn * 4.0 + uTime * 0.12) * 0.5 + 0.5;
           float streak = pow(rays, 3.0) * halo * 0.3;
 
-          float density = (halo * (0.65 + churn * 0.6) + core + streak);
+          float density = (halo * (0.65 + churn * 0.6) + core + streak) * edge;
           gl_FragColor = vec4(uColor * density * uIntensity, clamp(density, 0.0, 1.0));
         }
       `,
@@ -261,12 +262,10 @@ export function moteField(
           // Round, with a soft edge and a brighter centre.
           vec2 centred = gl_PointCoord - 0.5;
           float r = length(centred) * 2.0;
-          if (r > 1.0) {
-            discard;
-          }
-          float falloff = pow(1.0 - r, 2.2);
-          float core = pow(1.0 - r, 7.0);
-          float density = (falloff * 0.7 + core) * vTwinkle;
+          float edge = 1.0 - smoothstep(0.82, 1.0, r);
+          float falloff = pow(max(0.0, 1.0 - r), 2.2);
+          float core = pow(max(0.0, 1.0 - r), 7.0);
+          float density = (falloff * 0.7 + core) * vTwinkle * edge;
           gl_FragColor = vec4(uColor * density, density * uOpacity);
         }
       `,

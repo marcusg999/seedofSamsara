@@ -37,8 +37,12 @@ const VISIBILITY = {
   minBrightFraction: 0.005,
   /** A flat field has almost no variation, whatever its brightness. */
   minStdLuma: 3.5,
-  /** Mostly-clipped frames have lost their image at the other end. */
-  maxClippedFraction: 0.55,
+  /**
+   * Clipped frames have lost their image at the top end. A review measured one
+   * scene at 41% pure white with its own subtitle at 1.75:1 contrast against it,
+   * and the previous bound of 0.55 let that through.
+   */
+  maxClippedFraction: 0.34,
 } as const;
 
 test.describe('playthrough', () => {
@@ -211,6 +215,45 @@ test.describe('playthrough', () => {
 
     // One final sweep, including anything the page trapped but never logged.
     await watcher.assertClean('across the whole playthrough');
+  });
+
+  test('antialiases the geometry it draws', async ({ page }) => {
+    await page.goto('/');
+    await waitForReady(page);
+
+    // `antialias: true` on the renderer only ever applied to the default
+    // framebuffer, and with a composer the only thing drawn there is the final
+    // full-screen quad. The scene goes into the composer's own target, which
+    // three.js builds with no samples — so the flag was set, looked right, and
+    // did nothing, while every edge in the game aliased.
+    //
+    // A dead flag is invisible by definition, so it is asserted here.
+    const { post, coarse, software, description } = await page.evaluate(() => ({
+      post: globalThis.__game?.post(),
+      coarse:
+        typeof globalThis.matchMedia === 'function' &&
+        globalThis.matchMedia('(hover: none) and (pointer: coarse)').matches,
+      software: globalThis.__game?.renderer().software ?? false,
+      description: globalThis.__game?.renderer().description ?? 'unknown',
+    }));
+
+    expect(post, 'test API missing').toBeDefined();
+    if (coarse) {
+      // Mobile runs at a capped pixel ratio and does not pay for MSAA.
+      return;
+    }
+    if (software) {
+      // Deliberately off on a software rasteriser: it pays the full multisample
+      // fill and renders for nobody. Reported rather than asserted, on the same
+      // reasoning as the frame-time budget.
+      console.log(`\n  MSAA deliberately off on software renderer "${description}".\n`);
+      return;
+    }
+    expect(
+      post?.samples ?? 0,
+      'The post-processing target has no multisampling, so nothing in the game is antialiased — ' +
+        'the renderer\u2019s own antialias flag does not reach it.',
+    ).toBeGreaterThan(0);
   });
 
   test('keeps frame time within budget', async ({ page }) => {

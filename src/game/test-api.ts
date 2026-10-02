@@ -64,11 +64,15 @@ export interface TestApi {
   /** Audio state. Silent until the first user gesture. */
   audio(): { started: boolean; voices: string[] };
   /** Post-processing state, for the performance comparison. */
-  post(): { enabled: boolean; passes: number; bloomless: boolean };
+  post(): { enabled: boolean; passes: number; bloomless: boolean; samples: number };
   /** Turn the post stack off, to measure what it costs. */
   setPostEnabled(enabled: boolean): void;
   /** Camera and look state. */
   camera(): { mode: string; yaw: number; pitch: number; roll: number };
+  /** True when the current scene carries the spirit body (the player is dead). */
+  discarnate(): boolean;
+  /** How the spirit body reads. Brightness and colour reflect karma. */
+  spiritBody(): { color: number; intensity: number };
   /** Ask the render loop to measure the next frame it draws. */
   requestFrameSample(): void;
   /** What that frame actually contained. Undefined until the loop has sampled. */
@@ -142,11 +146,14 @@ export function installTestApi(game: Game, errors: readonly GateError[]): void {
       enabled: game.postPipeline.enabled,
       passes: game.postPipeline.passCount,
       bloomless: game.postPipeline.passCount <= 2,
+      samples: game.postPipeline.samples,
     }),
     setPostEnabled: (enabled) => {
       game.postPipeline.setEnabled(enabled);
     },
     camera: () => game.cameraRig.debug,
+    discarnate: () => game.isDiscarnate,
+    spiritBody: () => game.spiritBodyAppearance,
     requestFrameSample: () => {
       game.requestFrameSample();
     },

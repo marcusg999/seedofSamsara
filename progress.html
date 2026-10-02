@@ -119,53 +119,98 @@
         </ul>
       </div>
 
+      <h2>Which bar judges which piece</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.5rem">
+          Straight from <code>GAME_BRIEF.md</code> § Quality bars. Recorded here because it was
+          got wrong once and should not be got wrong again.
+        </p>
+        <table>
+          <thead><tr><th>Bar</th><th>Judges</th></tr></thead>
+          <tbody>
+            <tr><td>Journey</td><td><strong>The Light</strong>, the Threshold, higher spheres, the Life Market</td></tr>
+            <tr><td>Playdead's Inside</td><td>Death vignettes, lower spheres</td></tr>
+            <tr><td>Messenger by Abeto</td><td>Controls, camera, polish, performance</td></tr>
+          </tbody>
+        </table>
+        <ul class="notes">
+          <li>
+            <strong>The Light is judged against Journey, never against Messenger.</strong> Messenger
+            is the bar for controls, camera, polish and performance — rendering craft — and nothing
+            else. A review of rendering craft can report defects that happen to appear in the Light's
+            scenes, but it does not pass judgement on the Light.
+          </li>
+        </ul>
+      </div>
+
       <h2>What the critics said</h2>
       <div class="panel">
         <p style="margin:0 0 0.75rem; color:var(--muted)">
-          Three critics, each a separate agent with no access to the builder's notes
-          (<code>CLAUDE.md</code> § Working style). Each was given frames and a written rubric
-          derived from its piece's bar, and asked to name one biggest gap and return a blind verdict.
+          Each critic is a separate agent with no access to the builder's notes
+          (<code>CLAUDE.md</code> § Working style), given frames and a written rubric for its piece's
+          bar, and asked to name one biggest gap and return a blind verdict.
         </p>
         <table>
           <thead>
-            <tr><th>Piece</th><th>Verdict</th><th>Biggest gap named</th><th>Acted on</th></tr>
+            <tr><th>Piece</th><th>Bar</th><th>Verdict</th><th>Biggest gap</th><th>Acted on</th></tr>
           </thead>
           <tbody>
             <tr>
               <td>Heart-attack vignette</td>
+              <td>Inside</td>
               <td><span class="tag t-warn">NO</span></td>
-              <td>The lamp emits no light — everything is backlit by a flat window card, so nothing
-                has a lit edge, 75% of frame is below 10/255, and the death can only be expressed by
-                moving a global exposure slider.</td>
-              <td>Partly. Emissive bulb, bounce light and a second practical are in; the room still
-                has too few props and the death still changes the lens more than the world.</td>
+              <td>The lamp emits no light; everything is backlit by a flat window card, so nothing
+                has a lit edge and the death can only be expressed by moving an exposure slider.</td>
+              <td>Partly — emissive bulb, bounce and a second practical are in; the room still has
+                too few props and the death still changes the lens more than the world.</td>
             </tr>
             <tr>
-              <td>Threshold &amp; Light</td>
+              <td>Threshold &amp; the Light</td>
+              <td>Journey</td>
               <td><span class="tag t-warn">NO</span></td>
               <td>Six of ten frames contained no visible image, and the gate certified them as
                 rendered. Proposed a luminance-and-structure floor in the gate.</td>
-              <td>Yes — root-caused and fixed, and the proposed check is now in the gate.</td>
+              <td><span class="tag t-ok">Yes</span> — root-caused, fixed, and the proposed check is
+                now in the gate.</td>
             </tr>
             <tr>
               <td>Life review &amp; front matter</td>
+              <td>Journey</td>
               <td><span class="tag t-warn">NO</span></td>
-              <td>The vantage switch — the scene's stated emotional mechanic — is invisible: both
-                vantages used an identical camera, so the switch existed only in the subtitle.</td>
-              <td>Partly. The two vantages are now a genuine shot/reverse-shot cut. Typography,
-                copy and the table's material are not yet addressed.</td>
+              <td>The vantage switch — the scene's stated emotional mechanic — was invisible: both
+                vantages used an identical camera, so it existed only in the subtitle.</td>
+              <td>Partly — the two vantages are now a genuine shot/reverse-shot cut. Typography and
+                copy are still untouched.</td>
+            </tr>
+            <tr>
+              <td>Rendering craft</td>
+              <td>Messenger</td>
+              <td><span class="tag t-warn">NO</span></td>
+              <td><code>antialias: true</code> was dead: the scene renders into the composer's own
+                target, which three.js builds with no samples, so nothing in the game was
+                antialiased.</td>
+              <td><span class="tag t-ok">Yes</span> — verified in the three.js source, fixed with a
+                multisampled target, and the gate now asserts sample count.</td>
             </tr>
           </tbody>
         </table>
         <ul class="notes">
           <li>
-            <strong>No critic has been re-run since the fixes.</strong> The verdicts above are all
-            <em>NO</em> and nothing here claims otherwise. The loop has had one round, not the
-            &ldquo;until the critic picks ours&rdquo; the brief asks for.
+            Every verdict so far is <em>NO</em>. The loop has had one round per piece, not the
+            &ldquo;until the critic picks ours&rdquo; the brief asks for, and nothing here claims
+            otherwise.
           </li>
           <li>
-            Two of the three independently proposed the gate visibility check. That agreement is
-            the strongest signal in this round and is why it was built first.
+            Also fixed from the rendering review: the wash was added after exposure and before the
+            tonemap, driving bright beats past the curve into a clamp; <code>discard</code> edges
+            replaced with smoothstep, which restores early-Z on mobile; bloom thresholds raised from
+            0.16&ndash;0.30, where they selected the whole scene rather than its highlights. The
+            worst frame went from 41.1% to 30.5% pure white with standard deviation nearly doubling,
+            meaning structure returned rather than the image merely dimming.
+          </li>
+          <li>
+            Captions now carry their own backdrop. One measured 1.75:1 against a blown-out frame,
+            below the 3:1 a large-text contrast target asks for.
           </li>
         </ul>
       </div>

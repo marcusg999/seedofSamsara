@@ -85,34 +85,37 @@ Then the core choice: ENTER THE LIGHT or REFUSE IT.
 - The Council: guides weigh the life (heart against the feather).
 - The Life Market (below), then the River of Forgetting and rebirth.
 
-## The Life Market
+## The Life Market (Path A, after the life review)
 The soul shops for its next life the way you'd shop for groceries, in a vast,
-surreal, glowing market.
+surreal, glowing market. Grounded in the Myth of Er (souls choose their lots),
+Michael Newton's accounts of souls previewing future bodies, and Robert Schwartz's
+"pre-birth planning" (souls choosing challenges in advance for growth).
 
 Aisles:
-- Parents: each pair is shelved as a living diorama. Pick one up to glimpse a
-  moment of the childhood they'd give you.
-- Body and avatar: species, form, health, appearance, and any birthmark carried
-  from a past death.
+- Parents: each pair is shelved as a living diorama. Pick one up to glimpse
+  a moment of the childhood they'd give you.
+- Body and avatar: species, form, health, appearance, and any birthmark
+  carried from a past death.
 - Gifts: talents, beauty, intellect, charisma, artistry, intuition.
 - Trauma and challenges: loss, illness, abandonment, addiction in the family,
   injustice. These are the lessons the soul chooses to face.
 - Economic circumstance: from struggle to abundance, each with its own lessons.
 - Place: planet, culture, era.
-- Soul contracts: people from your soul group who agree to meet you in the next
-  life as a friend, rival, lover or teacher.
+- Soul contracts: people from your soul group who agree to meet you in the
+  next life as a friend, rival, lover or teacher.
 
-Economy: gifts cost karma; challenges repay karma debt and earn growth. The life
-review sets the shopping list, so unresolved karma puts certain lessons in the cart
-that can't be put back. A cart of only gifts is allowed, but the guides warn that
-such a life teaches little.
+Economy: gifts cost karma; challenges repay karma debt and earn growth.
+The life review sets the shopping list, so unresolved karma from the last life
+puts certain lessons in the cart that can't be put back. A cart full of gifts
+and no challenges is allowed, but the guides warn that such a life teaches little.
 
 Preview: holding any item plays a short sensory flash of that life.
-Checkout: the cart is weighed. The guides speak once. The soul walks to the River
-of Forgetting, and the cart's contents become the opening conditions of the next run.
+Checkout: the cart is weighed (the heart against the feather). The guides
+speak once. Then the soul walks to the River of Forgetting, and the cart's
+contents become the opening conditions of the next run.
 
-Tone: wonder and weight at once. The Trauma aisle should feel sacred, not grim,
-like choosing which mountain to climb.
+Tone: wonder and weight at once. The Trauma aisle should feel sacred, not
+grim, like choosing which mountain to climb.
 
 ## Path B — Refusing the Light
 - WILL is the core resource: it powers movement between spheres and resists the

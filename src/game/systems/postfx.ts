@@ -1,4 +1,12 @@
-import { Vector2, type IUniform, type PerspectiveCamera, type Scene, type WebGLRenderer } from 'three';
+import {
+  HalfFloatType,
+  Vector2,
+  WebGLRenderTarget,
+  type IUniform,
+  type PerspectiveCamera,
+  type Scene,
+  type WebGLRenderer,
+} from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -134,12 +142,13 @@ const gradeShader = {
         color = mix(color, smeared / weight, min(1.0, uSmear * 14.0));
       }
 
+      // The wash goes in BEFORE exposure, so the tonemap still has it in range.
+      // Added after exposure it drove the brightest beats past the curve and
+      // into the clamp below, which is how a scene ends up a third pure white
+      // with its own subtitle no longer legible against it.
+      color += uWashRgb * uWashAmount;
       color *= uExposure;
       color = drain(color, uDrain);
-
-      // The wash is additive-toward-colour rather than a mix, so the Light can
-      // exceed the scene's own brightness instead of flattening it.
-      color += uWashRgb * uWashAmount;
 
       color = filmic(color);
 
@@ -171,6 +180,8 @@ export interface PostPipeline {
   setEnabled(enabled: boolean): void;
   readonly enabled: boolean;
   readonly passCount: number;
+  /** MSAA sample count actually in use. 0 means none, which is a defect. */
+  readonly samples: number;
 }
 
 export function createPostPipeline(
@@ -178,9 +189,34 @@ export function createPostPipeline(
   scene: Scene,
   camera: PerspectiveCamera,
   tracker: ResourceTracker,
+  options: { softwareRenderer?: boolean } = {},
 ): PostPipeline {
   const size = renderer.getSize(new Vector2());
-  const composer = new EffectComposer(renderer);
+
+  // `antialias: true` on the renderer applies to the DEFAULT framebuffer, and
+  // once there is a composer the only thing ever drawn there is the final
+  // full-screen grade quad, which has no edges to antialias. The scene is drawn
+  // into the composer's own target, and three.js builds that target with no
+  // `samples` — so the flag was dead and every edge in the game was aliased.
+  //
+  // Supplying a multisampled target is the whole fix, and it covers every piece
+  // of geometry at once: glow quad edges, wireframes, silhouettes, the lot.
+  const pixelRatio = renderer.getPixelRatio();
+  const coarse =
+    typeof globalThis.matchMedia === 'function' &&
+    globalThis.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  // MSAA is resolved per frame, so it is the kind of cost a phone feels first.
+  // Mobile already runs at a capped pixel ratio, where the edges are shorter.
+  //
+  // A software rasteriser pays the whole multisample fill on the CPU and renders
+  // for nobody, since no player is on one. Headless CI runs on SwiftShader, so
+  // leaving it on there buys no signal and costs the gate most of its runtime.
+  const samples = coarse || options.softwareRenderer === true ? 0 : 4;
+  const target = new WebGLRenderTarget(size.x * pixelRatio, size.y * pixelRatio, {
+    type: HalfFloatType,
+    samples,
+  });
+  const composer = new EffectComposer(renderer, target);
   composer.setSize(size.x, size.y);
 
   const renderPass = new RenderPass(scene, camera);
@@ -200,6 +236,7 @@ export function createPostPipeline(
   // None of them are swept by the scene's tracker unless registered, and the
   // reincarnation loop rebuilds this pipeline on every run.
   tracker.onDispose(() => {
+    target.dispose();
     bloom.dispose();
     gradePass.dispose();
     renderPass.dispose();
@@ -257,6 +294,9 @@ export function createPostPipeline(
     },
     get passCount() {
       return composer.passes.filter((pass) => pass.enabled).length;
+    },
+    get samples() {
+      return samples;
     },
   };
 }

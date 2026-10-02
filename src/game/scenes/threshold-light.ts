@@ -154,6 +154,7 @@ export const tunnelScene: SceneDefinition = {
   id: 'threshold.tunnel',
   title: 'The passage',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.loved-ones' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.tunnel;
     const air = airShell(context.resources, { radius: 120, ground: grammar.ground, glow: 0x1a1430, density: 1 });
@@ -209,7 +210,7 @@ export const tunnelScene: SceneDefinition = {
     grade.washColor = [1, 0.93, 0.8];
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.72, 0.2);
+    context.post.setBloom(grammar.bloom, 0.72, 0.65);
 
     context.audio.room(0.06, 400);
     context.audio.drone(0.26, 42, 6);
@@ -250,7 +251,7 @@ export const tunnelScene: SceneDefinition = {
         // Held well back: the mouth of the tunnel should be the brightest thing
         // in frame, not the whole frame.
         grade.washAmount = Math.max(0, progress - 0.8) * 0.18;
-        context.post.setBloom(grammar.bloom + progress * 0.2, 0.72, Math.max(0.3, 0.42 - progress * 0.1));
+        context.post.setBloom(grammar.bloom + progress * 0.2, 0.72, Math.max(0.68, 0.78 - progress * 0.1));
 
         context.audio.drone(0.26 + progress * 0.1, 42 + progress * 22, 6 + progress * 10);
         context.audio.ring(0.05 - progress * 0.04, 1400);
@@ -282,6 +283,7 @@ export const lovedOnesScene: SceneDefinition = {
   id: 'threshold.loved-ones',
   title: 'The ones who came',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.being-of-light' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.kin;
     const air = airShell(context.resources, { radius: 110, ground: grammar.ground, glow: 0x2a2048, density: 1 });
@@ -346,7 +348,7 @@ export const lovedOnesScene: SceneDefinition = {
     grade.washColor = [1, 0.95, 0.86];
     grade.washAmount = 0.02;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.7, 0.18);
+    context.post.setBloom(grammar.bloom, 0.7, 0.63);
 
     context.audio.drone(0.22, 58, 8);
     context.audio.shimmer(0.16);
@@ -385,7 +387,7 @@ export const lovedOnesScene: SceneDefinition = {
         context.rig.target.set(0, 1.5, 0.6 - resolve * 1.1);
         grade.exposure = 1.04 + resolve * 0.1;
         grade.washAmount = 0.02 + resolve * 0.04;
-        context.post.setBloom(grammar.bloom + resolve * 0.3, 0.7, 0.18);
+        context.post.setBloom(grammar.bloom + resolve * 0.3, 0.7, 0.63);
         context.audio.shimmer(0.16 + resolve * 0.2);
         context.audio.drone(0.22, 58, 8 + resolve * 6);
       },
@@ -413,6 +415,7 @@ export const beingOfLightScene: SceneDefinition = {
   id: 'threshold.being-of-light',
   title: 'The Light',
   exits: [{ id: 'onward', label: 'Onward', to: 'threshold.border' }],
+  discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.light;
     // The air is kept faint here: the radiance below is what should carry the
@@ -474,7 +477,7 @@ export const beingOfLightScene: SceneDefinition = {
     grade.washColor = [1, 0.985, 0.95];
     grade.washAmount = 0.015;
     grade.smear = 0;
-    context.post.setBloom(0.85, 0.8, 0.45);
+    context.post.setBloom(0.85, 0.8, 0.9);
 
     context.audio.drone(0.24, 65, 14);
     context.audio.shimmer(0.4);
@@ -505,16 +508,16 @@ export const beingOfLightScene: SceneDefinition = {
         // Overwhelming is carried by structure and contrast, not by pushing every
         // channel to 1.0. The wash stays small, exposure barely moves, and the
         // bloom threshold stays high enough that only the core blooms.
-        grade.washAmount = 0.015 + Math.pow(closeness, 2.2) * 0.055;
-        grade.exposure = 1.02 + closeness * 0.05;
+        grade.washAmount = 0.015 + Math.pow(closeness, 2.2) * 0.03;
+        grade.exposure = 1.0 + closeness * 0.02;
         grade.vignette = 0.2 - closeness * 0.12;
         grade.aberration = 0.0028 + closeness * 0.003;
-        context.post.setBloom(0.85 + closeness * 0.5, 0.8, Math.max(0.3, 0.45 - closeness * 0.12));
+        context.post.setBloom(0.85 + closeness * 0.4, 0.8, Math.max(0.72, 0.84 - closeness * 0.12));
 
-        setU(inner.material, 'uIntensity', 1.6 + closeness * 1.1);
+        setU(inner.material, 'uIntensity', 1.3 + closeness * 0.5);
         // The radiance rises with closeness, and the focus stays on the heart of
         // the light, so the filaments always converge somewhere the eye can find.
-        radiance.setIntensity(0.3 + closeness * 0.3);
+        radiance.setIntensity(0.26 + closeness * 0.16);
         radiance.setFocus(0, 1.2 - context.rig.position.y, -16 - context.rig.position.z);
 
         context.audio.shimmer(0.4 + closeness * 0.4);

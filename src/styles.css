@@ -50,8 +50,15 @@ body {
   font-weight: 300;
   letter-spacing: 0.015em;
   line-height: 1.5;
-  color: #efe9f4;
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+  color: #f4f0f8;
+  /* Its own backdrop, so the line stays readable against the Light as well as
+     against the dark. Measured at 1.75:1 against a blown-out frame without it,
+     which is below the 3:1 a large-text contrast target asks for. */
+  padding: 0.5rem 1.1rem;
+  border-radius: 3px;
+  background: rgba(10, 8, 16, 0.58);
+  backdrop-filter: blur(3px);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.95);
 }
 
 /* Front matter: content notes and the one choice the slice offers. */

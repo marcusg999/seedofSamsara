@@ -79,6 +79,12 @@ export interface SceneDefinition {
    */
   readonly exits: readonly SceneExit[];
   readonly terminal?: boolean;
+  /**
+   * True once the player is out of the body. Such a scene carries the spirit
+   * body, whose brightness and colour reflect karma so the world shows the
+   * soul's state (GAME_BRIEF.md § Platform and art direction).
+   */
+  readonly discarnate?: boolean;
   /** Content notes to show before this scene is first entered, if any. */
   readonly contentNotes?: readonly string[];
   create(context: SceneContext): SceneInstance | Promise<SceneInstance>;

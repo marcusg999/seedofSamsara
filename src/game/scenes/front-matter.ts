@@ -65,7 +65,7 @@ function quietField(context: SceneContext, grammarName: 'living' | 'dying'): {
   context.rig.setRoll(0);
   context.rig.position.set(0, 0, 0);
 
-  context.post.setBloom(grammar.bloom * 0.8, 0.6, 0.25);
+  context.post.setBloom(grammar.bloom * 0.8, 0.6, 0.7);
   const grade = context.post.grade;
   grade.drain = grammar.drain;
   grade.grain = grammar.grain;

@@ -37,19 +37,37 @@ import { moteField, volumetricGlow } from '../systems/forms';
 const WARM = GRAMMAR.living;
 const COLD = GRAMMAR.dying;
 
+/**
+ * GAME_BRIEF.md § Act 1 asks for three to five minutes. The weight sits in the
+ * first half deliberately: the player has to care about this man before he dies,
+ * and that is bought with time in an ordinary room, not with incident.
+ */
 const BEATS: readonly Beat[] = [
-  { id: 'settle', seconds: 18, caption: 'Tuesday. The kettle, again.' },
-  { id: 'the-room', seconds: 26 },
-  { id: 'second-cup', seconds: 22, caption: 'Two cups. He still sets out two.' },
-  { id: 'first-twinge', seconds: 14 },
-  { id: 'wrong', seconds: 16, caption: 'Something in his chest turns over.' },
-  { id: 'grip', seconds: 15 },
-  { id: 'going-down', seconds: 11 },
-  { id: 'floor', seconds: 14 },
-  { id: 'stillness', seconds: 16, caption: 'The kettle is still going.' },
+  { id: 'settle', seconds: 24, caption: 'Tuesday. The kettle, again.' },
+  { id: 'the-room', seconds: 32 },
+  { id: 'second-cup', seconds: 28, caption: 'Two cups. He still sets out two.' },
+  { id: 'the-drawing', seconds: 24, caption: 'She drew that the year she turned six.' },
+  { id: 'first-twinge', seconds: 16 },
+  { id: 'wrong', seconds: 18, caption: 'Something in his chest turns over.' },
+  { id: 'grip', seconds: 17 },
+  { id: 'going-down', seconds: 12 },
+  { id: 'floor', seconds: 16 },
+  { id: 'stillness', seconds: 20, caption: 'The kettle is still going.' },
   // Holds until the player leaves, so the last image is never snatched away.
   { id: 'after', seconds: 1, hold: true },
 ];
+
+/**
+ * What this death hands to the afterlife (GAME_BRIEF.md § Act 1): violent and
+ * unjust deaths begin with heavy attachment, peaceful ones begin light. This one
+ * is neither — sudden, alone, and carrying one unfinished thing — so it starts
+ * low but not at nothing.
+ *
+ * Recorded as a design choice rather than a finding: lore bible § 12.6 notes
+ * that `L-ARREST-02` found depth of experience did not track medical severity,
+ * which is mild evidence against a tidy "worse death, heavier start" curve.
+ */
+const STARTING_ATTACHMENT = 0.25;
 
 export const deathHeartAttackScene: SceneDefinition = {
   id: 'death.heart-attack',
@@ -313,7 +331,7 @@ export const deathHeartAttackScene: SceneDefinition = {
     grade.exposure = 1.35;
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(WARM.bloom, 0.55, 0.42);
+    context.post.setBloom(WARM.bloom, 0.55, 0.87);
 
     context.audio.room(0.3, 1400);
     context.audio.drone(0.09, 44);
@@ -331,6 +349,7 @@ export const deathHeartAttackScene: SceneDefinition = {
       settle: 62,
       'the-room': 61,
       'second-cup': 60,
+      'the-drawing': 59,
       'first-twinge': 74,
       wrong: 96,
       grip: 124,
@@ -342,6 +361,7 @@ export const deathHeartAttackScene: SceneDefinition = {
 
     let bodyDown = 0;
     let silenceFor = 0;
+    let handedOver = false;
 
     return {
       update(delta, elapsed) {
@@ -358,7 +378,8 @@ export const deathHeartAttackScene: SceneDefinition = {
         context.audio.heartbeat(beating, Math.max(1, bpm), beat.id === 'stillness' ? 0.5 : 0.34);
 
         // The camera pulse follows the heart, so the frame tightens with it.
-        const pulseStrength = beat.id === 'settle' || beat.id === 'the-room' || beat.id === 'second-cup'
+        const pulseStrength = beat.id === 'settle' || beat.id === 'the-room'
+          || beat.id === 'second-cup' || beat.id === 'the-drawing'
           ? 0.12
           : beat.id === 'first-twinge'
             ? 0.4
@@ -422,6 +443,15 @@ export const deathHeartAttackScene: SceneDefinition = {
           context.captions.update();
         } else {
           context.audio.ring(0, 2100);
+        }
+
+        // The death sets the opening state of the afterlife, once, as it ends.
+        if (!handedOver && (beat.id === 'stillness' || beat.id === 'after')) {
+          handedOver = true;
+          context.soul.attachment = STARTING_ATTACHMENT;
+          // Will is what Path B spends to move between spheres; a soul arriving
+          // heavy arrives with less of it.
+          context.soul.will = 1 - STARTING_ATTACHMENT * 0.5;
         }
 
         // The exit is live from the first frame: the player is never held here.
