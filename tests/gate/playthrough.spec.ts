@@ -19,8 +19,39 @@ const SOFTLOCK_LIMIT_SECONDS = 60;
 /** Long enough for a scene to settle and for a stalled loop to show up. */
 const FRAMES_PER_SCENE = 20;
 
+/**
+ * What a scene has to put on screen.
+ *
+ * "Renders at least once" only proves a shader compiled — it is satisfied by a
+ * frame whose brightest pixel is 8% of white, which is a black screen. Three
+ * separate reviews of this build independently reported scenes as empty while
+ * the gate called them rendered, so the guarantee is made real here.
+ *
+ * The bounds are deliberately loose. This game is mostly very dark on purpose
+ * and the check must not push anyone toward brightening a scene for the test's
+ * sake; it only catches a frame with nothing in it, or one blown to white.
+ */
+const VISIBILITY = {
+  /** A frame passes brightness if it is either not-dark overall, or has lit pixels. */
+  minMeanLuma: 10,
+  minBrightFraction: 0.005,
+  /** A flat field has almost no variation, whatever its brightness. */
+  minStdLuma: 3.5,
+  /** Mostly-clipped frames have lost their image at the other end. */
+  maxClippedFraction: 0.55,
+} as const;
+
 test.describe('playthrough', () => {
   test('renders every registered scene, drives its exits, and frees its resources', async ({ page }) => {
+    // This test walks every scene, renders each, samples its frame and drives
+    // every declared exit — twelve scene builds and back again, on a software
+    // renderer in CI. The default per-test budget is sized for one scene's
+    // softlock window, not for the whole walk.
+    //
+    // This does NOT relax the softlock guarantee: that is asserted per scene
+    // below against SOFTLOCK_LIMIT_SECONDS, on each scene's own load time, and
+    // is untouched. Only the wall clock for the entire traversal moves.
+    test.setTimeout(420_000);
     const watcher = new GateWatcher(page);
     await page.goto('/');
     await waitForReady(page);
@@ -98,6 +129,56 @@ test.describe('playthrough', () => {
         visit.terminal || reachable.length > 0,
         `Scene "${sceneId}" offers no reachable exit and is not terminal — softlock.`,
       ).toBe(true);
+
+      // The scene must have put something on screen, not merely counted a frame.
+      const sample = await page.evaluate(async () => {
+        const api = globalThis.__game;
+        if (!api) {
+          throw new Error('test API missing');
+        }
+        api.requestFrameSample();
+        // The sample is taken inside the render loop, so wait for a frame.
+        await new Promise<void>((resolve) => {
+          let seen = 0;
+          const tick = (): void => {
+            seen += 1;
+            if (seen >= 3) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+        return api.frameSample();
+      });
+
+      expect(sample, `no frame sample was taken for "${sceneId}"`).toBeDefined();
+      if (sample) {
+        const visible =
+          sample.meanLuma >= VISIBILITY.minMeanLuma || sample.brightFraction >= VISIBILITY.minBrightFraction;
+        const describe =
+          `mean luma ${sample.meanLuma.toFixed(1)}/255, std ${sample.stdLuma.toFixed(1)}, ` +
+          `bright ${(sample.brightFraction * 100).toFixed(2)}%, clipped ${(sample.clippedFraction * 100).toFixed(1)}%`;
+
+        expect(
+          visible,
+          `Scene "${sceneId}" rendered a frame with nothing visible in it (${describe}). ` +
+            'It counted frames, so the old "renders at least once" check passed, but the player sees black.',
+        ).toBe(true);
+
+        expect(
+          sample.stdLuma,
+          `Scene "${sceneId}" rendered a flat field with no structure (${describe}). ` +
+            'A uniform wash is not an image.',
+        ).toBeGreaterThanOrEqual(VISIBILITY.minStdLuma);
+
+        expect(
+          sample.clippedFraction,
+          `Scene "${sceneId}" is blown out — most of the frame is at white (${describe}). ` +
+            'Overwhelming light still has to keep its structure.',
+        ).toBeLessThanOrEqual(VISIBILITY.maxClippedFraction);
+      }
 
       // Leaving the previous scene must have released that scene's resources.
       expect(

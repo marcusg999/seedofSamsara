@@ -24,6 +24,26 @@ interface Journey {
 }
 
 const JOURNEYS: readonly Journey[] = [
+  // The vertical slice: one complete path, front matter to life review. This is
+  // the journey that must stay green while the slice is the deliverable.
+  {
+    name: 'the vertical slice, front matter to life review',
+    steps: [
+      'content-notes',
+      'vignette-select',
+      'death.heart-attack',
+      'threshold.pronounced-dead',
+      'threshold.buzzing',
+      'threshold.out-of-body',
+      'threshold.tunnel',
+      'threshold.loved-ones',
+      'threshold.being-of-light',
+      'threshold.border',
+      'threshold.choice',
+      'light.life-review',
+    ],
+  },
+
   // Act 1 — all seven vignettes, each from front matter into the Threshold.
   ...[
     'death.car-crash',

@@ -29,6 +29,26 @@ export interface ContextEvents {
   restored: number;
 }
 
+/**
+ * What a rendered frame actually contains.
+ *
+ * "Every scene rendered at least once" only proves a shader compiled. It does
+ * not prove anything reached the screen: a scene whose geometry is painted over,
+ * is behind the camera, or never resolves still counts a frame and still passes.
+ * These numbers are what turn that guarantee into a real one.
+ */
+export interface FrameSample {
+  /** Mean luma, 0..255. Near zero means a black frame. */
+  meanLuma: number;
+  /** Standard deviation of luma. Near zero means a flat field with nothing in it. */
+  stdLuma: number;
+  /** Fraction of pixels brighter than 80/255. Zero means nothing is lit. */
+  brightFraction: number;
+  /** Fraction of pixels above 250/255. High means the frame is blown out. */
+  clippedFraction: number;
+  sampled: number;
+}
+
 /** Mobile gets a tighter cap: a retina phone at DPR 3 renders 9x the pixels. */
 const MAX_DPR_DESKTOP = 2;
 const MAX_DPR_MOBILE = 1.5;
@@ -60,15 +80,29 @@ export interface RendererBundle {
   isSoftwareRenderer(): boolean;
   rendererDescription(): string;
   resize(width: number, height: number): void;
+  /**
+   * Read the frame that was just drawn. Only meaningful in a build created with
+   * `readable`, and only immediately after a render.
+   */
+  sampleFrame(): FrameSample;
+  /** Whether this renderer can be sampled at all. */
+  readonly readable: boolean;
   dispose(): void;
 }
 
-export function createRenderer(canvas: HTMLCanvasElement): RendererBundle {
+export function createRenderer(canvas: HTMLCanvasElement, options: { readable?: boolean } = {}): RendererBundle {
   const renderer = new WebGLRenderer({
     canvas,
     antialias: true,
     alpha: false,
     powerPreference: 'high-performance',
+    // With antialiasing the default framebuffer is multisampled and is only
+    // resolved when the browser composites, so reading it back mid-frame returns
+    // an unresolved buffer — which measures as black however bright the scene
+    // is. Preserving the drawing buffer makes the readback valid. It costs
+    // memory and a copy, so only test builds ask for it; a shipping build keeps
+    // the default and simply cannot be sampled.
+    preserveDrawingBuffer: options.readable ?? false,
   });
   renderer.setPixelRatio(capDevicePixelRatio());
   renderer.setSize(canvas.clientWidth || 1, canvas.clientHeight || 1, false);
@@ -125,6 +159,7 @@ export function createRenderer(canvas: HTMLCanvasElement): RendererBundle {
     renderer,
     scene,
     camera,
+    readable: options.readable ?? false,
     shaderFailures,
     contextEvents,
     setCurrentSceneId(id) {
@@ -163,6 +198,79 @@ export function createRenderer(canvas: HTMLCanvasElement): RendererBundle {
       renderer.setSize(width, height, false);
       camera.aspect = width / Math.max(1, height);
       camera.updateProjectionMatrix();
+    },
+    sampleFrame() {
+      // EffectComposer leaves one of its own render targets bound when it
+      // finishes, so the default framebuffer has to be rebound explicitly.
+      renderer.setRenderTarget(null);
+      const gl = renderer.getContext();
+      const width = gl.drawingBufferWidth;
+      const height = gl.drawingBufferHeight;
+      if (width === 0 || height === 0) {
+        return { meanLuma: 0, stdLuma: 0, brightFraction: 0, clippedFraction: 0, sampled: 0 };
+      }
+
+      // readPixels cannot stride, and reading the whole frame is a synchronous
+      // GPU stall that costs more than the rest of the scene visit put together.
+      // A grid of small patches spread across the frame is representative —
+      // centre and edges both — at a fraction of the cost. Reading one corner
+      // would not be: the grade darkens corners, so a corner is the least
+      // representative part of the image there is.
+      // Coverage matters more than patch size: a scene can be correctly lit by
+      // one small bright feature (a window in a dark room), and a coarse grid
+      // misses it entirely and calls the frame empty. A denser grid of smaller
+      // patches spans the frame properly and still reads only ~14k pixels.
+      const PATCH = 16;
+      const COLS = 9;
+      const ROWS = 6;
+      const pixels = new Uint8Array(PATCH * PATCH * 4);
+
+      let total = 0;
+      let totalSquares = 0;
+      let bright = 0;
+      let clipped = 0;
+      let count = 0;
+
+      for (let gy = 0; gy < ROWS; gy += 1) {
+        for (let gx = 0; gx < COLS; gx += 1) {
+          // Spread the patches so they span the frame without touching its edge.
+          const x = Math.min(
+            Math.max(0, width - PATCH),
+            Math.round(((gx + 0.5) / COLS) * width - PATCH / 2),
+          );
+          const y = Math.min(
+            Math.max(0, height - PATCH),
+            Math.round(((gy + 0.5) / ROWS) * height - PATCH / 2),
+          );
+          gl.readPixels(x, y, PATCH, PATCH, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+          for (let i = 0; i < PATCH * PATCH; i += 1) {
+            const r = pixels[i * 4] ?? 0;
+            const g = pixels[i * 4 + 1] ?? 0;
+            const b = pixels[i * 4 + 2] ?? 0;
+            const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            total += luma;
+            totalSquares += luma * luma;
+            if (luma > 80) {
+              bright += 1;
+            }
+            if (luma > 250) {
+              clipped += 1;
+            }
+            count += 1;
+          }
+        }
+      }
+
+      const mean = count > 0 ? total / count : 0;
+      const variance = count > 0 ? Math.max(0, totalSquares / count - mean * mean) : 0;
+      return {
+        meanLuma: mean,
+        stdLuma: Math.sqrt(variance),
+        brightFraction: count > 0 ? bright / count : 0,
+        clippedFraction: count > 0 ? clipped / count : 0,
+        sampled: count,
+      };
     },
     dispose() {
       canvas.removeEventListener('webglcontextlost', onContextLost);

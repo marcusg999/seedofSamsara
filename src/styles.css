@@ -25,3 +25,130 @@ body {
   height: 100vh;
   touch-action: none;
 }
+
+/* Sparse on-screen text. One line, centred low, never two at once. */
+.captions {
+  position: fixed;
+  inset: auto 0 7vh 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 1.5rem;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.captions[data-visible='true'] {
+  opacity: 1;
+}
+
+.captions__line {
+  margin: 0;
+  max-width: 34rem;
+  text-align: center;
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+  font-weight: 300;
+  letter-spacing: 0.015em;
+  line-height: 1.5;
+  color: #efe9f4;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Front matter: content notes and the one choice the slice offers. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.5rem;
+  /* Readable without blacking out the scene behind it: the field is part of the
+     first impression, not something to hide under a scrim. */
+  background: radial-gradient(ellipse at 38% 45%, rgba(8, 7, 14, 0.82) 0%, rgba(8, 7, 14, 0.55) 45%, rgba(6, 5, 11, 0.2) 100%);
+  color: #e9e5f2;
+  opacity: 0;
+  transition: opacity 1200ms ease;
+}
+
+.overlay[data-visible='true'] {
+  opacity: 1;
+}
+
+.overlay__panel {
+  max-width: 36rem;
+  text-align: left;
+}
+
+.overlay__title {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.1rem, 2.6vw, 1.5rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.overlay__body {
+  margin: 0 0 1.25rem;
+  font-size: clamp(0.92rem, 1.9vw, 1.03rem);
+  font-weight: 300;
+  line-height: 1.65;
+  color: #c9c3d8;
+}
+
+.overlay__list {
+  margin: 0 0 1.75rem;
+  padding-left: 1.1rem;
+  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  font-weight: 300;
+  line-height: 1.7;
+  color: #c9c3d8;
+}
+
+.overlay__list li {
+  margin-bottom: 0.4rem;
+}
+
+.overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.overlay__button {
+  appearance: none;
+  border: 1px solid rgba(190, 175, 235, 0.42);
+  background: rgba(24, 20, 38, 0.6);
+  color: #efe9f8;
+  font: inherit;
+  font-size: clamp(0.9rem, 1.8vw, 1rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  padding: 0.72rem 1.4rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 320ms ease, border-color 320ms ease, transform 220ms ease;
+}
+
+.overlay__button:hover,
+.overlay__button:focus-visible {
+  background: rgba(46, 38, 74, 0.78);
+  border-color: rgba(214, 200, 255, 0.72);
+  outline: none;
+}
+
+.overlay__button:active {
+  transform: translateY(1px);
+}
+
+.overlay__hint {
+  margin: 1.5rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 300;
+  letter-spacing: 0.03em;
+  color: #8b85a0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .captions,
+  .overlay {
+    transition-duration: 1ms;
+  }
+}

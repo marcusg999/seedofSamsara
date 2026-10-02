@@ -28,7 +28,7 @@ function boot(): void {
     throw new Error(`Scene graph is invalid: ${detail}`);
   }
 
-  const game = new Game({ canvas, graph, startSceneId: START_SCENE_ID });
+  const game = new Game({ canvas, graph, startSceneId: START_SCENE_ID, readable: __TEST_API__ });
 
   let gestured = false;
   const onFirstGesture = (): void => {

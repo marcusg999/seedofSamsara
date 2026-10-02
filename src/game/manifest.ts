@@ -24,35 +24,31 @@ export interface ManifestEntry {
 }
 
 export const SCENE_MANIFEST: readonly ManifestEntry[] = [
-  // Harness only. Not gameplay: it exists so the gate has a scene to render,
-  // a shader to compile and resources to free while the game is still empty.
-  { id: 'boot', act: 'harness', status: 'implemented', note: 'Harness scene: proves render, shader compile and disposal paths.' },
-
   // Before play (GAME_BRIEF.md § Act 1, treatment rule).
-  { id: 'content-notes', act: 'front-matter', status: 'planned', note: 'Content notes appear before play.' },
-  { id: 'vignette-select', act: 'front-matter', status: 'planned', note: 'Player chooses a vignette or takes a random death.' },
+  { id: 'content-notes', act: 'front-matter', status: 'implemented', note: 'Content notes appear before play.' },
+  { id: 'vignette-select', act: 'front-matter', status: 'implemented', note: 'Player chooses a vignette or takes a random death.' },
 
   // Act 1 — the seven death vignettes.
   { id: 'death.car-crash', act: 'act1', status: 'planned', note: 'Vignette 1.' },
   { id: 'death.cliff-fall', act: 'act1', status: 'planned', note: 'Vignette 2: fall while hiking.' },
   { id: 'death.police-shooting', act: 'act1', status: 'planned', note: 'Vignette 3. Camera centers the victim.' },
   { id: 'death.bomb-blast', act: 'act1', status: 'planned', note: 'Vignette 4.' },
-  { id: 'death.heart-attack', act: 'act1', status: 'planned', note: 'Vignette 5. Grounded in cardiac-arrest NDE research.' },
+  { id: 'death.heart-attack', act: 'act1', status: 'implemented', note: 'Vignette 5. Grounded in cardiac-arrest NDE research.' },
   { id: 'death.lynching', act: 'act1', status: 'planned', note: 'Vignette 6. Camera centers the victim; perpetrators never the subject.' },
   { id: 'death.dmt', act: 'act1', status: 'planned', note: 'Vignette 7. Experience only, no dosing or preparation detail.' },
 
   // Act 2 — the Threshold, built from Moody's recurring elements.
-  { id: 'threshold.pronounced-dead', act: 'act2', status: 'planned', note: 'Hearing yourself pronounced dead.' },
-  { id: 'threshold.buzzing', act: 'act2', status: 'planned', note: 'The buzzing or ringing.' },
-  { id: 'threshold.out-of-body', act: 'act2', status: 'planned', note: 'The out-of-body view.' },
-  { id: 'threshold.tunnel', act: 'act2', status: 'planned', note: 'Living tunnel shader.' },
-  { id: 'threshold.loved-ones', act: 'act2', status: 'planned', note: 'Deceased loved ones and guides resolve out of glow.' },
-  { id: 'threshold.being-of-light', act: 'act2', status: 'planned', note: 'The Being of Light.' },
-  { id: 'threshold.border', act: 'act2', status: 'planned', note: 'The border.' },
-  { id: 'threshold.choice', act: 'act2', status: 'planned', note: 'ENTER THE LIGHT or REFUSE IT.' },
+  { id: 'threshold.pronounced-dead', act: 'act2', status: 'implemented', note: 'Hearing yourself pronounced dead.' },
+  { id: 'threshold.buzzing', act: 'act2', status: 'implemented', note: 'The buzzing or ringing.' },
+  { id: 'threshold.out-of-body', act: 'act2', status: 'implemented', note: 'The out-of-body view.' },
+  { id: 'threshold.tunnel', act: 'act2', status: 'implemented', note: 'Living tunnel shader.' },
+  { id: 'threshold.loved-ones', act: 'act2', status: 'implemented', note: 'Deceased loved ones and guides resolve out of glow.' },
+  { id: 'threshold.being-of-light', act: 'act2', status: 'implemented', note: 'The Being of Light.' },
+  { id: 'threshold.border', act: 'act2', status: 'implemented', note: 'The border.' },
+  { id: 'threshold.choice', act: 'act2', status: 'implemented', note: 'ENTER THE LIGHT or REFUSE IT.' },
 
   // Path A — the Light.
-  { id: 'light.life-review', act: 'pathA', status: 'planned', note: 'Key moments from others’ point of view. The moral engine.' },
+  { id: 'light.life-review', act: 'pathA', status: 'implemented', note: 'Key moments from others’ point of view. The moral engine.' },
   { id: 'light.council', act: 'pathA', status: 'planned', note: 'Guides weigh the life: heart against the feather.' },
   { id: 'market.parents', act: 'pathA', status: 'planned', note: 'Life Market aisle: living dioramas.' },
   { id: 'market.body', act: 'pathA', status: 'planned', note: 'Life Market aisle: body, form, birthmark carried from a past death.' },
