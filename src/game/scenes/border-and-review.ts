@@ -13,11 +13,13 @@ import {
   Vector3,
 } from 'three';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
+import type { SoulState } from '../soul';
 import { GRAMMAR, colorOf } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
 import { airShell, figureOfLight, moteField, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
 import { Overlay } from '../systems/overlay';
+import { ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
  * The border, the choice, and the life review.
@@ -96,15 +98,18 @@ function borderSurface(context: SceneContext): { mesh: Mesh; material: ShaderMat
 }
 
 const BORDER_BEATS: readonly Beat[] = [
-  { id: 'arrive', seconds: 16 },
-  { id: 'the-limit', seconds: 22, caption: 'Past this, there is no coming back.' },
+  { id: 'arrive', seconds: 8 },
+  { id: 'the-limit', seconds: 14, caption: 'Past this, there is no coming back.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
 export const borderScene: SceneDefinition = {
   id: 'threshold.border',
   title: 'The border',
-  exits: [{ id: 'onward', label: 'Onward', to: 'threshold.choice' }],
+  exits: [
+    { id: 'set-it-down', label: 'Set down what you are carrying', to: 'threshold.choice' },
+    { id: 'carry-it', label: 'Carry it across', to: 'threshold.choice' },
+  ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.border;
@@ -163,6 +168,80 @@ export const borderScene: SceneDefinition = {
     context.audio.room(0.05, 700);
     context.audio.heartbeat(false);
 
+    /**
+     * A border understood as the point of no return (`L-THRESH-08`). A limit is
+     * the one place where what you are still holding becomes a question, because
+     * it is the last place you can put it down.
+     *
+     * `L-THRESH-09` sets the tone it is asked in: what the reports describe at
+     * this point is reluctance to come back, not fear of going on. So nothing
+     * here warns the player off, and neither answer is a trap.
+     *
+     * Setting it down is forgiveness, which GAME_BRIEF.md § Systems names as one
+     * of the three things HARMONY rises through — and it is an effect on another
+     * person, felt, which is what the brief says KARMA is a ledger of. So the
+     * ledger moves in the kind direction here for the same reason it moved in
+     * the other direction in the life review: something between two people
+     * changed, and the soul was present for it.
+     *
+     * Carrying it across is not the wrong answer. A grievance is grip, and grip
+     * is WILL, which is the resource Path B spends to move at all — a soul that
+     * means to refuse the Light has a reason to keep it.
+     *
+     * Either way the spirit body re-reads: its brightness and colour are karma
+     * (`L-FRAN-03`), so the prompt says to look down.
+     */
+    let picked: 'set-it-down' | 'carry-it' | undefined;
+    let pickedAt: number | undefined;
+    let prompt: ThresholdPrompt | undefined = new ThresholdPrompt();
+
+    const choose = (choice: 'set-it-down' | 'carry-it'): void => {
+      if (picked !== undefined) {
+        return;
+      }
+      picked = choice;
+      if (choice === 'set-it-down') {
+        context.soul.karma += 1;
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment - 0.25);
+        prompt?.settle(
+          'You put it down on this side. The limit takes the colour of the far side, and the weight '
+          + 'of the thing is simply gone.',
+          'karma +1 · harmony +1 · look down: your own light has changed',
+          { id: 'set-it-down', label: 'Stand at the limit', onPick: () => { void context.takeExit('set-it-down'); } },
+        );
+      } else {
+        context.soul.will = clamp01(context.soul.will + 0.25);
+        context.soul.attachment = clamp01(context.soul.attachment + 0.2);
+        prompt?.settle(
+          'You keep it. The limit dims and closes up, and whatever you do next, you will be doing it '
+          + 'with both hands full.',
+          'will +0.25 · you are carrying more',
+          { id: 'carry-it', label: 'Stand at the limit', onPick: () => { void context.takeExit('carry-it'); } },
+        );
+      }
+    };
+
+    prompt.ask('This is the last place you can put anything down. Do you?', [
+      {
+        id: 'set-it-down',
+        label: 'Set it down here',
+        detail: 'Forgive what was left unfinished. The ledger moves, and you cross lighter.',
+        onPick: () => { choose('set-it-down'); },
+      },
+      {
+        id: 'carry-it',
+        label: 'Carry it across',
+        detail: 'Keep the grievance. It is grip, and grip is what moves you in the dark.',
+        onPick: () => { choose('carry-it'); },
+      },
+    ]);
+
+    context.resources.onDispose(() => {
+      prompt?.dispose();
+      prompt = undefined;
+    });
+
     return {
       update(delta, elapsed) {
         director.updateTo(elapsed);
@@ -174,14 +253,28 @@ export const borderScene: SceneDefinition = {
         ahead.update(elapsed, context.camera);
         motes.drift(delta, elapsed);
 
+        if (picked !== undefined && pickedAt === undefined) {
+          pickedAt = elapsed;
+        }
+        const answered = pickedAt === undefined ? 0 : ease.out(Math.min(1, (elapsed - pickedAt) / 4));
+        const released = picked === 'set-it-down' ? answered : 0;
+        const kept = picked === 'carry-it' ? answered : 0;
+
         const approach = beat.id === 'arrive' ? ease.out(t) * 0.5 : 0.5 + (beat.id === 'the-limit' ? t * 0.5 : 0.5);
 
         // Stops short. The scene never carries the player across — crossing is a
         // decision, and the decision is the next scene.
-        context.rig.target.set(0, 1.5, 4 - approach * 3.4);
-        setU(limit.material, 'uIntensity', 1 + approach * 0.7);
-        grade.washAmount = 0.03 + approach * 0.04;
-        context.audio.shimmer(0.22 + approach * 0.12);
+        context.rig.target.set(0, 1.5, 4 - approach * 3.4 - released * 1.2);
+        setU(limit.material, 'uIntensity', Math.max(0.25, 1 + approach * 0.7 + released * 0.8 - kept * 0.55));
+        setU(ahead.material, 'uIntensity', Math.max(0, 0.5 + released * 0.5 - kept * 0.35));
+        setU(behind.material, 'uIntensity', Math.max(0, 0.7 + kept * 0.3 - released * 0.2));
+        grade.washAmount = 0.03 + approach * 0.04 + released * 0.03;
+        grade.drain = grammar.drain + kept * 0.2 - released * 0.14;
+        grade.grain = grammar.grain + kept * 0.05;
+        grade.vignette = 0.3 + kept * 0.1 - released * 0.08;
+        context.post.setBloom(grammar.bloom + released * 0.35 - kept * 0.2, 0.74, 0.62);
+        context.audio.shimmer(0.22 + approach * 0.12 + released * 0.2 - kept * 0.14);
+        context.audio.drone(0.2 + kept * 0.08, 60 - kept * 8, 10 + released * 6);
       },
       beat() {
         const state = director.state;
@@ -195,6 +288,59 @@ export const borderScene: SceneDefinition = {
 };
 
 // --- the choice ----------------------------------------------------------------
+
+/**
+ * How the soul reads at the fork, in the game's own terms rather than as a HUD.
+ *
+ * Nothing here scores the player. It restates what they chose on the way here,
+ * so the one choice the brief calls central is made with the corridor's answers
+ * in view instead of from a blank slate.
+ */
+function readingOf(soul: SoulState): string[] {
+  const lines: string[] = [];
+
+  lines.push(
+    soul.karma > 0
+      ? 'Your light is warm. Something between you and someone else was mended on the way here.'
+      : soul.karma < 0
+        ? 'Your light has cooled. You stayed for what your death was doing to someone, and it went in.'
+        : 'Your light is even. Nothing between you and anyone else moved on the way here.',
+  );
+
+  lines.push(
+    soul.harmony >= 3
+      ? 'You let go of a great deal of it.'
+      : soul.harmony > 0
+        ? 'You let go of some of it.'
+        : 'You let go of none of it.',
+  );
+
+  lines.push(
+    soul.attachment >= 0.5
+      ? 'You are carrying a great deal. Weight is what the lower spheres are made of.'
+      : soul.attachment <= 0.2
+        ? 'You are carrying almost nothing.'
+        : 'You are carrying some of it still.',
+  );
+
+  lines.push(
+    soul.will >= 0.9
+      ? 'Your will is strong, and will is what moves a soul that refuses.'
+      : soul.will <= 0.6
+        ? 'Your will is low. Refusing would be a long road on little.'
+        : 'Your will is middling.',
+  );
+
+  // `L-THRESH-09`: the reports pair the reluctance to return with lasting change
+  // afterwards. Shards are this game's version of what lasts — they survive the
+  // river of forgetting while the specifics fade.
+  if (soul.shards.length > 0) {
+    lines.push(`You are keeping ${String(soul.shards.length)} thing${soul.shards.length === 1 ? '' : 's'} you were not born with.`);
+  }
+
+  return lines;
+}
+
 
 export const choiceScene: SceneDefinition = {
   id: 'threshold.choice',
@@ -258,6 +404,12 @@ export const choiceScene: SceneDefinition = {
         'Both are real paths in the finished game. Entering leads to the life review, '
         + 'the Council and the Life Market. Refusing leads to the lower spheres, and rising '
         + 'from them by freeing other souls.',
+      // What the corridor added up to, said out loud before the fork — because
+      // every element of the Threshold asked the player something, and a fork
+      // this size should be taken with the answers in view. `L-FRAN-03`: the
+      // spirit body is the soul's own record and its state is visible, read by
+      // others before the soul reads it itself.
+      list: readingOf(context.soul),
       actions: [
         {
           id: 'enter',
@@ -276,7 +428,7 @@ export const choiceScene: SceneDefinition = {
           },
         },
       ],
-      hint: 'This slice builds entering the Light. Refusing is planned.',
+      hint: 'This slice builds entering the Light. Refusing is planned. Will is what Path B spends.',
     });
     overlay.focusFirst();
 

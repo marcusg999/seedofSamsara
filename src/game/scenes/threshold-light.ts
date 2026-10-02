@@ -241,8 +241,12 @@ export const tunnelScene: SceneDefinition = {
 
     // The tunnel's own accent, which the ember recolours if it is taken. Held as
     // one Color and mutated in place, so the per-frame path allocates nothing.
-    const accent = new Color(GRAMMAR.tunnel.accent);
+    // Three persistent Colors: the wall's own accent, the wound's, and the one
+    // that is actually handed to the uniform. Mixed in place, because a Color
+    // built per frame is an allocation per frame on the hot path.
+    const baseAccent = new Color(GRAMMAR.tunnel.accent);
     const emberAccent = new Color(0xff7a5a);
+    const accent = new Color(GRAMMAR.tunnel.accent);
     const SHARD = 'past-life.the-earlier-wound';
 
     let picked: 'take-it' | 'let-it-pass' | undefined;
@@ -335,7 +339,7 @@ export const tunnelScene: SceneDefinition = {
         setU(tunnel.material, 'uBreath', 1 - opened * 0.55 + taken * 0.25);
 
         // The wound's colour gets into the walls if it was taken.
-        accent.copy(colorOf(GRAMMAR.tunnel.accent)).lerp(emberAccent, taken * 0.7);
+        accent.copy(baseAccent).lerp(emberAccent, taken * 0.7);
         setU(tunnel.material, 'uAccent', accent);
 
         // The ember rides ahead and to the side until it is answered: taken, it

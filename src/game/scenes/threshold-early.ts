@@ -113,7 +113,7 @@ export class ThresholdPrompt {
 
   /** Ask the scene's question. Two options; the prompt refuses to take more. */
   ask(question: string, options: readonly PromptOption[]): void {
-    if (options.length < 2 || options.length > 2) {
+    if (options.length !== 2) {
       throw new Error(`A Threshold question takes exactly two answers, got ${String(options.length)}`);
     }
     this.panel.replaceChildren();
@@ -351,11 +351,14 @@ function rememberedRoom(
       }
     },
     setPresence(value) {
-      presence = value;
-      lineMaterial.opacity = 0.85 * value;
-      cupMaterial.opacity = 0.9 * value;
-      setU(windowGlow.material, 'uIntensity', 2.2 * value);
-      setU(restingGlow.material, 'uIntensity', 1.5 * value * bodyGlow);
+      // A scene may push presence past 1 to say the room got *more* present.
+      // Material opacity is not a brightness, so it stops at 1 and the glows
+      // carry the rest.
+      presence = Math.max(0, value);
+      lineMaterial.opacity = Math.min(1, 0.85 * presence);
+      cupMaterial.opacity = Math.min(1, 0.9 * presence);
+      setU(windowGlow.material, 'uIntensity', 2.2 * presence);
+      setU(restingGlow.material, 'uIntensity', 1.5 * presence * bodyGlow);
     },
     setBody(value) {
       bodyGlow = value;
@@ -789,6 +792,7 @@ export const outOfBodyScene: SceneDefinition = {
      * on the spot: its brightness and colour are karma (`L-FRAN-03`, and
      * GAME_BRIEF.md § Platform), so the prompt says to look down.
      */
+    const WITNESSED = 'threshold.the-two-in-the-room';
     let picked: 'the-body' | 'the-living' | undefined;
     let pickedAt: number | undefined;
     let prompt: ThresholdPrompt | undefined = new ThresholdPrompt();
@@ -809,7 +813,9 @@ export const outOfBodyScene: SceneDefinition = {
       } else {
         context.soul.karma -= 1;
         context.soul.harmony += 1;
-        context.soul.shards.push('threshold.the-two-in-the-room');
+        if (!context.soul.shards.includes(WITNESSED)) {
+          context.soul.shards.push(WITNESSED);
+        }
         prompt?.settle(
           'You stay with them instead. They resolve, and what this is costing them arrives all at once.',
           'karma −1 · harmony +1 · look down: your own light has changed',
