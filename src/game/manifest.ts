@@ -58,8 +58,8 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'market.place', act: 'pathA', status: 'implemented', note: 'Life Market aisle: planet, culture, era.' },
   { id: 'market.contracts', act: 'pathA', status: 'implemented', note: 'Life Market aisle: soul contracts.' },
   { id: 'market.checkout', act: 'pathA', status: 'implemented', note: 'The cart is weighed; the guides speak once.' },
-  { id: 'light.river-of-forgetting', act: 'pathA', status: 'planned', note: 'Myth of Er: souls drink and forget.' },
-  { id: 'light.rebirth', act: 'pathA', status: 'planned', note: 'Cart contents become the next run’s opening conditions.' },
+  { id: 'light.river-of-forgetting', act: 'pathA', status: 'implemented', note: 'Myth of Er: souls drink and forget.' },
+  { id: 'light.rebirth', act: 'pathA', status: 'implemented', note: 'Cart contents become the next run’s opening conditions.' },
 
   // Path B — refusing the Light.
   { id: 'refuse.earthbound', act: 'pathB', status: 'planned', note: 'Haunting the living.' },

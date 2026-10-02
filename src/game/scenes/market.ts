@@ -472,7 +472,7 @@ export const marketCheckoutScene: SceneDefinition = {
     river.className = 'overlay__button';
     river.textContent = 'To the River of Forgetting';
     river.addEventListener('click', () => {
-      context.captions.show('The River of Forgetting is not built in this slice. Rebirth is next.', 7);
+      void context.takeExit('river');
     });
     const again = document.createElement('button');
     again.type = 'button';

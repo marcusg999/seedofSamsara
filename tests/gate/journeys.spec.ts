@@ -129,6 +129,17 @@ const JOURNEYS: readonly Journey[] = [
 test.describe('required journeys', () => {
   for (const journey of JOURNEYS) {
     test(journey.name, async ({ page }) => {
+      // A journey builds one scene per step, and the longest now walks thirteen
+      // of them — review, Council, seven aisles, checkout, the river, rebirth.
+      // The default per-test budget is sized for a single scene's softlock
+      // window, not for a whole path through the game.
+      //
+      // This does NOT relax the softlock guarantee. That is asserted per scene
+      // in playthrough.spec.ts, against each scene's own load time, for every
+      // registered scene, and is untouched. Only this traversal's wall clock
+      // scales with how far it walks.
+      test.setTimeout(Math.max(90_000, journey.steps.length * 30_000));
+
       const watcher = new GateWatcher(page);
       await page.goto('/');
       await waitForReady(page);

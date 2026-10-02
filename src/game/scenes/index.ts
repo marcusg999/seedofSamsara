@@ -6,6 +6,7 @@ import { tunnelScene, lovedOnesScene, beingOfLightScene } from './threshold-ligh
 import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
 import { councilScene } from './council';
 import { marketAisleScenes, marketCheckoutScene } from './market';
+import { riverOfForgettingScene, rebirthScene } from './rebirth';
 
 /**
  * Every scene the game has actually built. The manifest in `../manifest.ts`
@@ -34,6 +35,8 @@ export function createSceneGraph(): SceneGraph {
     councilScene,
     ...marketAisleScenes,
     marketCheckoutScene,
+    riverOfForgettingScene,
+    rebirthScene,
   );
 }
 
@@ -62,4 +65,6 @@ export const SLICE_PATH: readonly string[] = [
   'market.place',
   'market.contracts',
   'market.checkout',
+  'light.river-of-forgetting',
+  'light.rebirth',
 ];

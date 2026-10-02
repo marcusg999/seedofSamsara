@@ -198,4 +198,107 @@ test.describe('the brief', () => {
         'so it is showing nothing about the soul’s state.',
     ).not.toEqual(states.neutral);
   });
+
+  test('the loop closes: a life ends, and something outlives it', async ({ page }) => {
+    const watcher = new GateWatcher(page);
+    await page.goto('/');
+    await waitForReady(page);
+    await clickFirst(page);
+
+    // GAME_BRIEF.md § Systems: "each run is a life. Wisdom and unlocked memories
+    // persist across runs; specifics fade." And § The Life Market: the cart's
+    // contents become the opening conditions of the next run.
+    //
+    // This is the mechanic the game is named for. Before the river and rebirth
+    // existed, nothing in this game outlived a run, so this test could not have
+    // passed on any earlier commit.
+    const loop = await page.evaluate(async () => {
+      const api = globalThis.__game;
+      if (!api) {
+        throw new Error('test API missing');
+      }
+      const frame = async (): Promise<void> => {
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      };
+      const playOut = async (): Promise<void> => {
+        for (let guard = 0; guard < 40; guard += 1) {
+          const beat = api.beat();
+          if (!beat || beat.id === 'wait') {
+            break;
+          }
+          api.advanceBeat();
+          await frame();
+        }
+        for (let i = 0; i < 8; i += 1) {
+          await frame();
+        }
+      };
+
+      api.forgetAllLives();
+      const before = api.incarnation();
+
+      // Earn something worth carrying.
+      await api.goTo('light.life-review');
+      await playOut();
+
+      // Take a lesson, choosing by what is actually takeable rather than by
+      // position — an unaffordable first item would otherwise make this test
+      // fail for a reason that has nothing to do with the loop.
+      await api.goTo('market.trauma');
+      await frame();
+      let took = false;
+      for (const button of [...document.querySelectorAll('.market__item')]) {
+        (button as HTMLButtonElement).click();
+        const act = document.querySelector<HTMLButtonElement>('.market__act');
+        if (act && !act.disabled && act.textContent === 'Take it') {
+          act.click();
+          took = true;
+          break;
+        }
+      }
+
+      await api.goTo('light.river-of-forgetting');
+      await playOut();
+      await api.goTo('light.rebirth');
+      await playOut();
+
+      const after = api.incarnation();
+      document.querySelector<HTMLButtonElement>('.market__nav .overlay__button')?.click();
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, 400);
+      });
+
+      return { before, after, took, cartAfter: api.cart().length, shardsAfter: api.shards().length };
+    });
+
+    expect(loop.took, 'could not take any lesson from the Trauma aisle').toBe(true);
+    expect(
+      loop.after.lives,
+      'Rebirth did not record that a life had ended, so nothing counts the loop.',
+    ).toBeGreaterThan(loop.before.lives);
+    expect(
+      loop.after.wisdom.length,
+      'Nothing survived the river. Wisdom is supposed to persist across runs.',
+    ).toBeGreaterThan(0);
+    expect(
+      loop.after.birthmark,
+      'A death wound should carry over as the next body\u2019s birthmark (lore bible L-PAST-02).',
+    ).toBeDefined();
+    expect(
+      loop.cartAfter,
+      'The cart should be empty in the next life: the particulars do not come with you.',
+    ).toBe(0);
+    expect(
+      loop.shardsAfter,
+      'Memory shards persist across runs, so the next life should start carrying them.',
+    ).toBeGreaterThan(0);
+
+    await watcher.assertClean('while closing the loop');
+  });
 });

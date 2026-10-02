@@ -2,6 +2,7 @@ import type { Game } from './game';
 import type { SceneSnapshot } from './game';
 import { SCENE_MANIFEST } from './manifest';
 import { SLICE_PATH } from './scenes/index';
+import { clearIncarnation, loadIncarnation } from './systems/incarnation';
 import type { GraphIssue } from './state-machine';
 
 /**
@@ -73,6 +74,16 @@ export interface TestApi {
   discarnate(): boolean;
   /** How the spirit body reads. Brightness and colour reflect karma. */
   spiritBody(): { color: number; intensity: number };
+  /** What previous lives left behind. The loop's only durable state. */
+  incarnation(): {
+    lives: number;
+    wisdom: string[];
+    memories: string[];
+    birthmark: string | undefined;
+    opening: { karma: number; attachment: number; items: { id: string }[] };
+  };
+  /** Forget every past life. For tests only; the game never calls this. */
+  forgetAllLives(): void;
   /** Ask the render loop to measure the next frame it draws. */
   requestFrameSample(): void;
   /** What that frame actually contained. Undefined until the loop has sampled. */
@@ -154,6 +165,10 @@ export function installTestApi(game: Game, errors: readonly GateError[]): void {
     camera: () => game.cameraRig.debug,
     discarnate: () => game.isDiscarnate,
     spiritBody: () => game.spiritBodyAppearance,
+    incarnation: () => loadIncarnation(),
+    forgetAllLives: () => {
+      clearIncarnation();
+    },
     requestFrameSample: () => {
       game.requestFrameSample();
     },
