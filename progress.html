@@ -78,7 +78,7 @@
       <h1>Seed of Samsara — Progress</h1>
       <p class="sub">
         What changed, what the critic said, and the current blind-test result per piece.
-        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02 (vertical slice).
+        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02 (Council and Life Market).
       </p>
 
       <h2>Gate status</h2>
@@ -88,7 +88,7 @@
           <li>typecheck <b>&check;</b></li>
           <li>lint <b>&check;</b></li>
           <li>build <b>&check;</b></li>
-          <li>playthrough <b>&check;</b> 9 passed, 16 skipped</li>
+          <li>playthrough <b>&check;</b> 20 passed, 9 skipped</li>
         </ul>
         <ul class="notes">
           <li>
@@ -261,80 +261,88 @@
 
       <h2>What changed this pass</h2>
       <div class="panel">
+        <p style="margin:0 0 0.6rem">
+          <strong>Scene coverage 12/39 &rarr; 21/39.</strong> Path A now runs life review &rarr;
+          Council &rarr; seven Life Market aisles &rarr; checkout.
+        </p>
         <ul class="notes">
-          <li><strong>Twelve scenes built</strong>, one complete path: content notes, vignette
-            select, the heart attack, pronounced dead, the buzzing, the out-of-body lift, the
-            tunnel, the ones who came, the Being of Light, the border, the choice, the life review.
-            The harness scene is gone.</li>
-          <li><strong>Systems:</strong> a beat director so pacing is authored as data; procedural
-            audio with no asset files (a heartbeat that falters, a ring that rises, a drone that
-            opens into the Light); a two-pass post pipeline whose grade does drain, aberration,
-            distortion, vignette, grain, smear and tonemap in one shader; a damped camera rig with
-            embodied and drifting modes.</li>
-          <li><strong>Three systemic rendering bugs found and fixed:</strong> the glow form computed
-            radial falloff on a sphere <em>shell</em>, where every fragment sits at the same radius,
-            so it rendered as a flat disc; motes were square because <code>PointsMaterial</code>
-            draws squares without a sprite; and the air shell, being a transparent sphere at the
-            origin, was sorted <em>after</em> everything further away and painted whole scenes out.
-            That last one is why several scenes were black.</li>
-          <li><strong>The tunnel was rotated so its lit end was behind the camera</strong>, and its
-            wall shader seamed down one line because it drove frequencies from a UV coordinate that
-            wraps. Both fixed.</li>
-          <li><strong>The Light was a white rectangle.</strong> Scaling a glow sprite until the
-            camera is inside it fills the frame with one flat value. Replaced with a radiance shell
-            whose filaments keep structure at any brightness.</li>
+          <li>
+            <strong>Pacing.</strong> The heart-attack vignette reached the afterlife at 3.5 minutes
+            and then held its closing image indefinitely, so a player who simply watched could sit
+            in a dead room well past that. It now runs 164s of beats plus a 10-second grace, after
+            which the scene lets go by itself &mdash; 174s, under three minutes, with the exit live
+            from the first frame for anyone who wants to leave sooner. Every beat was trimmed rather
+            than any beat cut, so the arc keeps its shape. <code>GAME_BRIEF.md</code> was updated to
+            match rather than left contradicting the build.
+          </li>
+          <li>
+            <strong>The Council.</strong> The guides weigh the heart against the feather, and the
+            beam tilts by the karma the review recorded. Its real job is that it makes the ledger
+            run end to end: the review writes karma, the Council reads it and locks obligations into
+            the cart, and the Market honours those locks. Before this, karma was written and nothing
+            read it.
+          </li>
+          <li>
+            <strong>The Life Market.</strong> Seven aisles and a checkout, sharing one mechanism
+            rather than being seven hand-written scenes. 35 items, each carrying a sensory flash
+            rather than a description. Locked obligations show as &ldquo;already in your cart&rdquo;
+            and cannot be put back, which is what the brief specifies for unresolved karma.
+          </li>
+          <li>
+            <strong>The seven &ldquo;Life Market aisle through checkout&rdquo; journeys now pass.</strong>
+            They had skipped on every run since the first commit. This is the first time that part
+            of the brief has been exercised at all.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Two economy decisions worth a second opinion</h2>
+      <div class="panel">
+        <ul class="notes">
+          <li>
+            <strong>The numbers are a first guess.</strong> All pricing lives in one table in
+            <code>src/game/systems/market.ts</code>, deliberately, because an economy spread across
+            eight scene files cannot be tuned. Nobody has played it. With the slice's single review
+            writing &minus;1 karma, a soul arrives with one locked lesson and very little to spend
+            &mdash; which may be tight, or may just be stingy. Only playing it will say.
+          </li>
+          <li>
+            <strong>The gift flashes are written to be tempting.</strong> The brief allows a cart of
+            only gifts and has the guides warn that such a life teaches little. That warning is only
+            worth anything if the gifted life is genuinely attractive; written as obviously hollow,
+            the choice would be theatre and the warning redundant.
+          </li>
         </ul>
       </div>
 
       <h2>Known, named, not yet fixed</h2>
       <div class="panel">
         <ul class="notes">
-          <li>The kitchen has too few objects to read as lived-in, and the death still changes the
-            lens more than it changes the room. No prop in it does anything across the sequence.</li>
+          <li>The reincarnation loop is still open. The River of Forgetting and rebirth are unbuilt,
+            so the cart never becomes the next run's opening conditions &mdash; the one mechanic the
+            game is named for. Checkout names them rather than pretending the path continues.</li>
+          <li>Six of seven vignettes are unbuilt, including the two carrying the brief's hardest
+            content rules. Path B does not exist at all.</li>
+          <li>The kitchen has too few objects to read as lived-in, and its death still changes the
+            lens more than the room &mdash; the vignette critic's biggest gap, only partly addressed.</li>
           <li>Nothing in the Threshold has a horizon or an object of known size, so none of it
             conveys real scale.</li>
-          <li>The presences are additive glow with no boundary, no terminator and no occlusion, so
-            they read as light rather than as bodies.</li>
-          <li>Front-matter typography is the browser's default UI stack, and the copy still talks
-            about what is &ldquo;built&rdquo; and &ldquo;planned&rdquo; — release notes inside the
-            game.</li>
-          <li>Captions are carrying beats the images do not, which is the opposite of the intent.</li>
-        </ul>
-      </div>
-
-      <h2>Two things the gate caught on its first run</h2>
-      <div class="panel">
-        <p style="margin:0 0 0.5rem; color:var(--muted)">
-          Recorded because <code>CLAUDE.md</code> § Gotchas says to add to it every time a mistake is
-          made or narrowly avoided. Both are now in that section.
-        </p>
-        <ul class="notes">
-          <li>
-            <strong>Playwright / Chromium version skew.</strong> A caret range resolved Playwright to
-            a version whose required Chromium build was not the one installed, and all 24 tests failed
-            on a missing executable rather than on anything about the game. Fixed by pinning the
-            Playwright version exactly, since that version determines the browser build.
-          </li>
-          <li>
-            <strong>A WebGL warning that was not ours.</strong> The gate failed on
-            <code>GPU stall due to ReadPixels</code>. Before filtering it, it was tested against a
-            page containing nothing but a canvas and <code>gl.clear</code> — no three.js, none of our
-            code — which emitted the identical message. It is the headless compositor reading the
-            framebuffer back, so it is filtered, scoped narrowly to that one driver performance
-            message. Every other WebGL warning still fails the gate.
-          </li>
+          <li>The presences have no boundary, terminator or occlusion, so they read as light rather
+            than as bodies.</li>
+          <li>Front-matter typography is still the browser's default UI stack.</li>
+          <li>No critic has reviewed the Council or the Market. Every verdict on this page predates
+            both.</li>
         </ul>
       </div>
 
       <h2>Next</h2>
       <div class="panel">
         <ul class="notes">
-          <li>Re-run all three critics on the current build. Round 1 is complete; the brief asks for
-            a loop until a critic picks ours blind, and that has not happened.</li>
-          <li>Act on the vignette critic's biggest gap properly: a real light the room is lit
-            <em>by</em>, that can then fail — giving the death a change in the world rather than on
-            the lens.</li>
-          <li>Give the Threshold a ground plane and a horizon; it is the cheapest scale there is.</li>
+          <li><strong>The River of Forgetting and rebirth.</strong> Two scenes, and they close the
+            loop: the cart becomes the opening conditions of the next run, and meta-progression
+            finally has something to carry.</li>
+          <li>Run the critics on the Council and the Market, which nothing has judged yet.</li>
+          <li>Play the economy and tune it. The numbers are in one table for exactly this.</li>
         </ul>
       </div>
 
