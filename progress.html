@@ -78,7 +78,7 @@
       <h1>Seed of Samsara — Progress</h1>
       <p class="sub">
         What changed, what the critic said, and the current blind-test result per piece.
-        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02.
+        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02 (Council and Life Market).
       </p>
 
       <h2>Gate status</h2>
@@ -88,20 +88,129 @@
           <li>typecheck <b>&check;</b></li>
           <li>lint <b>&check;</b></li>
           <li>build <b>&check;</b></li>
-          <li>playthrough <b>&check;</b> 6 passed, 18 skipped</li>
+          <li>playthrough <b>&check;</b> 20 passed, 9 skipped</li>
         </ul>
         <ul class="notes">
           <li>
-            The 18 skips are the required journeys — every vignette, both paths, every Life Market
-            aisle through checkout. They are declared in <code>tests/gate/journeys.spec.ts</code>
-            and each skip names the scenes it is waiting on, so a missing vignette is
-            <em>visible</em> rather than absent. They start enforcing themselves the moment those
-            scenes are registered; no test needs to be written or widened.
+            <strong>The gate now checks that a scene is visible, not merely rendered.</strong>
+            All three critics independently reported scenes as blank while the gate called them
+            rendered — because &ldquo;renders at least once&rdquo; only proves a shader compiled.
+            Every scene is now sampled from the real frame buffer and fails if it has nothing in it
+            (black), no structure (a flat wash), or is blown out. This is a strengthening of the
+            gate, not a relaxation: no existing assertion was removed or loosened.
           </li>
           <li>
-            Frame time is measured but not judged: this container renders through SwiftShader, and
-            software frame times are not real performance (<code>CLAUDE.md</code> § Gotchas). The
-            budget assertion binds only on a hardware GPU.
+            Building that check surfaced four bugs in itself before it was trustworthy — it sampled
+            an intermediate post-processing target instead of the screen, then a 182&times;102 patch
+            of the bottom-left <em>corner</em> (the darkest part of frame, because the grade
+            vignettes corners), then stalled the GPU reading whole frames, then missed small bright
+            features on too coarse a grid. The first two made it report black for scenes that
+            screenshot at mean luma 81.
+          </li>
+          <li>
+            The one timing change: the scene-traversal test's wall clock was raised, because it
+            walks twelve scene builds on a software renderer. The 60-second softlock guarantee is
+            asserted per scene inside that test and is untouched.
+          </li>
+          <li>
+            Frame time is measured but not judged — this container renders through SwiftShader and
+            software frame times are not real performance (<code>CLAUDE.md</code> § Gotchas).
+          </li>
+        </ul>
+      </div>
+
+      <h2>Which bar judges which piece</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.5rem">
+          Straight from <code>GAME_BRIEF.md</code> § Quality bars. Recorded here because it was
+          got wrong once and should not be got wrong again.
+        </p>
+        <table>
+          <thead><tr><th>Bar</th><th>Judges</th></tr></thead>
+          <tbody>
+            <tr><td>Journey</td><td><strong>The Light</strong>, the Threshold, higher spheres, the Life Market</td></tr>
+            <tr><td>Playdead's Inside</td><td>Death vignettes, lower spheres</td></tr>
+            <tr><td>Messenger by Abeto</td><td>Controls, camera, polish, performance</td></tr>
+          </tbody>
+        </table>
+        <ul class="notes">
+          <li>
+            <strong>The Light is judged against Journey, never against Messenger.</strong> Messenger
+            is the bar for controls, camera, polish and performance — rendering craft — and nothing
+            else. A review of rendering craft can report defects that happen to appear in the Light's
+            scenes, but it does not pass judgement on the Light.
+          </li>
+        </ul>
+      </div>
+
+      <h2>What the critics said</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.75rem; color:var(--muted)">
+          Each critic is a separate agent with no access to the builder's notes
+          (<code>CLAUDE.md</code> § Working style), given frames and a written rubric for its piece's
+          bar, and asked to name one biggest gap and return a blind verdict.
+        </p>
+        <table>
+          <thead>
+            <tr><th>Piece</th><th>Bar</th><th>Verdict</th><th>Biggest gap</th><th>Acted on</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Heart-attack vignette</td>
+              <td>Inside</td>
+              <td><span class="tag t-warn">NO</span></td>
+              <td>The lamp emits no light; everything is backlit by a flat window card, so nothing
+                has a lit edge and the death can only be expressed by moving an exposure slider.</td>
+              <td>Partly — emissive bulb, bounce and a second practical are in; the room still has
+                too few props and the death still changes the lens more than the world.</td>
+            </tr>
+            <tr>
+              <td>Threshold &amp; the Light</td>
+              <td>Journey</td>
+              <td><span class="tag t-warn">NO</span></td>
+              <td>Six of ten frames contained no visible image, and the gate certified them as
+                rendered. Proposed a luminance-and-structure floor in the gate.</td>
+              <td><span class="tag t-ok">Yes</span> — root-caused, fixed, and the proposed check is
+                now in the gate.</td>
+            </tr>
+            <tr>
+              <td>Life review &amp; front matter</td>
+              <td>Journey</td>
+              <td><span class="tag t-warn">NO</span></td>
+              <td>The vantage switch — the scene's stated emotional mechanic — was invisible: both
+                vantages used an identical camera, so it existed only in the subtitle.</td>
+              <td>Partly — the two vantages are now a genuine shot/reverse-shot cut. Typography and
+                copy are still untouched.</td>
+            </tr>
+            <tr>
+              <td>Rendering craft</td>
+              <td>Messenger</td>
+              <td><span class="tag t-warn">NO</span></td>
+              <td><code>antialias: true</code> was dead: the scene renders into the composer's own
+                target, which three.js builds with no samples, so nothing in the game was
+                antialiased.</td>
+              <td><span class="tag t-ok">Yes</span> — verified in the three.js source, fixed with a
+                multisampled target, and the gate now asserts sample count.</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul class="notes">
+          <li>
+            Every verdict so far is <em>NO</em>. The loop has had one round per piece, not the
+            &ldquo;until the critic picks ours&rdquo; the brief asks for, and nothing here claims
+            otherwise.
+          </li>
+          <li>
+            Also fixed from the rendering review: the wash was added after exposure and before the
+            tonemap, driving bright beats past the curve into a clamp; <code>discard</code> edges
+            replaced with smoothstep, which restores early-Z on mobile; bloom thresholds raised from
+            0.16&ndash;0.30, where they selected the whole scene rather than its highlights. The
+            worst frame went from 41.1% to 30.5% pure white with standard deviation nearly doubling,
+            meaning structure returned rather than the image merely dimming.
+          </li>
+          <li>
+            Captions now carry their own backdrop. One measured 1.75:1 against a blown-out frame,
+            below the 3:1 a large-text contrast target asks for.
           </li>
         </ul>
       </div>
@@ -110,135 +219,130 @@
       <div class="panel">
         <table>
           <thead>
-            <tr><th>Piece</th><th>State</th><th>Critic</th><th>Blind test</th><th>Notes</th></tr>
+            <tr><th>Piece</th><th>State</th><th>Critic</th><th>Blind verdict</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Scaffold &amp; state machine</td>
-              <td><span class="tag t-ok">built</span></td>
-              <td><span class="tag t-todo">not run</span></td>
-              <td>n/a</td>
-              <td>Infrastructure, not a judgeable piece. No quality bar in GAME_BRIEF.md applies.</td>
-            </tr>
-            <tr>
-              <td>Error gate + playthrough harness</td>
-              <td><span class="tag t-ok">built</span></td>
-              <td><span class="tag t-todo">not run</span></td>
-              <td>n/a</td>
-              <td>Same. Judged by whether it catches real failures — see the two it already caught, below.</td>
-            </tr>
-            <tr>
-              <td><code>research/lore-bible.md</code></td>
-              <td><span class="tag t-ok">built</span></td>
-              <td><span class="tag t-todo">not run</span></td>
-              <td>n/a</td>
-              <td>50 claims with ids, every one sourced and tiered. Cite by id from code and copy.</td>
-            </tr>
-            <tr>
-              <td>Death vignettes (7)</td>
-              <td><span class="tag t-todo">not started</span></td>
-              <td>—</td>
-              <td>vs Playdead's <em>Inside</em></td>
-              <td>Gameplay. Not started by instruction.</td>
-            </tr>
-            <tr>
-              <td>The Threshold</td>
-              <td><span class="tag t-todo">not started</span></td>
-              <td>—</td>
-              <td>vs <em>Journey</em></td>
-              <td>Scene ids and Moody mapping already fixed in the lore bible § 2.</td>
-            </tr>
-            <tr>
-              <td>Path A — Light, Council, Life Market</td>
-              <td><span class="tag t-todo">not started</span></td>
-              <td>—</td>
-              <td>vs <em>Journey</em></td>
-              <td>Market aisles enumerated in the manifest; economy still unsourced (lore bible § 12).</td>
-            </tr>
-            <tr>
-              <td>Path B — refusing the Light</td>
-              <td><span class="tag t-todo">not started</span></td>
-              <td>—</td>
-              <td>vs Playdead's <em>Inside</em> (lower) / <em>Journey</em> (higher)</td>
-              <td>Cosmology fully mapped from Franchezzo, lore bible § 11.</td>
-            </tr>
-            <tr>
-              <td>Controls, camera, polish, performance</td>
-              <td><span class="tag t-todo">not started</span></td>
-              <td>—</td>
-              <td>vs Messenger by Abeto</td>
-              <td>Played live in a browser, per GAME_BRIEF.md § Quality bars.</td>
-            </tr>
+            <tr><td>The life before the heart attack</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The moment of death</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The out-of-body lift</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The tunnel</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The guides and the Being of Light</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The choice at the border</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>The life review</td><td><span class="tag t-ok">built</span></td><td>round 1</td><td><span class="tag t-warn">NO</span></td></tr>
+            <tr><td>Shader &amp; post-processing pipeline</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>n/a</td></tr>
+            <tr><td>Audio</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>stills carry no audio</td></tr>
+            <tr><td>Controls and camera</td><td><span class="tag t-ok">built</span></td><td><span class="tag t-todo">not judged</span></td><td>see limitation below</td></tr>
+            <tr><td>Performance</td><td><span class="tag t-ok">measured</span></td><td><span class="tag t-todo">not judged</span></td><td>software renderer only</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h2>What changed this pass</h2>
+      <h2>Limitations of this round — read before trusting the table above</h2>
       <div class="panel">
         <ul class="notes">
           <li>
-            <strong>Scaffold.</strong> Vite + TypeScript strict (<code>noUncheckedIndexedAccess</code>,
-            <code>exactOptionalPropertyTypes</code>), three.js, type-aware ESLint. Three entry points
-            kept as required: <code>dev</code>, <code>build</code>, <code>gate</code>.
+            <strong>No reference footage was compared against.</strong> Neither this builder nor any
+            critic can watch video. Every critic judged our frames against a written rubric derived
+            from its bar, not side by side with the bar itself. Where a verdict says a stranger would
+            pick the other one, that is a judgement from criteria, not from a comparison.
           </li>
           <li>
-            <strong>Explicit state machine.</strong> Every state declares its exits; a state with no
-            exits must mark itself terminal or the graph check fails it as a softlock.
+            <strong>The controls/camera/polish bar was never played.</strong> Loading it needs
+            Chromium to trust this container's proxy CA; it does not, and the only override is
+            disabling TLS verification, which this environment forbids. So controls, camera feel and
+            polish have not been judged against anything.
           </li>
           <li>
-            <strong>Seeded RNG.</strong> One module, named sub-streams per scene, so adding a draw in
-            one scene cannot shift another's sequence. Nothing calls <code>Math.random()</code>.
-          </li>
-          <li>
-            <strong>Resource tracker.</strong> Scenes allocate through it and are swept on unload;
-            the playthrough asserts a sweep ran on every transition.
-          </li>
-          <li>
-            <strong>Test API</strong> on <code>window.__game</code> in dev and test builds only,
-            exposing scene, karma, harmony, will, cart and <code>goTo()</code>.
-          </li>
-          <li>
-            <strong>Research.</strong> Franchezzo's full text fetched into <code>research/sources/</code>
-            (public domain, 1896) and committed, so the lore bible's chapter and page citations are
-            verifiable offline. <code>npm run research:fetch</code> reproduces it byte-identically.
+            <strong>Stills cannot judge pacing, motion or audio.</strong> Every critic said so
+            explicitly. The vignette runs about three minutes and was reviewed from five frames.
           </li>
         </ul>
       </div>
 
-      <h2>Two things the gate caught on its first run</h2>
+      <h2>What changed this pass</h2>
       <div class="panel">
-        <p style="margin:0 0 0.5rem; color:var(--muted)">
-          Recorded because <code>CLAUDE.md</code> § Gotchas says to add to it every time a mistake is
-          made or narrowly avoided. Both are now in that section.
+        <p style="margin:0 0 0.6rem">
+          <strong>Scene coverage 12/39 &rarr; 21/39.</strong> Path A now runs life review &rarr;
+          Council &rarr; seven Life Market aisles &rarr; checkout.
         </p>
         <ul class="notes">
           <li>
-            <strong>Playwright / Chromium version skew.</strong> A caret range resolved Playwright to
-            a version whose required Chromium build was not the one installed, and all 24 tests failed
-            on a missing executable rather than on anything about the game. Fixed by pinning the
-            Playwright version exactly, since that version determines the browser build.
+            <strong>Pacing.</strong> The heart-attack vignette reached the afterlife at 3.5 minutes
+            and then held its closing image indefinitely, so a player who simply watched could sit
+            in a dead room well past that. It now runs 164s of beats plus a 10-second grace, after
+            which the scene lets go by itself &mdash; 174s, under three minutes, with the exit live
+            from the first frame for anyone who wants to leave sooner. Every beat was trimmed rather
+            than any beat cut, so the arc keeps its shape. <code>GAME_BRIEF.md</code> was updated to
+            match rather than left contradicting the build.
           </li>
           <li>
-            <strong>A WebGL warning that was not ours.</strong> The gate failed on
-            <code>GPU stall due to ReadPixels</code>. Before filtering it, it was tested against a
-            page containing nothing but a canvas and <code>gl.clear</code> — no three.js, none of our
-            code — which emitted the identical message. It is the headless compositor reading the
-            framebuffer back, so it is filtered, scoped narrowly to that one driver performance
-            message. Every other WebGL warning still fails the gate.
+            <strong>The Council.</strong> The guides weigh the heart against the feather, and the
+            beam tilts by the karma the review recorded. Its real job is that it makes the ledger
+            run end to end: the review writes karma, the Council reads it and locks obligations into
+            the cart, and the Market honours those locks. Before this, karma was written and nothing
+            read it.
           </li>
+          <li>
+            <strong>The Life Market.</strong> Seven aisles and a checkout, sharing one mechanism
+            rather than being seven hand-written scenes. 35 items, each carrying a sensory flash
+            rather than a description. Locked obligations show as &ldquo;already in your cart&rdquo;
+            and cannot be put back, which is what the brief specifies for unresolved karma.
+          </li>
+          <li>
+            <strong>The seven &ldquo;Life Market aisle through checkout&rdquo; journeys now pass.</strong>
+            They had skipped on every run since the first commit. This is the first time that part
+            of the brief has been exercised at all.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Two economy decisions worth a second opinion</h2>
+      <div class="panel">
+        <ul class="notes">
+          <li>
+            <strong>The numbers are a first guess.</strong> All pricing lives in one table in
+            <code>src/game/systems/market.ts</code>, deliberately, because an economy spread across
+            eight scene files cannot be tuned. Nobody has played it. With the slice's single review
+            writing &minus;1 karma, a soul arrives with one locked lesson and very little to spend
+            &mdash; which may be tight, or may just be stingy. Only playing it will say.
+          </li>
+          <li>
+            <strong>The gift flashes are written to be tempting.</strong> The brief allows a cart of
+            only gifts and has the guides warn that such a life teaches little. That warning is only
+            worth anything if the gifted life is genuinely attractive; written as obviously hollow,
+            the choice would be theatre and the warning redundant.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Known, named, not yet fixed</h2>
+      <div class="panel">
+        <ul class="notes">
+          <li>The reincarnation loop is still open. The River of Forgetting and rebirth are unbuilt,
+            so the cart never becomes the next run's opening conditions &mdash; the one mechanic the
+            game is named for. Checkout names them rather than pretending the path continues.</li>
+          <li>Six of seven vignettes are unbuilt, including the two carrying the brief's hardest
+            content rules. Path B does not exist at all.</li>
+          <li>The kitchen has too few objects to read as lived-in, and its death still changes the
+            lens more than the room &mdash; the vignette critic's biggest gap, only partly addressed.</li>
+          <li>Nothing in the Threshold has a horizon or an object of known size, so none of it
+            conveys real scale.</li>
+          <li>The presences have no boundary, terminator or occlusion, so they read as light rather
+            than as bodies.</li>
+          <li>Front-matter typography is still the browser's default UI stack.</li>
+          <li>No critic has reviewed the Council or the Market. Every verdict on this page predates
+            both.</li>
         </ul>
       </div>
 
       <h2>Next</h2>
       <div class="panel">
         <ul class="notes">
-          <li>First gameplay piece: <code>content-notes</code> then <code>vignette-select</code>, which
-            turns <code>boot</code> from the entry point into a scene to delete.</li>
-          <li>The gauntlet loop starts with the first judgeable piece — builder and critic as separate
-            agents, the critic never seeing the builder's notes. Nothing above has been through it yet,
-            and this table says so rather than implying otherwise.</li>
-          <li>Unresolved design tension worth settling early: lore bible § 12.6, whether "worse death →
-            heavier start" survives <code>L-ARREST-02</code>.</li>
+          <li><strong>The River of Forgetting and rebirth.</strong> Two scenes, and they close the
+            loop: the cart becomes the opening conditions of the next run, and meta-progression
+            finally has something to carry.</li>
+          <li>Run the critics on the Council and the Market, which nothing has judged yet.</li>
+          <li>Play the economy and tune it. The numbers are in one table for exactly this.</li>
         </ul>
       </div>
 

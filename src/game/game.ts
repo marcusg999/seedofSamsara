@@ -4,8 +4,13 @@ import type { SoulState } from './soul';
 import { createRng, defaultSeed } from './rng';
 import { createSoulState } from './soul';
 import { ResourceTracker, type DisposalCounts } from './disposal';
-import { createRenderer, type FrameStats, type RendererBundle } from './renderer';
+import { createRenderer, type FrameSample, type FrameStats, type RendererBundle } from './renderer';
 import type { SceneGraph } from './state-machine';
+import { AudioEngine } from './systems/audio';
+import { CameraRig } from './systems/camera-rig';
+import { Captions } from './systems/captions';
+import { createPostPipeline, type PostPipeline } from './systems/postfx';
+import { createSpiritBody, type SpiritBody } from './systems/spirit-body';
 
 export interface SceneSnapshot {
   readonly id: string;
@@ -17,6 +22,8 @@ export interface SceneSnapshot {
   /** Frames rendered since this scene loaded. A scene must render at least once. */
   readonly framesRendered: number;
   readonly liveResources: DisposalCounts;
+  /** The authored beat the scene is on, if it has a timeline. */
+  readonly beat: { id: string; index: number; t: number; finished: boolean } | undefined;
 }
 
 export interface GameOptions {
@@ -24,6 +31,8 @@ export interface GameOptions {
   readonly graph: SceneGraph;
   readonly seed?: string;
   readonly startSceneId: string;
+  /** Test and dev builds only: makes the frame readable for the gate's checks. */
+  readonly readable?: boolean;
 }
 
 /**
@@ -42,6 +51,13 @@ export class Game {
   private readonly canvas: HTMLCanvasElement;
   private readonly rootRng: Rng;
   private readonly disposedCounts: DisposalCounts[] = [];
+  private readonly rig: CameraRig;
+  private readonly audioEngine: AudioEngine;
+  private readonly captionLayer: Captions;
+  private readonly post: PostPipeline;
+  private readonly spiritBody: SpiritBody;
+  /** Owns the pipeline's render targets for the game's whole lifetime. */
+  private readonly pipelineTracker = new ResourceTracker();
 
   private definition: SceneDefinition | undefined;
   private instance: SceneInstance | undefined;
@@ -50,6 +66,9 @@ export class Game {
   private framesRendered = 0;
   private lastFrameAt = 0;
   private rafHandle: number | undefined;
+  /** Set by the gate; the loop samples the next frame it draws. */
+  private sampleWanted = false;
+  private lastSample: FrameSample | undefined;
   private running = false;
   /** Set when a transition is in flight, so overlapping goTo calls serialise. */
   private pending: Promise<void> = Promise.resolve();
@@ -63,7 +82,20 @@ export class Game {
     this.seed = options.seed ?? defaultSeed();
     this.rootRng = createRng(this.seed);
     this.soul = createSoulState();
-    this.bundle = createRenderer(options.canvas);
+    this.bundle = createRenderer(options.canvas, { readable: options.readable ?? false });
+    this.rig = new CameraRig(this.bundle.camera, options.canvas);
+    this.audioEngine = new AudioEngine(this.rootRng.stream('audio'));
+    this.captionLayer = new Captions();
+    this.post = createPostPipeline(
+      this.bundle.renderer,
+      this.bundle.scene,
+      this.bundle.camera,
+      this.pipelineTracker,
+      { softwareRenderer: this.bundle.isSoftwareRenderer() },
+    );
+    // Owned by the game rather than by a scene: it belongs to the player, not to
+    // any one place, and it has to survive every transition between them.
+    this.spiritBody = createSpiritBody(this.pipelineTracker);
 
     const onResize = (): void => {
       this.resize();
@@ -78,6 +110,57 @@ export class Game {
 
   get currentSceneId(): string | undefined {
     return this.definition?.id;
+  }
+
+  /** Started on the first user gesture; silent before that. */
+  get audio(): AudioEngine {
+    return this.audioEngine;
+  }
+
+  get captions(): Captions {
+    return this.captionLayer;
+  }
+
+  get postPipeline(): PostPipeline {
+    return this.post;
+  }
+
+  get cameraRig(): CameraRig {
+    return this.rig;
+  }
+
+  /** How the spirit body currently reads. Reflects karma. */
+  get spiritBodyAppearance(): { color: number; intensity: number } {
+    return this.spiritBody.appearance;
+  }
+
+  /** Whether the current scene carries the spirit body. */
+  get isDiscarnate(): boolean {
+    return this.definition?.discarnate === true;
+  }
+
+  /** Skip to the end of the current scene's beat, if it has a timeline. */
+  advanceBeat(): void {
+    this.instance?.advance?.();
+  }
+
+  /**
+   * Ask the loop to measure the next frame it draws. Sampling has to happen
+   * inside the loop, immediately after the render, because the drawing buffer is
+   * not readable once the frame has been presented.
+   */
+  requestFrameSample(): void {
+    this.sampleWanted = true;
+    this.lastSample = undefined;
+  }
+
+  get frameSample(): FrameSample | undefined {
+    return this.lastSample;
+  }
+
+  /** False in a shipping build, where the frame cannot be read back. */
+  get frameReadable(): boolean {
+    return this.bundle.readable;
   }
 
   get frameStats(): FrameStats {
@@ -117,6 +200,7 @@ export class Game {
       elapsed: (performance.now() - this.sceneLoadedAt) / 1000,
       framesRendered: this.framesRendered,
       liveResources: this.tracker?.live ?? { geometries: 0, materials: 0, textures: 0, renderTargets: 0, other: 0 },
+      beat: this.instance?.beat?.(),
     };
   }
 
@@ -164,6 +248,7 @@ export class Game {
     const width = this.canvas.clientWidth || globalThis.innerWidth || 1;
     const height = this.canvas.clientHeight || globalThis.innerHeight || 1;
     this.bundle.resize(width, height);
+    this.post.setSize(width, height);
     this.instance?.resize?.(width, height);
   }
 
@@ -172,6 +257,10 @@ export class Game {
     this.stop();
     this.unloadCurrent();
     this.onTeardown();
+    this.rig.dispose();
+    this.audioEngine.dispose();
+    this.captionLayer.dispose();
+    this.pipelineTracker.disposeAll();
     this.bundle.dispose();
   }
 
@@ -189,11 +278,23 @@ export class Game {
       rng: this.rootRng.stream(sceneId),
       resources: tracker,
       soul: this.soul,
+      rig: this.rig,
+      audio: this.audioEngine,
+      post: this.post,
+      captions: this.captionLayer,
+      takeExit: (exitId) => this.takeExit(exitId),
+      goTo: (target) => this.goTo(target),
       viewport: {
         width: this.canvas.clientWidth || globalThis.innerWidth || 1,
         height: this.canvas.clientHeight || globalThis.innerHeight || 1,
       },
     });
+
+    // The scene graph is cleared on every unload, so a discarnate scene has to
+    // take the spirit body back each time it loads.
+    if (definition.discarnate === true) {
+      this.bundle.scene.add(this.spiritBody.group);
+    }
 
     this.definition = definition;
     this.instance = instance;
@@ -206,6 +307,10 @@ export class Game {
 
   private unloadCurrent(): void {
     this.instance?.dispose?.();
+    // Every scene leaves the audio bed and the caption line clean, so a voice
+    // from the last scene can never bleed into the next one.
+    this.audioEngine.resetVoices();
+    this.captionLayer.clear();
     if (this.tracker) {
       this.disposedCounts.push(this.tracker.disposeAll());
     }
@@ -230,8 +335,21 @@ export class Game {
     this.lastFrameAt = now;
 
     if (this.instance) {
-      this.instance.update(delta, (now - this.sceneLoadedAt) / 1000);
-      this.bundle.renderer.render(this.bundle.scene, this.bundle.camera);
+      const elapsed = (now - this.sceneLoadedAt) / 1000;
+      this.instance.update(delta, elapsed);
+      this.rig.update(delta);
+      if (this.definition?.discarnate === true) {
+        // After the rig has moved, so the body is where the player is.
+        this.spiritBody.update(elapsed, this.bundle.camera, this.soul);
+      }
+      this.audioEngine.update();
+      this.captionLayer.update();
+      this.post.commit(elapsed);
+      this.post.render(delta);
+      if (this.sampleWanted) {
+        this.sampleWanted = false;
+        this.lastSample = this.bundle.sampleFrame();
+      }
       this.framesRendered += 1;
       this.bundle.recordFrame(performance.now() - now);
     }

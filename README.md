@@ -18,11 +18,72 @@ result per piece.
 
 ## Running it
 
+Requires Node 20.19 or newer.
+
 ```sh
-npm install          # Playwright's Chromium: npx playwright install chromium
-npm run dev          # http://localhost:5173
-npm run build        # production build (no test API)
-npm run gate         # the error gate — must pass before any commit
+git clone https://github.com/marcusg999/seedofSamsara.git
+cd seedofSamsara
+npm install
+npx playwright install chromium   # only needed to run the gate
+```
+
+### Play it locally
+
+```sh
+npm run dev
+```
+
+Then open **http://localhost:5173** in a browser. The dev server hot-reloads, so
+edits to a scene appear without a restart.
+
+### Play the production build
+
+```sh
+npm run build     # type-checks, then bundles to dist/
+npm run preview
+```
+
+Then open **http://localhost:4173**. This is the build a player would get: it has
+no test API and no frame readback.
+
+To serve `dist/` from anything else, note that the build uses relative asset paths
+(`base: './'`), so it works from a subdirectory as well as from a domain root —
+any static host will do, including `npx serve dist`.
+
+### In the browser
+
+Desktop and mobile browsers with WebGL2. **Play with sound on** — the audio is
+synthesised at runtime and carries a lot of the vignette. Browsers block audio
+until you interact, so the first click or key press starts it.
+
+Controls, which the game also states on its first screen:
+
+| Input | Action |
+| --- | --- |
+| Drag with mouse or finger | Look around |
+| Arrow keys, or WASD | Look around |
+| On-screen buttons | Begin, choose, and move on |
+
+There is nothing to fail and nothing to time. Movement is authored; where you
+look is yours.
+
+A run takes about twelve minutes end to end, most of it the vignette.
+
+### Pin a seed
+
+All randomness comes from one seeded generator, so a run is reproducible. Append
+a seed to the URL to replay the same one:
+
+```
+http://localhost:5173/?seed=anything-you-like
+```
+
+### Other scripts
+
+```sh
+npm run gate             # the error gate — must pass before any commit
+npm run typecheck        # TypeScript alone
+npm run lint             # ESLint alone
 npm run research:fetch   # re-fetch the public-domain primary sources
 ```
 

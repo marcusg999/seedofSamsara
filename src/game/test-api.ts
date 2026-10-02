@@ -1,6 +1,8 @@
 import type { Game } from './game';
 import type { SceneSnapshot } from './game';
 import { SCENE_MANIFEST } from './manifest';
+import { SLICE_PATH } from './scenes/index';
+import { clearIncarnation, loadIncarnation } from './systems/incarnation';
 import type { GraphIssue } from './state-machine';
 
 /**
@@ -50,6 +52,48 @@ export interface TestApi {
   errors(): readonly GateError[];
   /** True once the first scene has rendered at least one frame. */
   ready(): boolean;
+
+  // --- the vertical slice -------------------------------------------------
+  /** The scene ids of the built path, in order. */
+  slicePath(): readonly string[];
+  /** The authored beat the current scene is on, if it has a timeline. */
+  beat(): { id: string; index: number; t: number; finished: boolean } | undefined;
+  /** Skip to the end of the current beat, so the gate can play a long vignette quickly. */
+  advanceBeat(): void;
+  /** The caption currently on screen, or the empty string. */
+  caption(): string;
+  /** Audio state. Silent until the first user gesture. */
+  audio(): { started: boolean; voices: string[] };
+  /** Post-processing state, for the performance comparison. */
+  post(): { enabled: boolean; passes: number; bloomless: boolean; samples: number };
+  /** Turn the post stack off, to measure what it costs. */
+  setPostEnabled(enabled: boolean): void;
+  /** Camera and look state. */
+  camera(): { mode: string; yaw: number; pitch: number; roll: number };
+  /** True when the current scene carries the spirit body (the player is dead). */
+  discarnate(): boolean;
+  /** How the spirit body reads. Brightness and colour reflect karma. */
+  spiritBody(): { color: number; intensity: number };
+  /** What previous lives left behind. The loop's only durable state. */
+  incarnation(): {
+    lives: number;
+    wisdom: string[];
+    memories: string[];
+    birthmark: string | undefined;
+    opening: { karma: number; attachment: number; items: { id: string }[] };
+  };
+  /** Forget every past life. For tests only; the game never calls this. */
+  forgetAllLives(): void;
+  /** Ask the render loop to measure the next frame it draws. */
+  requestFrameSample(): void;
+  /** What that frame actually contained. Undefined until the loop has sampled. */
+  frameSample(): {
+    meanLuma: number;
+    stdLuma: number;
+    brightFraction: number;
+    clippedFraction: number;
+    sampled: number;
+  } | undefined;
 }
 
 declare global {
@@ -102,6 +146,33 @@ export function installTestApi(game: Game, errors: readonly GateError[]): void {
     disposalLog: () => game.disposalLog,
     errors: () => errors,
     ready: () => (game.snapshot()?.framesRendered ?? 0) > 0,
+    slicePath: () => SLICE_PATH,
+    beat: () => game.snapshot()?.beat,
+    advanceBeat: () => {
+      game.advanceBeat();
+    },
+    caption: () => game.captions.text,
+    audio: () => ({ started: game.audio.isStarted, voices: game.audio.activeVoices }),
+    post: () => ({
+      enabled: game.postPipeline.enabled,
+      passes: game.postPipeline.passCount,
+      bloomless: game.postPipeline.passCount <= 2,
+      samples: game.postPipeline.samples,
+    }),
+    setPostEnabled: (enabled) => {
+      game.postPipeline.setEnabled(enabled);
+    },
+    camera: () => game.cameraRig.debug,
+    discarnate: () => game.isDiscarnate,
+    spiritBody: () => game.spiritBodyAppearance,
+    incarnation: () => loadIncarnation(),
+    forgetAllLives: () => {
+      clearIncarnation();
+    },
+    requestFrameSample: () => {
+      game.requestFrameSample();
+    },
+    frameSample: () => game.frameSample,
   };
 
   globalThis.__game = api;

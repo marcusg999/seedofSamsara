@@ -2,6 +2,10 @@ import type { PerspectiveCamera, Scene, WebGLRenderer } from 'three';
 import type { Rng } from './rng';
 import type { ResourceTracker } from './disposal';
 import type { SoulState } from './soul';
+import type { AudioEngine } from './systems/audio';
+import type { CameraRig } from './systems/camera-rig';
+import type { Captions } from './systems/captions';
+import type { PostPipeline } from './systems/postfx';
 
 /** What a scene is handed when it is created. */
 export interface SceneContext {
@@ -14,7 +18,23 @@ export interface SceneContext {
   readonly resources: ResourceTracker;
   /** Karma, harmony, will, cart — read freely, mutate through the game. */
   readonly soul: SoulState;
+  /** Camera and look input. Scenes set the mode and drive the path. */
+  readonly rig: CameraRig;
+  /** Procedural audio. Silent until the first user gesture. */
+  readonly audio: AudioEngine;
+  /** Bloom and the grade pass. Scenes drive these per frame. */
+  readonly post: PostPipeline;
+  /** Sparse on-screen text. Rationed deliberately. */
+  readonly captions: Captions;
   readonly viewport: { width: number; height: number };
+  /**
+   * Follow one of this scene's declared exits. Preferred over `goTo`, because it
+   * cannot reach a state the scene did not declare — which is what keeps the
+   * state machine's exit declarations true (CLAUDE.md § Testability).
+   */
+  takeExit(exitId: string): Promise<void>;
+  /** Jump to any scene. For the few transitions that are not a declared exit. */
+  goTo(sceneId: string): Promise<void>;
 }
 
 /** A live scene. */
@@ -24,10 +44,21 @@ export interface SceneInstance {
   /** Called on resize; optional because most scenes only need the camera update. */
   resize?(width: number, height: number): void;
   /**
-   * Release everything not held by the scene's ResourceTracker. The tracker is
+   * Release anything not held by the scene's ResourceTracker. The tracker is
    * swept by the game, so most scenes need nothing here.
    */
   dispose?(): void;
+  /**
+   * The beat the scene is on, for the gate and the test API. A scene with an
+   * authored timeline should report it so a playthrough can assert on a beat
+   * rather than on a wall-clock time.
+   */
+  beat?(): { id: string; index: number; t: number; finished: boolean } | undefined;
+  /**
+   * Skip to the end of the current beat. The gate uses this to play a long
+   * vignette quickly without turning the sequence off.
+   */
+  advance?(): void;
 }
 
 export interface SceneExit {
@@ -48,5 +79,13 @@ export interface SceneDefinition {
    */
   readonly exits: readonly SceneExit[];
   readonly terminal?: boolean;
+  /**
+   * True once the player is out of the body. Such a scene carries the spirit
+   * body, whose brightness and colour reflect karma so the world shows the
+   * soul's state (GAME_BRIEF.md § Platform and art direction).
+   */
+  readonly discarnate?: boolean;
+  /** Content notes to show before this scene is first entered, if any. */
+  readonly contentNotes?: readonly string[];
   create(context: SceneContext): SceneInstance | Promise<SceneInstance>;
 }
