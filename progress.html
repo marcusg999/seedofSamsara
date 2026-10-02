@@ -88,7 +88,7 @@
           <li>typecheck <b>&check;</b></li>
           <li>lint <b>&check;</b></li>
           <li>build <b>&check;</b></li>
-          <li>playthrough <b>&check;</b> 20 passed, 9 skipped</li>
+          <li>playthrough <b>&check;</b> 22 passed, 8 skipped</li>
         </ul>
         <ul class="notes">
           <li>
@@ -270,8 +270,16 @@
             <strong>Pacing.</strong> The heart-attack vignette reached the afterlife at 3.5 minutes
             and then held its closing image indefinitely, so a player who simply watched could sit
             in a dead room well past that. It now runs 164s of beats plus a 10-second grace, after
-            which the scene lets go by itself &mdash; 174s, under three minutes, with the exit live
-            from the first frame for anyone who wants to leave sooner. Every beat was trimmed rather
+            which the scene lets go by itself &mdash; 175s, under three minutes, with the exit live
+            from the first frame for anyone who wants to leave sooner.
+            <strong>That figure was only true at full frame rate.</strong> Trimming the beats fixed
+            the script but not the clock: the timeline was advanced by the game loop&rsquo;s
+            <em>clamped</em> animation delta, so at roughly 3fps each 0.33s frame moved the story
+            only 0.1s and the 165s vignette took over 500s to play. Pacing was a property of the
+            machine, not of the game, which is why tuning beats could never fix it. The Director now
+            advances to absolute wall-clock time since scene load, still bounded so a hidden tab
+            does not skip beats nobody saw. The grace period had the identical bug &mdash; counting
+            deltas to reach 10 seconds meant it took 27. 2:55, now on any renderer. Every beat was trimmed rather
             than any beat cut, so the arc keeps its shape. <code>GAME_BRIEF.md</code> was updated to
             match rather than left contradicting the build.
           </li>

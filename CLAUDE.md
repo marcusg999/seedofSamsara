@@ -71,4 +71,22 @@ If a test is wrong, fix the test and say why in the commit message.
   emits it too. Before ever filtering a WebGL warning, prove it is the host's
   by reproducing it without any of our code — and scope the filter to that one
   message. Filtering anything we actually caused is weakening the gate.
+- Never start a second server on the gate's port while the gate is running. The
+  gate's `vite preview` uses `--strictPort` on 4173, so it cannot be hijacked at
+  startup — but a mid-run `fuser -k 4173/tcp` from a separate build check killed
+  it and replaced it with a *production* preview. Production strips
+  `window.__game` by design, so all 28 remaining tests timed out at
+  `waitForReady` and the run looked like a total regression in the change under
+  test. A gate failure where *everything* fails at `waitForReady` means the page
+  has no test API: suspect the wrong bundle before suspecting the code. Verify
+  with `pgrep -af vite` that the preview serving 4173 is the gate's own.
+- Vite hashes asset filenames by content, so an unchanged hash is proof the
+  bundle is unchanged. Comparing the published artifact's asset sha256 against a
+  fresh local build answers "is the live link actually running my fix?" without
+  guessing — and it caught that a republish was unnecessary.
+- Trimming a timeline fixes the script, not the clock. Anything that must take a
+  real amount of time (a beat, a grace period, a timeout) reads wall-clock, never
+  accumulated frame deltas: the loop clamps deltas for animation, and a clamped
+  delta makes story time run slow in exact proportion to how bad the frame rate
+  is. Pacing must be a property of the game, not of the machine.
 - Add to this section every time a mistake is made or narrowly avoided.
