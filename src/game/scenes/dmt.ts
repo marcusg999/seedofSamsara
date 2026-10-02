@@ -784,7 +784,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
     grade.washColor = [1, 0.9, 0.78];
     grade.washAmount = 0;
     grade.smear = 0;
-    context.post.setBloom(grammar.bloom, 0.68, 0.74);
+    context.post.setBloom(0.7, 0.66, 0.86);
 
     context.audio.drone(0.26, 51, 11);
     context.audio.shimmer(0.3);
@@ -888,7 +888,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
         grade.aberration = 0.0045 + attention * 0.003;
         grade.distortion = 0.06 - open * 0.02;
         grade.vignette = 0.26 - open * 0.08;
-        context.post.setBloom(grammar.bloom + attention * 0.25, 0.68, 0.74);
+        context.post.setBloom(0.7 + attention * 0.25, 0.66, 0.86);
 
         context.audio.shimmer(0.3 + attention * 0.35 + open * 0.15);
         context.audio.drone(0.26 + open * 0.08, 51, 11 + attention * 9);

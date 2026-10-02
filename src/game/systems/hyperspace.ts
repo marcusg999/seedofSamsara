@@ -268,25 +268,32 @@ export function hyperspaceField(
 
           float depth = clamp(t / FAR, 0.0, 1.0);
           float facet = clamp(trap * 0.6, 0.0, 1.0);
-          float density = clamp(glowAcc * 0.075, 0.0, 1.8);
+          // Averaged over the steps actually taken, not summed over them. A sum
+          // makes the whole frame brighter whenever the step budget rises, so
+          // the picture would have changed every time the resolution adapted —
+          // a scene that brightens because the machine got faster is a bug, and
+          // a flickering one while the controller settles.
+          float density = clamp(glowAcc / max(1.0, float(uSteps)) * 1.5, 0.0, 1.0);
 
           // The field the structure stands in. Direction-dependent, so a ray
           // that reaches nothing still lands on something graded.
-          vec3 color = mix(uDeep * 0.6, uDeep * 1.5, 0.5 + 0.5 * ray.y);
-          color += uAccent * 0.2 * pow(max(0.0, 1.0 - abs(ray.y)), 3.0);
+          vec3 color = mix(uDeep * 0.45, uDeep * 1.05, 0.5 + 0.5 * ray.y);
+          color += uAccent * 0.12 * pow(max(0.0, 1.0 - abs(ray.y)), 3.0);
 
           // The architecture: tinted by the trap, and holding most of its colour
           // a long way back, so the corridors read as deep rather than fogged.
           vec3 surface = mix(uAccent, uGlow, facet);
-          color = mix(color, surface * (0.45 + 0.9 * (1.0 - depth * 0.55)), hit * 0.92);
+          color = mix(color, surface * (0.26 + 0.6 * (1.0 - depth * 0.6)), hit * 0.92);
 
           // The volume between surfaces.
-          color += surface * density * 0.26 * (1.0 - depth * 0.45);
+          color += surface * density * 0.22 * (1.0 - depth * 0.45);
 
           // Step count is highest where a ray grazes a surface, which is exactly
           // the silhouette — so this is a free edge light along every form.
+          // Normalised by the budget for the same reason the density is: this
+          // has to say the same thing at 22 steps as at 48.
           float graze = used / max(1.0, float(uSteps));
-          color += uGlow * pow(graze, 2.0) * 0.4;
+          color += uGlow * pow(graze, 3.0) * 0.13;
 
           // Regard. When an entity is attending to the player the whole place
           // leans in slightly, which is the cheapest way to say it is aware.
@@ -297,7 +304,7 @@ export function hyperspaceField(
           // ceiling — the architecture's near faces would otherwise clip, and
           // the edges the eye reads the structure from are the first thing lost
           // when they do — and it leaves the grade downstream headroom to work.
-          color = color / (1.0 + color * 0.38);
+          color = color / (1.0 + color * 0.45);
           gl_FragColor = vec4(color, 1.0);
         }
       `,
