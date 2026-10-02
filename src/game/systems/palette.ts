@@ -41,6 +41,24 @@ export const GRAMMAR = {
   border: { ground: 0x0a0912, glow: 0xf4e9d8, accent: 0x6fd8c4, drain: 0.2, bloom: 0.8, grain: 0.06 },
   /** The review: warm, close, inhabited. */
   review: { ground: 0x120f14, glow: 0xffc98e, accent: 0xa98cff, drain: 0.35, bloom: 0.7, grain: 0.1 },
+  /**
+   * Hyperspace: the one grammar with no grey in it at all.
+   *
+   * Every other register in the game reaches its intensity by draining colour
+   * out or by pushing light past the top of the range. This one goes the other
+   * way: full chroma, two hues that do not belong in the same room, and a
+   * ground that is a colour rather than a darkness. `drain` is zero and stays
+   * zero, which is what separates it from `dying` — the ordinary world loses
+   * its colour at the moment of death, and this place has too much of it.
+   */
+  hyperspace: { ground: 0x1a0836, glow: 0xffd27a, accent: 0x3fe3cd, drain: 0, bloom: 0.9, grain: 0.05 },
+  /**
+   * Coming back: the ordinary world, seen by someone who has just been
+   * returned to it. Warmer and far less drained than `living`, because the
+   * point of the scene is that the kitchen-coloured world is almost unbearably
+   * vivid for a while afterwards.
+   */
+  returning: { ground: 0x120f17, glow: 0xffd2a0, accent: 0x7fd8c8, drain: 0.1, bloom: 0.5, grain: 0.07 },
 } as const satisfies Record<string, Grammar>;
 
 export type GrammarName = keyof typeof GRAMMAR;
