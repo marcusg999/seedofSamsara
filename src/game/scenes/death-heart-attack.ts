@@ -38,24 +38,34 @@ const WARM = GRAMMAR.living;
 const COLD = GRAMMAR.dying;
 
 /**
- * GAME_BRIEF.md § Act 1 asks for three to five minutes. The weight sits in the
- * first half deliberately: the player has to care about this man before he dies,
- * and that is bought with time in an ordinary room, not with incident.
+ * The player reaches the afterlife within three minutes (GAME_BRIEF.md § Act 1).
+ *
+ * The weight still sits in the first half, because caring about this man before
+ * he dies is the whole job of the opening and it cannot be bought with incident.
+ * But it is bought with less time than before: every beat here is trimmed rather
+ * than any beat being cut, so the shape of the arc survives the shorter run.
+ *
+ * Authored length is 164s. The closing beat then holds for GRACE_SECONDS before
+ * moving on by itself, so a player who simply watches still crosses over inside
+ * three minutes, while a player who wants to go sooner always can.
  */
 const BEATS: readonly Beat[] = [
-  { id: 'settle', seconds: 24, caption: 'Tuesday. The kettle, again.' },
-  { id: 'the-room', seconds: 32 },
-  { id: 'second-cup', seconds: 28, caption: 'Two cups. He still sets out two.' },
-  { id: 'the-drawing', seconds: 24, caption: 'She drew that the year she turned six.' },
-  { id: 'first-twinge', seconds: 16 },
-  { id: 'wrong', seconds: 18, caption: 'Something in his chest turns over.' },
-  { id: 'grip', seconds: 17 },
-  { id: 'going-down', seconds: 12 },
-  { id: 'floor', seconds: 16 },
-  { id: 'stillness', seconds: 20, caption: 'The kettle is still going.' },
-  // Holds until the player leaves, so the last image is never snatched away.
+  { id: 'settle', seconds: 18, caption: 'Tuesday. The kettle, again.' },
+  { id: 'the-room', seconds: 22 },
+  { id: 'second-cup', seconds: 20, caption: 'Two cups. He still sets out two.' },
+  { id: 'the-drawing', seconds: 16, caption: 'She drew that the year she turned six.' },
+  { id: 'first-twinge', seconds: 14 },
+  { id: 'wrong', seconds: 16, caption: 'Something in his chest turns over.' },
+  { id: 'grip', seconds: 15 },
+  { id: 'going-down', seconds: 11 },
+  { id: 'floor', seconds: 14 },
+  { id: 'stillness', seconds: 18, caption: 'The kettle is still going.' },
+  // Holds, so the last image is never snatched away — but not forever.
   { id: 'after', seconds: 1, hold: true },
 ];
+
+/** How long the closing image holds before the scene moves on by itself. */
+const GRACE_SECONDS = 10;
 
 /**
  * What this death hands to the afterlife (GAME_BRIEF.md § Act 1): violent and
@@ -362,6 +372,8 @@ export const deathHeartAttackScene: SceneDefinition = {
     let bodyDown = 0;
     let silenceFor = 0;
     let handedOver = false;
+    let heldFor = 0;
+    let leaving = false;
 
     return {
       update(delta, elapsed) {
@@ -455,8 +467,15 @@ export const deathHeartAttackScene: SceneDefinition = {
         }
 
         // The exit is live from the first frame: the player is never held here.
+        // And if they do nothing, the scene lets go on their behalf rather than
+        // leaving them sitting in a dead room past the three-minute mark.
         if (beat.id === 'after' && t >= 1) {
           context.captions.show('Let go.', 8);
+          heldFor += delta;
+          if (!leaving && heldFor >= GRACE_SECONDS) {
+            leaving = true;
+            void context.takeExit('onward');
+          }
         }
       },
       beat() {

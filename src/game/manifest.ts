@@ -49,7 +49,7 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
 
   // Path A — the Light.
   { id: 'light.life-review', act: 'pathA', status: 'implemented', note: 'Key moments from others’ point of view. The moral engine.' },
-  { id: 'light.council', act: 'pathA', status: 'planned', note: 'Guides weigh the life: heart against the feather.' },
+  { id: 'light.council', act: 'pathA', status: 'implemented', note: 'Guides weigh the life: heart against the feather.' },
   { id: 'market.parents', act: 'pathA', status: 'planned', note: 'Life Market aisle: living dioramas.' },
   { id: 'market.body', act: 'pathA', status: 'planned', note: 'Life Market aisle: body, form, birthmark carried from a past death.' },
   { id: 'market.gifts', act: 'pathA', status: 'planned', note: 'Life Market aisle: talents. Cost karma.' },

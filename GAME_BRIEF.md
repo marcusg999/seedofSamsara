@@ -53,7 +53,7 @@ Each sphere has its own visual grammar.
   A spirit who refuses rest, wanders dark lower regions shaped by his own passions
   and attachments, and rises by serving and rescuing other lost souls.
 
-## Act 1 — The Death Vignettes (first person, 3–5 minutes each)
+## Act 1 — The Death Vignettes (first person, under 3 minutes each)
 Each vignette is a slice of a specific person's life, then their death. The player
 should care about this person before they die.
 1. Car crash
@@ -64,6 +64,10 @@ should care about this person before they die.
 6. Lynched by a group of racist men
 7. Smoking DMT (the edge case: the player may be sent back, the classic
    "it is not your time" NDE, which unlocks an alternate thread)
+
+Pacing rule: the player reaches the afterlife within three minutes. The vignette
+holds its closing image briefly and then lets go by itself, so a player who only
+watches still crosses over in time, and a player who wants to go sooner always can.
 
 Treatment rule: death is conveyed through perception, not gore. Time slows, sound
 drops out, color drains, then the camera lifts out of the body and sees the scene

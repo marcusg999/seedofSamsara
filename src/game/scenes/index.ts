@@ -4,6 +4,7 @@ import { deathHeartAttackScene } from './death-heart-attack';
 import { pronouncedDeadScene, buzzingScene, outOfBodyScene } from './threshold-early';
 import { tunnelScene, lovedOnesScene, beingOfLightScene } from './threshold-light';
 import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
+import { councilScene } from './council';
 
 /**
  * Every scene the game has actually built. The manifest in `../manifest.ts`
@@ -29,6 +30,7 @@ export function createSceneGraph(): SceneGraph {
     borderScene,
     choiceScene,
     lifeReviewScene,
+    councilScene,
   );
 }
 
@@ -48,4 +50,5 @@ export const SLICE_PATH: readonly string[] = [
   'threshold.border',
   'threshold.choice',
   'light.life-review',
+  'light.council',
 ];
