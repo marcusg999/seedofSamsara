@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seed of Samsara — Progress</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #faf9fc;
+        --panel: #ffffff;
+        --ink: #17151f;
+        --muted: #5d586e;
+        --line: #e2dfea;
+        --accent: #5a43c4;
+        --ok: #1a7f52;
+        --warn: #9a6b00;
+        --todo: #6b6678;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0b0a11;
+          --panel: #14121c;
+          --ink: #ece9f4;
+          --muted: #9f99b3;
+          --line: #262235;
+          --accent: #a996ff;
+          --ok: #5fd39b;
+          --warn: #e0b253;
+          --todo: #837d96;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2.5rem 1.5rem 4rem;
+        background: var(--bg);
+        color: var(--ink);
+        font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main { max-width: 68rem; margin: 0 auto; }
+      h1 { font-size: 1.9rem; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+      h2 { font-size: 1.15rem; margin: 2.5rem 0 0.75rem; letter-spacing: -0.01em; }
+      .sub { color: var(--muted); margin: 0 0 2rem; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+      th, td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+      tr:last-child td { border-bottom: 0; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.88em; }
+      .tag {
+        display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px;
+        font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap;
+      }
+      .t-ok { background: color-mix(in oklab, var(--ok) 16%, transparent); color: var(--ok); }
+      .t-warn { background: color-mix(in oklab, var(--warn) 18%, transparent); color: var(--warn); }
+      .t-todo { background: color-mix(in oklab, var(--todo) 16%, transparent); color: var(--todo); }
+      .gate { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.25rem 0 0; padding: 0; list-style: none; }
+      .gate li {
+        border: 1px solid var(--line); border-radius: 8px; padding: 0.4rem 0.7rem;
+        font-size: 0.88rem; background: var(--bg);
+      }
+      .gate b { color: var(--ok); }
+      ul.notes { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+      ul.notes li { margin-bottom: 0.35rem; }
+      footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Seed of Samsara — Progress</h1>
+      <p class="sub">
+        What changed, what the critic said, and the current blind-test result per piece.
+        Required by <code>CLAUDE.md</code> § Working style. Last updated: 2026-10-02.
+      </p>
+
+      <h2>Gate status</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.5rem"><code>npm run gate</code> — <span class="tag t-ok">passing</span></p>
+        <ul class="gate">
+          <li>typecheck <b>&check;</b></li>
+          <li>lint <b>&check;</b></li>
+          <li>build <b>&check;</b></li>
+          <li>playthrough <b>&check;</b> 6 passed, 18 skipped</li>
+        </ul>
+        <ul class="notes">
+          <li>
+            The 18 skips are the required journeys — every vignette, both paths, every Life Market
+            aisle through checkout. They are declared in <code>tests/gate/journeys.spec.ts</code>
+            and each skip names the scenes it is waiting on, so a missing vignette is
+            <em>visible</em> rather than absent. They start enforcing themselves the moment those
+            scenes are registered; no test needs to be written or widened.
+          </li>
+          <li>
+            Frame time is measured but not judged: this container renders through SwiftShader, and
+            software frame times are not real performance (<code>CLAUDE.md</code> § Gotchas). The
+            budget assertion binds only on a hardware GPU.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Pieces</h2>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr><th>Piece</th><th>State</th><th>Critic</th><th>Blind test</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Scaffold &amp; state machine</td>
+              <td><span class="tag t-ok">built</span></td>
+              <td><span class="tag t-todo">not run</span></td>
+              <td>n/a</td>
+              <td>Infrastructure, not a judgeable piece. No quality bar in GAME_BRIEF.md applies.</td>
+            </tr>
+            <tr>
+              <td>Error gate + playthrough harness</td>
+              <td><span class="tag t-ok">built</span></td>
+              <td><span class="tag t-todo">not run</span></td>
+              <td>n/a</td>
+              <td>Same. Judged by whether it catches real failures — see the two it already caught, below.</td>
+            </tr>
+            <tr>
+              <td><code>research/lore-bible.md</code></td>
+              <td><span class="tag t-ok">built</span></td>
+              <td><span class="tag t-todo">not run</span></td>
+              <td>n/a</td>
+              <td>50 claims with ids, every one sourced and tiered. Cite by id from code and copy.</td>
+            </tr>
+            <tr>
+              <td>Death vignettes (7)</td>
+              <td><span class="tag t-todo">not started</span></td>
+              <td>—</td>
+              <td>vs Playdead's <em>Inside</em></td>
+              <td>Gameplay. Not started by instruction.</td>
+            </tr>
+            <tr>
+              <td>The Threshold</td>
+              <td><span class="tag t-todo">not started</span></td>
+              <td>—</td>
+              <td>vs <em>Journey</em></td>
+              <td>Scene ids and Moody mapping already fixed in the lore bible § 2.</td>
+            </tr>
+            <tr>
+              <td>Path A — Light, Council, Life Market</td>
+              <td><span class="tag t-todo">not started</span></td>
+              <td>—</td>
+              <td>vs <em>Journey</em></td>
+              <td>Market aisles enumerated in the manifest; economy still unsourced (lore bible § 12).</td>
+            </tr>
+            <tr>
+              <td>Path B — refusing the Light</td>
+              <td><span class="tag t-todo">not started</span></td>
+              <td>—</td>
+              <td>vs Playdead's <em>Inside</em> (lower) / <em>Journey</em> (higher)</td>
+              <td>Cosmology fully mapped from Franchezzo, lore bible § 11.</td>
+            </tr>
+            <tr>
+              <td>Controls, camera, polish, performance</td>
+              <td><span class="tag t-todo">not started</span></td>
+              <td>—</td>
+              <td>vs Messenger by Abeto</td>
+              <td>Played live in a browser, per GAME_BRIEF.md § Quality bars.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>What changed this pass</h2>
+      <div class="panel">
+        <ul class="notes">
+          <li>
+            <strong>Scaffold.</strong> Vite + TypeScript strict (<code>noUncheckedIndexedAccess</code>,
+            <code>exactOptionalPropertyTypes</code>), three.js, type-aware ESLint. Three entry points
+            kept as required: <code>dev</code>, <code>build</code>, <code>gate</code>.
+          </li>
+          <li>
+            <strong>Explicit state machine.</strong> Every state declares its exits; a state with no
+            exits must mark itself terminal or the graph check fails it as a softlock.
+          </li>
+          <li>
+            <strong>Seeded RNG.</strong> One module, named sub-streams per scene, so adding a draw in
+            one scene cannot shift another's sequence. Nothing calls <code>Math.random()</code>.
+          </li>
+          <li>
+            <strong>Resource tracker.</strong> Scenes allocate through it and are swept on unload;
+            the playthrough asserts a sweep ran on every transition.
+          </li>
+          <li>
+            <strong>Test API</strong> on <code>window.__game</code> in dev and test builds only,
+            exposing scene, karma, harmony, will, cart and <code>goTo()</code>.
+          </li>
+          <li>
+            <strong>Research.</strong> Franchezzo's full text fetched into <code>research/sources/</code>
+            (public domain, 1896) and committed, so the lore bible's chapter and page citations are
+            verifiable offline. <code>npm run research:fetch</code> reproduces it byte-identically.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Two things the gate caught on its first run</h2>
+      <div class="panel">
+        <p style="margin:0 0 0.5rem; color:var(--muted)">
+          Recorded because <code>CLAUDE.md</code> § Gotchas says to add to it every time a mistake is
+          made or narrowly avoided. Both are now in that section.
+        </p>
+        <ul class="notes">
+          <li>
+            <strong>Playwright / Chromium version skew.</strong> A caret range resolved Playwright to
+            a version whose required Chromium build was not the one installed, and all 24 tests failed
+            on a missing executable rather than on anything about the game. Fixed by pinning the
+            Playwright version exactly, since that version determines the browser build.
+          </li>
+          <li>
+            <strong>A WebGL warning that was not ours.</strong> The gate failed on
+            <code>GPU stall due to ReadPixels</code>. Before filtering it, it was tested against a
+            page containing nothing but a canvas and <code>gl.clear</code> — no three.js, none of our
+            code — which emitted the identical message. It is the headless compositor reading the
+            framebuffer back, so it is filtered, scoped narrowly to that one driver performance
+            message. Every other WebGL warning still fails the gate.
+          </li>
+        </ul>
+      </div>
+
+      <h2>Next</h2>
+      <div class="panel">
+        <ul class="notes">
+          <li>First gameplay piece: <code>content-notes</code> then <code>vignette-select</code>, which
+            turns <code>boot</code> from the entry point into a scene to delete.</li>
+          <li>The gauntlet loop starts with the first judgeable piece — builder and critic as separate
+            agents, the critic never seeing the builder's notes. Nothing above has been through it yet,
+            and this table says so rather than implying otherwise.</li>
+          <li>Unresolved design tension worth settling early: lore bible § 12.6, whether "worse death →
+            heavier start" survives <code>L-ARREST-02</code>.</li>
+        </ul>
+      </div>
+
+      <footer>
+        Sources and claim ids: <code>research/lore-bible.md</code>.
+        Scene graph and build status: <code>src/game/manifest.ts</code>.
+      </footer>
+    </main>
+  </body>
+</html>

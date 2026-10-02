@@ -1,0 +1,32 @@
+{
+  "name": "seed-of-samsara",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Seed of Samsara \u2014 a browser game about death, the afterlife and reincarnation.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "gate": "node scripts/gate.mjs",
+    "research:fetch": "node scripts/fetch-sources.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "preview": "vite preview --port 4173 --strictPort",
+    "gate:play": "playwright test"
+  },
+  "dependencies": {
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.18.0",
+    "@types/three": "^0.180.0",
+    "eslint": "^9.37.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.45.0",
+    "vite": "^7.1.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}
