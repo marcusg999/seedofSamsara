@@ -373,9 +373,9 @@ function rememberedRoom(
 // --- hearing yourself pronounced dead ------------------------------------------
 
 const PRONOUNCED_BEATS: readonly Beat[] = [
-  { id: 'voices', seconds: 8 },
-  { id: 'the-words', seconds: 10, caption: 'Someone says a time out loud.' },
-  { id: 'apart', seconds: 14 },
+  { id: 'voices', seconds: 6 },
+  { id: 'the-words', seconds: 6, caption: 'Someone says a time out loud.' },
+  { id: 'apart', seconds: 8 },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
@@ -542,8 +542,8 @@ export const pronouncedDeadScene: SceneDefinition = {
 // --- the buzzing ---------------------------------------------------------------
 
 const BUZZING_BEATS: readonly Beat[] = [
-  { id: 'rising', seconds: 8 },
-  { id: 'everything', seconds: 10 },
+  { id: 'rising', seconds: 6 },
+  { id: 'everything', seconds: 6 },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
@@ -703,10 +703,10 @@ export const buzzingScene: SceneDefinition = {
 // --- the out-of-body view -------------------------------------------------------
 
 const LIFT_BEATS: readonly Beat[] = [
-  { id: 'above', seconds: 8 },
-  { id: 'looking-down', seconds: 14, caption: 'That is the room. He is still in it.' },
-  { id: 'rising', seconds: 14 },
-  { id: 'away', seconds: 12 },
+  { id: 'above', seconds: 6 },
+  { id: 'looking-down', seconds: 8, caption: 'That is the room. He is still in it.' },
+  { id: 'rising', seconds: 8 },
+  { id: 'away', seconds: 7 },
   { id: 'wait', seconds: 1, hold: true },
 ];
 

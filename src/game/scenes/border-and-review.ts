@@ -104,8 +104,8 @@ function borderSurface(context: SceneContext): { mesh: Mesh; material: ShaderMat
 }
 
 const BORDER_BEATS: readonly Beat[] = [
-  { id: 'arrive', seconds: 8 },
-  { id: 'the-limit', seconds: 14, caption: 'Past this, there is no coming back.' },
+  { id: 'arrive', seconds: 6 },
+  { id: 'the-limit', seconds: 9, caption: 'Past this, there is no coming back.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
@@ -525,11 +525,11 @@ export const choiceScene: SceneDefinition = {
  * `rememberedRoom` and the witnesses below.
  */
 const REVIEW_BEATS: readonly Beat[] = [
-  { id: 'his-side', seconds: 24, caption: 'He thought there would be time to call her back.' },
-  { id: 'turning', seconds: 12 },
-  { id: 'her-side', seconds: 26, caption: 'She waited up. She told herself he was just tired.' },
-  { id: 'felt', seconds: 22, caption: 'This is what she felt. It was always here.' },
-  { id: 'carried', seconds: 18, caption: 'Nothing is being weighed yet. It is only being seen.' },
+  { id: 'his-side', seconds: 15, caption: 'He thought there would be time to call her back.' },
+  { id: 'turning', seconds: 7 },
+  { id: 'her-side', seconds: 16, caption: 'She waited up. She told herself he was just tired.' },
+  { id: 'felt', seconds: 14, caption: 'This is what she felt. It was always here.' },
+  { id: 'carried', seconds: 11, caption: 'Nothing is being weighed yet. It is only being seen.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 

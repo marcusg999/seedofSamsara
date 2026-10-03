@@ -146,9 +146,9 @@ function livingTunnel(context: SceneContext): { group: Group; material: ShaderMa
 }
 
 const TUNNEL_BEATS: readonly Beat[] = [
-  { id: 'enter', seconds: 8 },
-  { id: 'moving', seconds: 16 },
-  { id: 'opening', seconds: 16 },
+  { id: 'enter', seconds: 6 },
+  { id: 'moving', seconds: 9 },
+  { id: 'opening', seconds: 9 },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
@@ -386,9 +386,9 @@ export const tunnelScene: SceneDefinition = {
 // --- the ones who come to meet you ---------------------------------------------
 
 const KIN_BEATS: readonly Beat[] = [
-  { id: 'glow', seconds: 7 },
-  { id: 'resolving', seconds: 14 },
-  { id: 'recognition', seconds: 14, caption: 'You know them. You cannot say how.' },
+  { id: 'glow', seconds: 6 },
+  { id: 'resolving', seconds: 8 },
+  { id: 'recognition', seconds: 8, caption: 'You know them. You cannot say how.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
@@ -625,9 +625,9 @@ export const lovedOnesScene: SceneDefinition = {
 // --- the Being of Light ---------------------------------------------------------
 
 const BEING_BEATS: readonly Beat[] = [
-  { id: 'approach', seconds: 9 },
-  { id: 'inside-it', seconds: 15 },
-  { id: 'held', seconds: 15, caption: 'It does not ask anything. It is only glad.' },
+  { id: 'approach', seconds: 6 },
+  { id: 'inside-it', seconds: 8 },
+  { id: 'held', seconds: 8, caption: 'It does not ask anything. It is only glad.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 

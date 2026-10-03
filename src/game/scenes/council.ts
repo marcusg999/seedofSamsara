@@ -48,11 +48,11 @@ import type { CartItem } from '../soul';
  */
 
 const BEATS: readonly Beat[] = [
-  { id: 'gathering', seconds: 14 },
-  { id: 'the-balance', seconds: 18, caption: 'Your heart, against a feather.' },
-  { id: 'weighing', seconds: 22 },
-  { id: 'the-reading', seconds: 20, caption: 'No one here is angry with you.' },
-  { id: 'what-carries', seconds: 22, caption: 'This is what the next life will ask of you.' },
+  { id: 'gathering', seconds: 9 },
+  { id: 'the-balance', seconds: 12, caption: 'Your heart, against a feather.' },
+  { id: 'weighing', seconds: 14 },
+  { id: 'the-reading', seconds: 13, caption: 'No one here is angry with you.' },
+  { id: 'what-carries', seconds: 14, caption: 'This is what the next life will ask of you.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 

@@ -50,16 +50,16 @@ const COLD = GRAMMAR.dying;
  * three minutes, while a player who wants to go sooner always can.
  */
 const BEATS: readonly Beat[] = [
-  { id: 'settle', seconds: 18, caption: 'Tuesday. The kettle, again.' },
-  { id: 'the-room', seconds: 22 },
-  { id: 'second-cup', seconds: 20, caption: 'Two cups. He still sets out two.' },
-  { id: 'the-drawing', seconds: 16, caption: 'She drew that the year she turned six.' },
-  { id: 'first-twinge', seconds: 14 },
-  { id: 'wrong', seconds: 16, caption: 'Something in his chest turns over.' },
-  { id: 'grip', seconds: 15 },
-  { id: 'going-down', seconds: 11 },
-  { id: 'floor', seconds: 14 },
-  { id: 'stillness', seconds: 18, caption: 'The kettle is still going.' },
+  { id: 'settle', seconds: 14, caption: 'Tuesday. The kettle, again.' },
+  { id: 'the-room', seconds: 16 },
+  { id: 'second-cup', seconds: 15, caption: 'Two cups. He still sets out two.' },
+  { id: 'the-drawing', seconds: 12, caption: 'She drew that the year she turned six.' },
+  { id: 'first-twinge', seconds: 10 },
+  { id: 'wrong', seconds: 12, caption: 'Something in his chest turns over.' },
+  { id: 'grip', seconds: 11 },
+  { id: 'going-down', seconds: 8 },
+  { id: 'floor', seconds: 10 },
+  { id: 'stillness', seconds: 14, caption: 'The kettle is still going.' },
   // Holds, so the last image is never snatched away — but not forever.
   { id: 'after', seconds: 1, hold: true },
 ];
