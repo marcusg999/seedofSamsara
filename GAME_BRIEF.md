@@ -65,9 +65,13 @@ should care about this person before they die.
 7. Smoke DMT (the edge case: the player may be sent back, the classic
    "it is not your time" NDE, which unlocks an alternate thread)
 
-Pacing rule: the player reaches the afterlife within three minutes. The vignette
-holds its closing image briefly and then lets go by itself, so a player who only
-watches still crosses over in time, and a player who wants to go sooner always can.
+Pacing rule: the player reaches the afterlife within three minutes. Where nothing
+is being decided, the vignette holds its closing image briefly and then lets go by
+itself, so a player who only watches still crosses over in time, and a player who
+wants to go sooner always can. Where a choice is open, the scene waits for the
+player instead, however long that takes, and so does the last image of a vignette
+built out of choices: the game does not decide for them. The three minutes measure
+the authored time, not a clock run against the player.
 
 Treatment rule: death is conveyed through perception, not gore. Time slows, sound
 drops out, color drains, then the camera lifts out of the body and sees the scene

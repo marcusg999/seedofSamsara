@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-art/
 test-results/
 playwright-report/
 .gate/

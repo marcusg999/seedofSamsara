@@ -686,8 +686,6 @@ function choiceQueue(context: SceneContext): {
   enqueue(build: () => OverlayContent): void;
   /** Call from a choice's handler: closes it and offers whatever is waiting. */
   answered(): void;
-  /** True while a choice is on screen or still waiting its turn. */
-  readonly waiting: boolean;
 } {
   const queue: (() => OverlayContent)[] = [];
   let current: Overlay | undefined;
@@ -717,9 +715,6 @@ function choiceQueue(context: SceneContext): {
       current = undefined;
       pump();
     },
-    get waiting() {
-      return current !== undefined || queue.length > 0;
-    },
   };
 }
 
@@ -732,11 +727,11 @@ function choiceQueue(context: SceneContext): {
  *
  * The player's first real choice is live 9 seconds in and stays live until it is
  * answered, and the second goes up the moment the first comes down, so from 9s
- * onward there is always something to decide. The ordinary life this vignette has to establish
- * is established *by* that first choice rather than ahead of it: the three
- * options are the three things in his flat, and picking one is what tells the
- * player who he is. Nothing here is watched for a minute before it can be
- * touched.
+ * onward there is always something to decide. The ordinary life this vignette
+ * has to establish is established *by* that first choice rather than ahead of
+ * it: the three options are the three things in his flat, and picking one is
+ * what tells the player who he is. Nothing here is watched for a minute before
+ * it can be touched.
  */
 const DMT_BEATS: readonly Beat[] = [
   { id: 'already-going', seconds: 9, caption: 'Sunday evening. It has already started.' },
