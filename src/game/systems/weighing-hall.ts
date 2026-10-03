@@ -142,9 +142,13 @@ export function luminousGround(
           // recedes so the rings blur out instead of shimmering at the horizon.
           float phase = r * uRingFreq;
           float ridge = abs(fract(phase + 0.5) - 0.5) * 2.0;
-          float band = clamp(0.055 + r * 0.014, 0.0, 0.95);
-          float ring = (1.0 - smoothstep(0.0, band, ridge))
-            * (1.0 - smoothstep(uRadius * 0.07, uRadius * 0.44, r));
+          float band = clamp(0.09 + r * 0.016, 0.0, 0.95);
+          // Softened deliberately. A crisp bright line at this spacing reads as a
+          // technical grid, and the hall is not a readout — the rings are only
+          // there so the eye has something to measure the distance to the far
+          // side of the room against.
+          float ring = pow(1.0 - smoothstep(0.0, band, ridge), 1.6)
+            * (1.0 - smoothstep(uRadius * 0.03, uRadius * 0.24, r));
 
           // A pool of light under everything that is standing here, which is
           // what puts a figure ON the floor rather than in front of it.
@@ -153,11 +157,15 @@ export function luminousGround(
             if (i >= uPoolCount) { break; }
             vec2 at = vec2(uPools[i].x, uPools[i].y);
             float d = length(ground - at);
-            pooled += uPools[i].z * exp(-d * d * 0.3);
+            pooled += uPools[i].z * exp(-d * d * 0.5);
           }
 
-          float breath = 0.94 + 0.06 * sin(uTime * 0.22 + r * 0.1);
-          vec3 color = base * breath + uLine * ring * 0.5 + uLine * pooled * 0.46;
+          // A slow unevenness across the floor, so it is a surface and not a
+          // gradient. Two sines rather than noise: this is the largest thing in
+          // frame and every instruction in it is paid for at every pixel.
+          float mottle = sin(ground.x * 0.13 + uTime * 0.05) * sin(ground.y * 0.11 - uTime * 0.04);
+          float breath = 0.9 + 0.07 * sin(uTime * 0.22 + r * 0.1) + mottle * 0.06;
+          vec3 color = base * breath + uLine * ring * 0.17 + uLine * pooled * 0.8;
           // The disc has to become the air before it runs out, or the player
           // sees its rim and the hall becomes a dinner plate.
           color = mix(color, uFar, smoothstep(uRadius * 0.52, uRadius * 0.99, r));
@@ -256,11 +264,14 @@ export function distantColonnade(
         varying vec3 vWorldPos;
 
         void main() {
-          float fade = (1.0 - smoothstep(0.12, 1.0, vUpward)) * smoothstep(0.0, 0.05, vUpward);
+          // No hard edge anywhere on it: a column with a visible top is an
+          // object, and these have to read as architecture standing too far away
+          // to make out.
+          float fade = pow(max(0.0, 1.0 - vUpward), 2.3) * smoothstep(0.0, 0.1, vUpward);
           float shimmer = 0.84 + 0.16 * sin(uTime * 0.26 + vWorldPos.x * 0.18 + vWorldPos.z * 0.15);
           vec3 color = mix(uAccent, uColor, clamp(vUpward * 0.7, 0.0, 1.0));
           float density = fade * uIntensity * shimmer;
-          gl_FragColor = vec4(color * density, clamp(density * 0.8, 0.0, 1.0));
+          gl_FragColor = vec4(color * density, clamp(density * 0.6, 0.0, 1.0));
         }
       `,
     }),
@@ -372,9 +383,9 @@ export function weighingBalance(
 
       vec3 color = uBase * (0.16 + lit * 0.95)
         + uCool * bounced * 0.42
-        + uSpec * highlight * 1.6
-        + uBase * edge * 0.55
-        + uBase * uGlow * 0.85;
+        + uSpec * highlight * 1.25
+        + uBase * edge * 0.4
+        + uBase * uGlow * 0.7;
       gl_FragColor = vec4(color, 1.0);
     }
   `;
@@ -515,8 +526,8 @@ export function weighingBalance(
     beam.rotation.z = tilt;
     leftPan.position.set(-dx, PIVOT_Y - dy, 0);
     rightPan.position.set(dx, PIVOT_Y + dy, 0);
-    heartSeat.set(leftPan.position.x, leftPan.position.y - DROP + 0.19, 0);
-    featherSeat.set(rightPan.position.x, rightPan.position.y - DROP + 0.12, 0);
+    heartSeat.set(leftPan.position.x, leftPan.position.y - DROP + 0.23, 0);
+    featherSeat.set(rightPan.position.x, rightPan.position.y - DROP + 0.14, 0);
   };
   place();
 

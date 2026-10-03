@@ -122,7 +122,7 @@ export function obligationsFor(karma: number): CartItem[] {
  * instrument. Wide, and unevenly spaced once the seeded jitter is on, because an
  * evenly spaced rank of five facing one way is a tribunal and this is not one.
  */
-const GUIDE_ANGLES = [-50, -26, 0, 26, 50];
+const GUIDE_ANGLES = [-53, -28, -12, 18, 46];
 /** How far out from the instrument they stand. */
 const GUIDE_RING = 4.0;
 
@@ -137,12 +137,16 @@ export const councilScene: SceneDefinition = {
   create(context: SceneContext): SceneInstance {
     const { resources, scene, soul } = context;
 
-    const air = airShell(resources, { radius: 120, ground: 0x151230, glow: 0x4a3f7a, density: 0.6 });
+    const air = airShell(resources, { radius: 120, ground: 0x151230, glow: 0x584a8e, density: 0.6 });
     scene.add(air.mesh);
 
     const radiance = radianceShell(resources, { radius: 110, color: 0xffeccd, accent: 0x8f7bf0 });
     scene.add(radiance.mesh);
-    radiance.setFocus(0, 0.45, -1);
+    // Focused almost straight up, and dim. The shell's filaments converge on
+    // the focus direction, and a convergence point left in frame reads as a lens
+    // flare — exactly the artefact this scene was carrying before. Overhead, it
+    // is a sky with a light somewhere above the hall instead.
+    radiance.setFocus(0, 1, -0.18);
 
     // The hall. Ground first: it is opaque, so it also takes the bottom half of
     // the frame away from the two full-screen noise shells above, which is why
@@ -158,14 +162,14 @@ export const councilScene: SceneDefinition = {
 
     const colonnade = distantColonnade(resources, context.rng.stream('council-hall'), {
       count: 18,
-      innerRadius: 44,
-      outerRadius: 78,
-      minHeight: 9,
-      maxHeight: 27,
+      innerRadius: 38,
+      outerRadius: 70,
+      minHeight: 11,
+      maxHeight: 31,
       color: 0xffe6c4,
       accent: 0x7f68cc,
     });
-    colonnade.setIntensity(0.3);
+    colonnade.setIntensity(0.55);
     scene.add(colonnade.group);
 
     // --- the council -------------------------------------------------------
@@ -180,8 +184,8 @@ export const councilScene: SceneDefinition = {
       const height = 2.42 + rng.range(-0.18, 0.34) + (index === 2 ? 0.16 : 0);
       const figure = figureOfLight(resources, {
         height,
-        color: 0xffeccd,
-        accent: 0xc9a9ff,
+        color: 0xffd9a0,
+        accent: 0xa98cff,
         seed: rng.range(0, 40),
         // Lit from above and from the player's side, which is where the Light
         // and the instrument both are.
@@ -221,8 +225,8 @@ export const councilScene: SceneDefinition = {
 
     // The feather: unchanging, and much lighter than it looks (`L-ER-05`).
     const feather = featherOfMaat(resources, {
-      length: 0.56,
-      width: 0.105,
+      length: 0.82,
+      width: 0.16,
       color: 0xeaf7ff,
       accent: 0x8fd6ff,
     });
@@ -430,10 +434,13 @@ export const councilScene: SceneDefinition = {
             -2 * (1 - fall) + balance.featherSeat.z * fall,
           );
           // It never falls straight: it is a feather. The turn settles as it lands.
+          // It never falls straight, and it does not lie flat when it lands: a
+          // plume comes to rest against the rim of the pan, standing up out of
+          // it, which is the only way its shape reads at all from here.
           feather.mesh.rotation.set(
             Math.sin(elapsed * 0.5) * 0.18 * (1 - fall * 0.7),
-            -0.5 + Math.sin(elapsed * 0.33) * 0.5 * (1 - fall) + fall * 0.4,
-            0.25 + Math.sin(elapsed * 0.41) * 0.35 * (1 - fall * 0.8),
+            -0.5 + Math.sin(elapsed * 0.33) * 0.5 * (1 - fall) + fall * 0.82,
+            0.25 + Math.sin(elapsed * 0.41) * 0.35 * (1 - fall * 0.5) + fall * 0.55,
           );
           feather.setIntensity(0.8 + fall * 0.5);
         }
@@ -446,8 +453,8 @@ export const councilScene: SceneDefinition = {
           instrumentPool[2] = 0.55 + loaded * 0.35 + releasing * 0.25;
         }
         ground.setPools(pools);
-        colonnade.setIntensity(0.26 + arriving * 0.08 + attending * 0.05);
-        radiance.setIntensity(0.24 + releasing * 0.08);
+        colonnade.setIntensity(0.44 + arriving * 0.14 + attending * 0.08);
+        radiance.setIntensity(0.15 + releasing * 0.05);
 
         // A slow drift in and across. The columns are 50 metres out and the
         // instrument is four, so a very small move gives the hall its depth.

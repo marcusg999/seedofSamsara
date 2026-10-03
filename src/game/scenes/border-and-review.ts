@@ -142,6 +142,52 @@ export const borderScene: SceneDefinition = {
     });
     context.scene.add(motes.points);
 
+    /**
+     * What is standing on the far side of the limit.
+     *
+     * `L-THRESH-08` makes this the point of no return, and the whole sky above
+     * it was empty. One appearance of the company the player will be reviewed in
+     * front of, and the architecture it belongs to, a long way beyond the limit:
+     * so the far side is somewhere inhabited rather than a blank, and so the
+     * review does not introduce these out of nowhere.
+     *
+     * Far enough that it cannot read as a threat and is plainly not waiting for
+     * an answer — it is on the other side of a line the player has not crossed.
+     * It never moves, never brightens at the player, and neither answer to the
+     * prompt changes it in any way. `L-THRESH-06`: without judgement.
+     *
+     * The vault is the Hopf fibration of the 3-sphere — one object in four
+     * dimensions, which three dimensions can only show as rings threading each
+     * other. It is here rather than over the life review because it needs open
+     * sky: at the scale a kitchen needs, its fibres cross the frame as chords.
+     */
+    const farWitness = witnessOfLight(context.resources, {
+      radius: 7.0,
+      color: GRAMMAR.light.glow,
+      accent: grammar.accent,
+      carried: context.soul.karma >= 0 ? 0xffd7a4 : 0xa9bcff,
+      vantage: WITNESS_VANTAGES[2] ?? WITNESS_VANTAGES[0] ?? [],
+      distance: 2.3,
+      weight: 0.5,
+    });
+    farWitness.group.position.set(-17, 13, -58);
+    farWitness.setPresence(1);
+    context.scene.add(farWitness.group);
+
+    const vault = vaultOfFibres(context.resources, {
+      fibres: 8,
+      segments: 40,
+      extent: [18, 16, 18],
+      color: GRAMMAR.light.glow,
+      accent: grammar.accent,
+      carried: 0xcfe9e2,
+      weight: 0.34,
+      distance: 2.5,
+    });
+    vault.group.position.set(6, 23, -74);
+    vault.setPresence(1);
+    context.scene.add(vault.group);
+
     const director = new Director(BORDER_BEATS);
     director.onBeat((beat) => {
       if (beat.caption !== undefined) {
@@ -258,6 +304,12 @@ export const borderScene: SceneDefinition = {
         behind.update(elapsed, context.camera);
         ahead.update(elapsed, context.camera);
         motes.drift(delta, elapsed);
+
+        // One shared rotation for both: the appearance and the architecture are
+        // the same four-dimensional space, seen from two places in it.
+        const rotation = simultaneousRotation(elapsed, 0);
+        farWitness.update(elapsed, rotation);
+        vault.update(elapsed, rotation);
 
         if (picked !== undefined && pickedAt === undefined) {
           pickedAt = elapsed;
@@ -784,36 +836,6 @@ export const lifeReviewScene: SceneDefinition = {
       return { presence, halo, side: spec.side };
     });
 
-    /**
-     * The structure the appearances belong to, and that the memory is inside.
-     *
-     * The Hopf fibration of the 3-sphere: in four dimensions one object, filled
-     * exactly by circles, one for each point of an ordinary sphere, no two of
-     * them meeting and every two of them linked. Three dimensions cannot hold
-     * that, so what the room gets is many rings threading each other — which is
-     * the same sentence the appearances say, at the scale of architecture
-     * instead of the scale of a body. It is driven by the same rotation as they
-     * are, because it is the same space.
-     *
-     * Scaled so the memory sits inside it rather than under it: a canopy over a
-     * camera pitched down at a table is a canopy nobody ever sees. Held very
-     * faint — `L-FRAN-08` is a source that keeps saying the higher lands cannot
-     * be carried in earthly terms, and something you can only half make out is
-     * the honest version of that.
-     */
-    const vault = vaultOfFibres(context.resources, {
-      fibres: 8,
-      segments: 40,
-      extent: [21, 13, 21],
-      color: grammar.glow,
-      accent: grammar.accent,
-      carried,
-      weight: 0.3,
-      distance: 2.5,
-    });
-    vault.group.position.set(0, 5, 0);
-    context.scene.add(vault.group);
-
     const director = new Director(REVIEW_BEATS);
     director.onBeat((beat) => {
       if (beat.caption !== undefined) {
@@ -965,9 +987,6 @@ export const lifeReviewScene: SceneDefinition = {
           witness.halo.update(elapsed, context.camera);
           setU(witness.halo.material, 'uIntensity', lit * (0.26 + understanding * 0.18));
         }
-        vault.setPresence(presence * 0.9);
-        vault.setWarmth(understanding * 0.5);
-        vault.update(elapsed, rotation);
         if (!credited && (beat.id === 'carried' || beat.id === 'wait')) {
           credited = true;
           // KARMA is the ledger of effect on others as felt in the review, not a

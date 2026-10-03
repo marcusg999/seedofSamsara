@@ -69,11 +69,22 @@ Moody's composite, not a finding about dying.**
 | `L-THRESH-07` | A review of the life is shown, panoramic and often simultaneous rather than sequential. | `MOODY-1975` | P | `light.life-review` |
 | `L-THRESH-08` | A border or limit is reached, understood as the point of no return. | `MOODY-1975` | P | `threshold.border` |
 | `L-THRESH-09` | Many report reluctance to come back, and lasting change afterwards. | `MOODY-1975`, `VANLOMMEL-2001` | P/E | `threshold.choice`, `dmt.sent-back` |
+| `L-THRESH-10` | The review is not watched alone: in Moody's composite the being of light is present through it, and what it puts to the traveller is reported as prompting reflection rather than as accusation — the accounts are emphatic that no condemnation is felt from it. | `MOODY-1975` | P | `light.life-review` |
 
 Design note: the life review is reported as panoramic and *felt*, not watched
 (`L-THRESH-07`). GAME_BRIEF.md § Path A makes the player re-live moments from
 other people's point of view, which is the game's way of staging that reported
 quality. The mechanic is the game's; the quality it stages is Moody's.
+
+`L-THRESH-10` is the claim that the review happens in company, and it is the
+one that keeps `light.life-review` from being a slideshow the player watches
+alone. It must be read together with `L-THRESH-06`: the presence in the
+accounts is felt as wholly loving and *without judgement*, and the questions
+reported are not an interrogation. Anything the game builds on it therefore has
+to be present without weighing — the weighing is `light.council`'s job
+(`L-BETWEEN-02`, `L-ER-05`), and the two must not blur into each other. Added
+when the witnesses were built for that scene; the claim is Moody's composite,
+not a finding about dying, on the same terms as the rest of this section.
 
 ## 3. Intensity — the Greyson scale
 

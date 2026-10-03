@@ -141,27 +141,37 @@ export function volumetricGlow(
  * problem the Council had.
  */
 const PRESENCE_PROFILE: readonly (readonly [number, number])[] = [
-  [0.020, 0.000],
-  [0.150, 0.000],
-  [0.246, 0.014],
-  [0.250, 0.044],
-  [0.214, 0.124],
-  [0.170, 0.262],
-  [0.146, 0.420],
-  [0.138, 0.548],
-  [0.151, 0.622],
-  [0.178, 0.690],
-  [0.150, 0.752],
-  [0.098, 0.790],
-  [0.093, 0.840],
-  [0.080, 0.900],
-  [0.050, 0.956],
+  [0.015, 0.000],
+  [0.130, 0.000],
+  [0.186, 0.020],
+  [0.176, 0.070],
+  [0.155, 0.150],
+  [0.136, 0.265],
+  [0.122, 0.385],
+  [0.116, 0.470],
+  [0.128, 0.540],
+  [0.152, 0.615],
+  [0.146, 0.665],
+  [0.112, 0.705],
+  [0.078, 0.735],
+  [0.072, 0.762],
+  // The crown closes on a circle rather than running to a point. A lathe that
+  // tapers to its last vertex makes a cone, and a cone on top of a tapered body
+  // is a game piece, not a presence.
+  [0.079, 0.790],
+  [0.104, 0.820],
+  [0.117, 0.855],
+  [0.120, 0.890],
+  [0.111, 0.925],
+  [0.094, 0.955],
+  [0.069, 0.978],
+  [0.034, 0.995],
   [0.000, 1.000],
 ];
 
 function presenceGeometry(height: number, swell: number, lift: number): LatheGeometry {
   const points = PRESENCE_PROFILE.map(
-    ([radius, y]) => new Vector2(radius * height * swell + (swell > 1 ? 0.012 : 0), y * height * lift),
+    ([radius, y]) => new Vector2(radius * height * swell + (swell > 1 ? 0.016 : 0), y * height * lift),
   );
   // 16 radial segments: enough that the silhouette curve is smooth at the size
   // these are drawn, and few enough that five of them cost nothing.
@@ -273,10 +283,10 @@ export function figureOfLight(
           if (vPart > 0.5) {
             // The shell: lit only where it turns away from the eye, so what
             // reads is radiance coming off the figure rather than a sprite.
-            float aura = pow(1.0 - facing, 3.4) * coherence * present;
+            float aura = pow(1.0 - facing, 1.9) * coherence * present;
             float breath = 0.82 + 0.18 * sin(uTime * 0.6 + uSeed);
             vec3 glow = mix(uAccent, uColor, 0.45);
-            gl_FragColor = vec4(glow * aura * 0.95 * breath, clamp(aura * 0.5, 0.0, 1.0));
+            gl_FragColor = vec4(glow * aura * 0.62 * breath, clamp(aura * 0.34, 0.0, 1.0));
             return;
           }
 
@@ -291,11 +301,13 @@ export function figureOfLight(
           // Brightest at the foot, where the figure stands in the light, and at
           // the crown. The dip between them is what gives the form a waist.
           float foot = 1.0 - smoothstep(0.0, 0.44, vUpward);
-          float crown = smoothstep(0.80, 1.0, vUpward);
-          float body = (lambert * 0.55 + rim * 0.95 + 0.10) * (0.52 + foot * 0.52 + crown * 0.9);
+          float crown = smoothstep(0.74, 0.95, vUpward) * (1.0 - smoothstep(0.95, 1.0, vUpward) * 0.4);
+          float body = (lambert * 0.5 + rim * 0.7 + 0.12) * (0.5 + foot * 0.45 + crown * 0.8);
           body *= (0.86 + weave * 0.28) * coherence * present;
 
-          vec3 tint = mix(uAccent, uColor, clamp(rim * 0.7 + crown * 0.6, 0.0, 1.0));
+          // Warm at the core and cooling toward the edge, rather than the other
+          // way round: a presence lit from inside is warmest where it is thickest.
+          vec3 tint = mix(uColor, uAccent, clamp(rim * 0.62 - crown * 0.4 + 0.12, 0.0, 1.0));
           gl_FragColor = vec4(tint * body, clamp(body * 0.9, 0.0, 1.0));
         }
       `,
@@ -304,7 +316,7 @@ export function figureOfLight(
 
   const group = new Group();
   const body = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1, 1), 0)), material);
-  const shell = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1.2, 1.03), 1)), material);
+  const shell = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1.09, 1.02), 1)), material);
   group.add(body, shell);
   // The group's origin is where the figure stands, as it was when this was a
   // capsule offset by half its height. Every caller positions feet, not centre.
