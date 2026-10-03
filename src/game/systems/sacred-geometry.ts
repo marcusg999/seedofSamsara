@@ -858,3 +858,238 @@ export function awareSolid(
     },
   };
 }
+
+// --- the fourth dimension -------------------------------------------------------
+
+/**
+ * Four-dimensional geometry, so that a form in the scene can be the part of a
+ * larger body that happens to fall inside the scene's three dimensions.
+ *
+ * This is the same discipline as the rest of this file — classical constructions
+ * derived here from their own numbers, nothing traced from anyone's drawing —
+ * extended by one axis. It is kept in this module because it is mathematics; the
+ * beings built out of it live in `higher-dimensional.ts`.
+ *
+ * The three facts the rest of the game leans on:
+ *
+ * 1. A *double rotation* of R4 turns two orthogonal planes at once. When the two
+ *    angles differ it has no invariant axis at all, so its shadow in R3 can never
+ *    be read as something spinning: the projected figure changes shape instead of
+ *    merely turning. That is the honest way to say "there is more of this than
+ *    you are being shown" without saying it.
+ * 2. A perspective projection along w makes the fourth coordinate legible as
+ *    *size*: the parts of the body nearer in w are drawn larger. Nothing is
+ *    hidden and nothing is faked — what the player sees really is the shadow.
+ * 3. One body, projected from several different vantages in R4, gives several
+ *    appearances that move in exact lockstep and are not copies of one another.
+ *    That is simultaneity expressed as geometry rather than asserted in a
+ *    caption (lore bible `L-THRESH-07`).
+ */
+
+/** A point of R4. */
+export type Vec4 = readonly [number, number, number, number];
+
+/** A 4x4 matrix in row-major order, so `m[row * 4 + col]`. */
+export type Mat4 = readonly number[];
+
+export function identity4(): Mat4 {
+  return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+}
+
+/**
+ * A Givens rotation: a turn by `angle` in the coordinate plane spanned by axes
+ * `i` and `j`, with the other two axes fixed.
+ *
+ * R4 has six coordinate planes, and every element of SO(4) is a product of
+ * rotations in them, so this is the only primitive the module needs.
+ */
+export function givens4(i: number, j: number, angle: number): Mat4 {
+  const m = [...identity4()];
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  m[i * 4 + i] = c;
+  m[j * 4 + j] = c;
+  m[i * 4 + j] = -s;
+  m[j * 4 + i] = s;
+  return m;
+}
+
+export function multiply4(a: Mat4, b: Mat4): Mat4 {
+  const out = new Array<number>(16).fill(0);
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      let sum = 0;
+      for (let k = 0; k < 4; k += 1) {
+        sum += (a[row * 4 + k] ?? 0) * (b[k * 4 + col] ?? 0);
+      }
+      out[row * 4 + col] = sum;
+    }
+  }
+  return out;
+}
+
+export function apply4(m: Mat4, v: Vec4): Vec4 {
+  const out: [number, number, number, number] = [0, 0, 0, 0];
+  for (let row = 0; row < 4; row += 1) {
+    out[row] =
+      (m[row * 4] ?? 0) * v[0] +
+      (m[row * 4 + 1] ?? 0) * v[1] +
+      (m[row * 4 + 2] ?? 0) * v[2] +
+      (m[row * 4 + 3] ?? 0) * v[3];
+  }
+  return out;
+}
+
+/**
+ * A double rotation: `alpha` in the plane of axes 0 and 1, `beta` in the plane
+ * of axes 2 and 3. The two planes are orthogonal, so the factors commute and the
+ * result is exact.
+ *
+ * With alpha equal to beta this is *isoclinic* and every point travels on a
+ * circle of the same angular speed — the most regular motion R4 has. The callers
+ * here deliberately use two incommensurable rates instead, so the figure never
+ * returns to a pose it has already held and never settles into a loop the eye
+ * can learn.
+ */
+export function doubleRotation4(alpha: number, beta: number): Mat4 {
+  return multiply4(givens4(0, 1, alpha), givens4(2, 3, beta));
+}
+
+/**
+ * A fixed orientation of R4, built as the product of one rotation in each of the
+ * six coordinate planes. Used to conjugate a double rotation so that its two
+ * invariant planes are not the room's own axes — otherwise the projection reads
+ * as two ordinary spins bolted together.
+ */
+export function orientation4(angles: readonly number[]): Mat4 {
+  const planes: [number, number][] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+  let m = identity4();
+  for (let i = 0; i < planes.length; i += 1) {
+    const plane = planes[i];
+    if (!plane) {
+      continue;
+    }
+    m = multiply4(m, givens4(plane[0], plane[1], angles[i] ?? 0));
+  }
+  return m;
+}
+
+/** The transpose, which for a rotation is also its inverse. */
+export function transpose4(m: Mat4): Mat4 {
+  const out = new Array<number>(16).fill(0);
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      out[col * 4 + row] = m[row * 4 + col] ?? 0;
+    }
+  }
+  return out;
+}
+
+export interface Projected4 {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  /** The fourth coordinate the projection threw away, kept so shading can use it. */
+  readonly w: number;
+  /** How much the perspective divide magnified this point. */
+  readonly scale: number;
+}
+
+/**
+ * Perspective projection from a point on the w axis, exactly as a 3D perspective
+ * camera projects to a plane: scale = d / (d - w).
+ *
+ * `distance` must exceed the body's largest w or the divide passes through zero;
+ * the clamp keeps a mis-set caller from producing infinities on the GPU rather
+ * than silently drawing nothing.
+ */
+export function project4(v: Vec4, distance: number): Projected4 {
+  const denom = Math.max(0.12, distance - v[3]);
+  const scale = distance / denom;
+  return { x: v[0] * scale, y: v[1] * scale, z: v[2] * scale, w: v[3], scale };
+}
+
+/**
+ * The 24-cell: the one regular polytope that exists in four dimensions and has
+ * no analogue in any other.
+ *
+ * Its 24 vertices are the points with two coordinates at ±1 and two at zero —
+ * six choices of which pair is nonzero, four sign combinations each. Two of them
+ * are joined by an edge exactly when they are at squared distance 2, which gives
+ * each vertex eight neighbours and the figure 96 edges. It is self-dual: the
+ * centres of its 24 octahedral cells form another 24-cell. That self-duality is
+ * why it is the right body for a presence rather than, say, the 600-cell — it is
+ * its own dual, so there is nothing it is the shadow of except itself.
+ *
+ * Returned on the unit sphere of R4 (the raw vertices have length sqrt(2)), so a
+ * caller scales it by one radius and nothing else.
+ */
+export function cell24(): { vertices: Vec4[]; edges: [number, number][] } {
+  const vertices: Vec4[] = [];
+  const inverseRoot2 = Math.SQRT1_2;
+  for (let i = 0; i < 4; i += 1) {
+    for (let j = i + 1; j < 4; j += 1) {
+      for (const si of [1, -1]) {
+        for (const sj of [1, -1]) {
+          const v: [number, number, number, number] = [0, 0, 0, 0];
+          v[i] = si * inverseRoot2;
+          v[j] = sj * inverseRoot2;
+          vertices.push(v);
+        }
+      }
+    }
+  }
+
+  // On the unit sphere the edge length squared is 1, not 2. Compared with a
+  // tolerance rather than exactly, because these are floating-point numbers.
+  const edges: [number, number][] = [];
+  for (let a = 0; a < vertices.length; a += 1) {
+    for (let b = a + 1; b < vertices.length; b += 1) {
+      const u = vertices[a];
+      const v = vertices[b];
+      if (!u || !v) {
+        continue;
+      }
+      let d2 = 0;
+      for (let k = 0; k < 4; k += 1) {
+        const delta = (u[k] ?? 0) - (v[k] ?? 0);
+        d2 += delta * delta;
+      }
+      if (Math.abs(d2 - 1) < 1e-6) {
+        edges.push([a, b]);
+      }
+    }
+  }
+  return { vertices, edges };
+}
+
+/**
+ * One fibre of the Hopf fibration: a great circle of the 3-sphere.
+ *
+ * The Hopf map sends a unit (z1, z2) in C^2 — which is the 3-sphere in R4 — to
+ * the ratio z1/z2 on the Riemann sphere. The preimage of a single ratio is the
+ * whole circle of unit multiples of it, so S3 is filled by circles, one for each
+ * point of an ordinary 2-sphere, and no two of them meet. Any two are linked.
+ *
+ * With the ratio written as `radius * e^(i * phase)`:
+ *   n = 1 / sqrt(1 + radius^2)
+ *   p(t) = (n*radius*cos(t + phase), n*radius*sin(t + phase), n*cos(t), n*sin(t))
+ * whose length is n^2 * (radius^2 + 1) = 1 exactly, for every t.
+ *
+ * This is the architecture rather than the beings: a structure of linked rings
+ * that is one object in four dimensions and comes apart into many in three.
+ */
+export function hopfFibre(radius: number, phase: number, segments: number): Vec4[] {
+  const n = 1 / Math.sqrt(1 + radius * radius);
+  const points: Vec4[] = [];
+  for (let i = 0; i < segments; i += 1) {
+    const t = (i / segments) * Math.PI * 2;
+    points.push([
+      n * radius * Math.cos(t + phase),
+      n * radius * Math.sin(t + phase),
+      n * Math.cos(t),
+      n * Math.sin(t),
+    ]);
+  }
+  return points;
+}

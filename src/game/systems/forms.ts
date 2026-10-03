@@ -3,13 +3,15 @@ import {
   BackSide,
   BufferAttribute,
   BufferGeometry,
-  CapsuleGeometry,
   Color,
+  Group,
+  LatheGeometry,
   Mesh,
   PlaneGeometry,
   Points,
   ShaderMaterial,
   SphereGeometry,
+  Vector2,
   Vector3,
   type Camera,
   type Object3D,
@@ -22,10 +24,11 @@ import { NOISE, setU } from './glsl';
  * Reusable forms. Original abstract shapes — a glow that has volume, a figure
  * that resolves out of light, drifting motes, and a shell for a room's air.
  *
- * Figures are deliberately abstract: a soft capsule silhouette with an emissive
- * core, so a presence reads as a presence without ever becoming a character
- * model. GAME_BRIEF.md asks for figures that resolve out of glow, which is a
- * lighting problem, not a modelling one.
+ * Figures are deliberately abstract: a lathe-revolved vessel of light with no
+ * face and no limbs, so a presence reads as a presence without ever becoming a
+ * character model. GAME_BRIEF.md asks for figures that resolve out of glow,
+ * which is a lighting problem first — but it is not only one. A form with no
+ * silhouette events has nothing for the light to describe.
  */
 
 /**
@@ -121,15 +124,88 @@ export function volumetricGlow(
 }
 
 /**
- * A presence. An abstract soft silhouette with an emissive interior — never a
- * character, only a shape the eye reads as someone standing there.
+ * The silhouette of a presence, as a lathe profile of (radius, height) pairs on
+ * a unit height.
+ *
+ * Original, abstract, and deliberately not a body: a column of light that
+ * gathers where it meets the ground, draws in at the waist, broadens where
+ * shoulders would be and closes to a crown. There is no face anywhere in it and
+ * there never will be — this world is made of light (GAME_BRIEF.md § The
+ * Threshold, "figures that resolve out of glow").
+ *
+ * What a capsule could not do, and why this exists: a capsule has exactly one
+ * silhouette event, its own radius, so at any distance it reads as a pill. The
+ * eye reads a standing presence off three events — a base, a waist and a
+ * shoulder line — and those are cheap to put in a lathe profile. The form is
+ * then legible at the distance the Council places it at, which is the whole
+ * problem the Council had.
+ */
+const PRESENCE_PROFILE: readonly (readonly [number, number])[] = [
+  [0.020, 0.000],
+  [0.150, 0.000],
+  [0.246, 0.014],
+  [0.250, 0.044],
+  [0.214, 0.124],
+  [0.170, 0.262],
+  [0.146, 0.420],
+  [0.138, 0.548],
+  [0.151, 0.622],
+  [0.178, 0.690],
+  [0.150, 0.752],
+  [0.098, 0.790],
+  [0.093, 0.840],
+  [0.080, 0.900],
+  [0.050, 0.956],
+  [0.000, 1.000],
+];
+
+function presenceGeometry(height: number, swell: number, lift: number): LatheGeometry {
+  const points = PRESENCE_PROFILE.map(
+    ([radius, y]) => new Vector2(radius * height * swell + (swell > 1 ? 0.012 : 0), y * height * lift),
+  );
+  // 16 radial segments: enough that the silhouette curve is smooth at the size
+  // these are drawn, and few enough that five of them cost nothing.
+  return new LatheGeometry(points, 16);
+}
+
+/** Tag every vertex of a geometry so one shared material can shade two parts. */
+function tagPart(geometry: BufferGeometry, part: number): BufferGeometry {
+  const count = geometry.getAttribute('position').count;
+  const parts = new Float32Array(count);
+  parts.fill(part);
+  geometry.setAttribute('aPart', new BufferAttribute(parts, 1));
+  return geometry;
+}
+
+/**
+ * A presence: a being of light standing somewhere, with enough form to read as
+ * one and no more detail than that.
+ *
+ * Two surfaces share one material, which is what lets a scene drive the whole
+ * figure through the single `material` this returns — the shell outside the body
+ * is tagged by a vertex attribute and shaded as the radiance coming off it. That
+ * replaces the billboard halo scenes used to hang above a figure: a camera-facing
+ * sprite with a radial streak reads as a lens flare, which is an artefact of a
+ * camera that is not in this world, while a shell that follows the form turns
+ * with it and reads as light coming off a body.
+ *
+ * Form comes from a wrapped diffuse term as well as the rim. Rim alone is what
+ * made the old figure flat: every silhouette is equally bright and nothing in
+ * between is lit at all, so the shape has an outline and no interior. One
+ * directional term costs a dot product and gives the body a lit side.
  */
 export function figureOfLight(
   tracker: ResourceTracker,
-  options: { height: number; color: number; accent: number; seed: number },
+  options: {
+    height: number;
+    color: number;
+    accent: number;
+    seed: number;
+    /** Where the light on this figure comes from, in world space. */
+    light?: readonly [number, number, number];
+  },
 ): { group: Object3D; material: ShaderMaterial } {
-  const radius = options.height * 0.17;
-  const geometry = tracker.track(new CapsuleGeometry(radius, Math.max(0.1, options.height - radius * 2), 16, 24));
+  const light = options.light ?? [0.22, 0.34, 1];
   const material = tracker.track(
     new ShaderMaterial({
       transparent: true,
@@ -140,16 +216,27 @@ export function figureOfLight(
         uColor: { value: new Color(options.color) },
         uAccent: { value: new Color(options.accent) },
         uSeed: { value: options.seed },
+        uHeight: { value: options.height },
+        uLight: { value: new Vector3(light[0], light[1], light[2]) },
         /** 0 = not yet resolved out of the glow, 1 = fully present. */
         uResolve: { value: 0 },
       },
       vertexShader: /* glsl */ `
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
+        attribute float aPart;
+        uniform float uHeight;
+        varying float vPart;
+        varying vec3 vWorldNormal;
+        varying vec3 vWorldPos;
+        varying float vUpward;
         void main() {
-          vNormalView = normalize(normalMatrix * normal);
-          vLocal = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vPart = aPart;
+          // World space rather than view space: the light on a presence belongs
+          // to the place it is standing in, so it must not swing with the head.
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
+          vec4 world = modelMatrix * vec4(position, 1.0);
+          vWorldPos = world.xyz;
+          vUpward = position.y / max(0.001, uHeight);
+          gl_Position = projectionMatrix * viewMatrix * world;
         }
       `,
       fragmentShader: /* glsl */ `
@@ -157,36 +244,71 @@ export function figureOfLight(
         uniform float uTime;
         uniform vec3 uColor;
         uniform vec3 uAccent;
+        uniform vec3 uLight;
         uniform float uSeed;
         uniform float uResolve;
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
+        varying float vPart;
+        varying vec3 vWorldNormal;
+        varying vec3 vWorldPos;
+        varying float vUpward;
 
         ${NOISE}
 
         void main() {
-          // Rim-dominant: brightest where the form turns away, which is what
-          // makes a shape read as lit from within.
-          float facing = clamp(dot(normalize(vNormalView), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
-          float rim = pow(1.0 - facing, 2.0);
+          vec3 normal = normalize(vWorldNormal);
+          vec3 view = normalize(cameraPosition - vWorldPos);
+          float facing = clamp(dot(normal, view), 0.0, 1.0);
+          float rim = pow(1.0 - facing, 2.3);
 
-          // Before it resolves, the figure is dissolved into noise; as uResolve
-          // rises the noise tightens until a silhouette is standing there.
-          float grain = fbm(vLocal * 3.2 + vec3(uSeed, uTime * 0.2, uSeed * 0.5), 4);
-          float coherence = mix(grain, 1.0, uResolve);
+          float resolve = clamp(uResolve, 0.0, 1.4);
+          // Before it resolves the form is still coming apart into the light it
+          // is made of; as uResolve rises the noise tightens into a silhouette.
+          // Two octaves rather than four: at the size a figure is drawn the
+          // upper octaves are below a pixel, and this shader runs on every
+          // figure in every scene of the Light.
+          float grain = fbm(vWorldPos * 2.1 + vec3(uSeed, uTime * 0.16, uSeed * 0.5), 2);
+          float coherence = mix(grain * 1.5, 1.0, clamp(resolve, 0.0, 1.0));
+          float present = smoothstep(0.0, 0.32, resolve);
 
-          float body = (rim * 0.85 + 0.15) * coherence;
-          body *= smoothstep(0.0, 0.35, uResolve);
+          if (vPart > 0.5) {
+            // The shell: lit only where it turns away from the eye, so what
+            // reads is radiance coming off the figure rather than a sprite.
+            float aura = pow(1.0 - facing, 3.4) * coherence * present;
+            float breath = 0.82 + 0.18 * sin(uTime * 0.6 + uSeed);
+            vec3 glow = mix(uAccent, uColor, 0.45);
+            gl_FragColor = vec4(glow * aura * 0.95 * breath, clamp(aura * 0.5, 0.0, 1.0));
+            return;
+          }
 
-          vec3 tint = mix(uAccent, uColor, rim);
-          gl_FragColor = vec4(tint * body, body * 0.9);
+          // Wrapped diffuse: never fully dark on the turned-away side, because a
+          // being of light has no shadow side, but still directional enough that
+          // the body has a near face and a far one.
+          float lambert = clamp(dot(normal, normalize(uLight)) * 0.5 + 0.5, 0.0, 1.0);
+          // Filaments running up the form, so the surface is light rather than
+          // plastic. Cheap: one sine, no noise.
+          float around = atan(normal.z, normal.x);
+          float weave = sin(around * 5.0 + vUpward * 7.0 - uTime * 0.3) * 0.5 + 0.5;
+          // Brightest at the foot, where the figure stands in the light, and at
+          // the crown. The dip between them is what gives the form a waist.
+          float foot = 1.0 - smoothstep(0.0, 0.44, vUpward);
+          float crown = smoothstep(0.80, 1.0, vUpward);
+          float body = (lambert * 0.55 + rim * 0.95 + 0.10) * (0.52 + foot * 0.52 + crown * 0.9);
+          body *= (0.86 + weave * 0.28) * coherence * present;
+
+          vec3 tint = mix(uAccent, uColor, clamp(rim * 0.7 + crown * 0.6, 0.0, 1.0));
+          gl_FragColor = vec4(tint * body, clamp(body * 0.9, 0.0, 1.0));
         }
       `,
     }),
   );
-  const mesh = new Mesh(geometry, material);
-  mesh.position.y = options.height * 0.5;
-  return { group: mesh, material };
+
+  const group = new Group();
+  const body = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1, 1), 0)), material);
+  const shell = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1.2, 1.03), 1)), material);
+  group.add(body, shell);
+  // The group's origin is where the figure stands, as it was when this was a
+  // capsule offset by half its height. Every caller positions feet, not centre.
+  return { group, material };
 }
 
 /** Drifting motes. Dust in a sunbeam, or souls at a distance. */
