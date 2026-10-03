@@ -62,7 +62,7 @@ should care about this person before they die.
 4. Killed in a bomb blast
 5. Heart attack
 6. Lynched by a group of racist men
-7. Smoking DMT (the edge case: the player may be sent back, the classic
+7. Smoke DMT (the edge case: the player may be sent back, the classic
    "it is not your time" NDE, which unlocks an alternate thread)
 
 Pacing rule: the player reaches the afterlife within three minutes. The vignette

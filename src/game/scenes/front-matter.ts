@@ -150,7 +150,7 @@ export const vignetteSelectScene: SceneDefinition = {
     { id: 'heart-attack', label: 'The heart attack', to: 'death.heart-attack' },
     // Vignette 7, the edge case: the one death the player can survive
     // (GAME_BRIEF.md § Act 1).
-    { id: 'dmt', label: 'The one you survive', to: 'death.dmt' },
+    { id: 'dmt', label: 'Smoke DMT', to: 'death.dmt' },
   ],
   create(context: SceneContext): SceneInstance {
     const field = quietField(context, 'living');
@@ -176,7 +176,7 @@ export const vignetteSelectScene: SceneDefinition = {
         },
         {
           id: 'dmt',
-          label: 'The one you survive',
+          label: 'Smoke DMT',
           onPick: () => {
             context.audio.start();
             void context.takeExit('dmt');
