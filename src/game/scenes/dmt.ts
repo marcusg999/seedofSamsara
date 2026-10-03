@@ -43,8 +43,14 @@ import { recordUnlock } from '../systems/incarnation';
  * tightens, the entities hold their distance or close in, and the spirit body's
  * colour and brightness change on the frame after the choice that moves karma
  * (`L-FRAN-03`). No beat anywhere in the thread leaves the player with nothing
- * to decide for longer than about fifteen seconds, and every scene's exit is
- * reachable from its first frame.
+ * to decide for longer than about fifteen seconds.
+ *
+ * Every one of the six waits for a real answer, and so does every way out. The
+ * clock in these scenes moves the world and the camera; it never moves the
+ * ledger and it never takes a door. That is the Threshold corridor's rule —
+ * `threshold.pronounced-dead` and its neighbours ask and then wait — applied
+ * here by the owner's decision, which GAME_BRIEF.md § Act 1's pacing rule now
+ * records.
  *
  * Lore: `L-DMT-01` and `L-DMT-02` are the licence for this vignette to sit
  * beside the six deaths and to lead into the same Threshold — the overlap with
@@ -659,47 +665,74 @@ function forgetDecisions(context: SceneContext): void {
 }
 
 /**
- * One overlay slot per scene.
+ * One overlay slot per scene, with a queue behind it.
  *
- * Choices arrive several times in each of these scenes and each one replaces the
- * last, so a scene must never be able to leave two dialogs stacked on the frame
- * — and whatever is up must come down when the scene unloads, which is what the
+ * All six choices in the thread share this one slot, and the beat clock reaches
+ * the next choice's cue whether or not the player has answered the last one. So
+ * a cue never offers: it *queues*. The slot shows the head of the queue, and the
+ * next choice goes up on the frame the current one is answered.
+ *
+ * That ordering is the whole mechanism. Offering straight off the timeline would
+ * paint over an unanswered dialog, and a choice that disappears unasked is worse
+ * than a default — the player never learns it was there, and the karma, harmony,
+ * will and attachment it carries never move at all. Queued, a choice can only
+ * ever wait.
+ *
+ * Whatever is up must come down when the scene unloads, which is what the
  * tracker registration here guarantees.
  */
-function choiceSlot(context: SceneContext): {
-  offer(content: OverlayContent): void;
-  close(): void;
+function choiceQueue(context: SceneContext): {
+  /** Queue a choice. `build` runs at the moment it actually goes up. */
+  enqueue(build: () => OverlayContent): void;
+  /** Call from a choice's handler: closes it and offers whatever is waiting. */
+  answered(): void;
+  /** True while a choice is on screen or still waiting its turn. */
+  readonly waiting: boolean;
 } {
+  const queue: (() => OverlayContent)[] = [];
   let current: Overlay | undefined;
   context.resources.onDispose(() => {
     current?.dispose();
     current = undefined;
+    queue.length = 0;
   });
+  const pump = (): void => {
+    if (current) {
+      return;
+    }
+    const next = queue.shift();
+    if (!next) {
+      return;
+    }
+    current = new Overlay(next());
+    current.focusFirst();
+  };
   return {
-    offer(content) {
-      current?.dispose();
-      current = new Overlay(content);
-      current.focusFirst();
+    enqueue(build) {
+      queue.push(build);
+      pump();
     },
-    close() {
+    answered() {
       current?.dispose();
       current = undefined;
+      pump();
+    },
+    get waiting() {
+      return current !== undefined || queue.length > 0;
     },
   };
 }
 
-/** How long a closing image holds before the scene moves on by itself. */
-const GRACE_SECONDS = 10;
-
 // --- vignette 7: the threshold of it -------------------------------------------
 
 /**
- * 67 seconds of authored time, then the closing image holds for
- * `GRACE_SECONDS` and lets go by itself (GAME_BRIEF.md § Act 1, pacing rule).
+ * 64 seconds of authored time, and then the closing image waits to be let go of
+ * (GAME_BRIEF.md § Act 1, pacing rule: where the player has something to decide,
+ * the scene waits for them).
  *
- * The player's first real choice is live 9 seconds in and stays live for 20, and
- * the second opens the moment the first closes, so from 9s to 56s there is
- * always something to decide. The ordinary life this vignette has to establish
+ * The player's first real choice is live 9 seconds in and stays live until it is
+ * answered, and the second goes up the moment the first comes down, so from 9s
+ * onward there is always something to decide. The ordinary life this vignette has to establish
  * is established *by* that first choice rather than ahead of it: the three
  * options are the three things in his flat, and picking one is what tells the
  * player who he is. Nothing here is watched for a minute before it can be
@@ -756,7 +789,7 @@ export const deathDmtScene: SceneDefinition = {
       }
     });
 
-    const slot = choiceSlot(context);
+    const choices = choiceQueue(context);
 
     // Sitting on the floor with his back to the near wall, looking down the room
     // at the half-painted wall and the doorframe. Eye height is a seated eye.
@@ -788,8 +821,18 @@ export const deathDmtScene: SceneDefinition = {
     let resisted: boolean | undefined;
     let askedHeld = false;
     let askedFold = false;
-    let holdBeganAt: number | undefined;
+    let askedOnward = false;
     let leaving = false;
+
+    /** The one way out, taken once, by the player. */
+    function leave(exitId: string): void {
+      if (leaving) {
+        return;
+      }
+      leaving = true;
+      choices.answered();
+      void context.takeExit(exitId);
+    }
 
     /** The first choice. What he fixes on as the room starts to go. */
     function take(id: HeldId): void {
@@ -807,12 +850,12 @@ export const deathDmtScene: SceneDefinition = {
       context.soul.will = clamp01(context.soul.will + choice.will);
       flat.setHeld(flat.anchors[id]);
       context.captions.show(choice.caption, 9);
-      slot.close();
+      choices.answered();
     }
 
     function offerHeld(): void {
       askedHeld = true;
-      slot.offer({
+      choices.enqueue(() => ({
         title: 'What does he hold on to?',
         body:
           'The room is beginning to go. There are three things in it. Whichever one he keeps '
@@ -825,8 +868,8 @@ export const deathDmtScene: SceneDefinition = {
             take(entry.id);
           },
         })),
-        hint: 'Decide, or the moment passes and he is left looking at the window.',
-      });
+        hint: 'The moment holds, and it goes on holding until he picks one.',
+      }));
     }
 
     /** The second choice. Whether he resists the fold or goes with it. */
@@ -847,12 +890,12 @@ export const deathDmtScene: SceneDefinition = {
         context.soul.will = clamp01(context.soul.will - 0.05);
         context.captions.show('He stops holding the room together. It was never him doing that.', 8);
       }
-      slot.close();
+      choices.answered();
     }
 
     function offerFold(): void {
       askedFold = true;
-      slot.offer({
+      choices.enqueue(() => ({
         title: 'The room is coming apart.',
         body:
           'He can brace against it or stop trying to hold it together. Bracing keeps something '
@@ -862,8 +905,29 @@ export const deathDmtScene: SceneDefinition = {
           { id: 'hold', label: 'Brace', onPick: () => { fold('hold'); } },
           { id: 'release', label: 'Let it take him', onPick: () => { fold('release'); } },
         ],
-        hint: 'Decide, or he simply stops deciding, which is its own answer.',
-      });
+        hint: 'Neither of these happens on its own. It is his to do.',
+      }));
+    }
+
+    /**
+     * The way out of the closing image.
+     *
+     * One exit, and the player is the one who takes it. It is queued like
+     * everything else, so it comes up behind anything still unanswered: a player
+     * who has not said what he holds on to is asked that first, and the vignette
+     * cannot carry them past it.
+     */
+    function offerOnward(): void {
+      askedOnward = true;
+      choices.enqueue(() => ({
+        title: 'It opens.',
+        body:
+          'The room is still around him and it is no longer the thing he is in. Whatever he '
+          + 'kept hold of is what he is carrying out of it.',
+        actions: [
+          { id: 'onward', label: 'Let it open', onPick: () => { leave('onward'); } },
+        ],
+      }));
     }
 
     return {
@@ -871,22 +935,19 @@ export const deathDmtScene: SceneDefinition = {
         director.updateTo(elapsed);
         const { beat, t } = director.state;
 
-        // --- the choices, on the clock -----------------------------------
+        // --- the choices, queued on the clock -----------------------------
+        // The clock decides when a question is *asked*. It never answers one.
+        // Both cues only enqueue, so the fold question cannot paint over an
+        // unanswered first choice: if the player is still deciding what he holds
+        // on to when the room starts to come apart, it waits its turn behind it.
         if (!askedHeld && beat.id === 'what-he-holds') {
           offerHeld();
         }
-        if (beat.id === 'breathing' || beat.id === 'folding' || beat.id === 'given-way' || beat.id === 'gone') {
-          if (!held) {
-            // The window. He was looking at it anyway, which is the lightest
-            // thing he could have been carrying, and the hint said so.
-            take('window');
-          }
-          if (!askedFold) {
-            offerFold();
-          }
-        }
-        if ((beat.id === 'given-way' || beat.id === 'gone') && resisted === undefined) {
-          fold('release');
+        if (
+          !askedFold
+          && (beat.id === 'breathing' || beat.id === 'folding' || beat.id === 'given-way' || beat.id === 'gone')
+        ) {
+          offerFold();
         }
 
         // Bracing slows the fold and roughens the lens; letting go hurries it.
@@ -921,12 +982,13 @@ export const deathDmtScene: SceneDefinition = {
         context.audio.shimmer(Math.max(0, foldNow - 0.2) * 0.5);
         context.audio.ring(Math.max(0, foldNow - 0.5) * 0.14, 1700 + foldNow * 500);
 
+        // The closing image does not let go by itself. It hands the player the
+        // door and holds, because this vignette is built out of decisions and a
+        // timer taking the last one would undo the other five.
         if (beat.id === 'gone' && t >= 1) {
           context.captions.show('Let it open.', 8);
-          holdBeganAt ??= elapsed;
-          if (!leaving && elapsed - holdBeganAt >= GRACE_SECONDS) {
-            leaving = true;
-            void context.takeExit('onward');
+          if (!askedOnward) {
+            offerOnward();
           }
         }
       },
@@ -971,8 +1033,11 @@ export const deathDmtScene: SceneDefinition = {
 /**
  * 62 seconds of authored time, with a decision live from 10 seconds in and
  * never more than one beat away after that: meet it or look away at 10s, show
- * it what he was holding or keep it at 26s, and the fork itself at 42s, which
- * stays open until the scene lets go.
+ * it what he was holding or keep it at 26s, and the fork itself at 42s. Each of
+ * the three waits for an answer and the next only goes up once the last is
+ * answered, so none of them can be missed — and the fork waits for as long as it
+ * takes, because being sent back is a thing the player chooses here and not a
+ * thing that happens to them.
  */
 const HYPERSPACE_BEATS: readonly Beat[] = [
   { id: 'arrival', seconds: 10 },
@@ -987,8 +1052,8 @@ const HYPERSPACE_BEATS: readonly Beat[] = [
  * The floor under the weight this crossing would hand to the afterlife, if it
  * turned out to be the crossing (GAME_BRIEF.md § Act 1: each death sets the
  * starting state). Only a floor: the player's choices set the actual figure, and
- * this exists so that a player who decides nothing at all still arrives
- * carrying something. Deliberately the lightest in the game — nothing here is
+ * this exists so that nobody crosses over from this thread carrying nothing at
+ * all. Deliberately the lightest in the game — nothing here is
  * violent, nothing is unjust, and lore bible § 12.6 flags the whole "worse
  * death, heavier start" curve as unresolved anyway.
  */
@@ -999,9 +1064,11 @@ export const dmtHyperspaceScene: SceneDefinition = {
   title: 'Hyperspace',
   exits: [
     // The edge case has two sides and the graph has to say so. Being sent back
-    // is what the brief calls the classic case and it is what happens if the
-    // player does nothing; going on leads into the same Threshold as the six
-    // deaths, which is what `L-DMT-02`'s measured overlap licenses.
+    // is what the brief calls the classic case; going on leads into the same
+    // Threshold as the six deaths, which is what `L-DMT-02`'s measured overlap
+    // licenses. Which one happens is the player's and only the player's: this is
+    // the most consequential choice in Act 1, and nothing in the scene — no
+    // timer, no beat, no closing image — takes it for them.
     { id: 'sent-back', label: 'Be sent back', to: 'dmt.sent-back' },
     { id: 'cross-over', label: 'Go on', to: 'threshold.pronounced-dead' },
   ],
@@ -1064,7 +1131,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
       }
     });
 
-    const slot = choiceSlot(context);
+    const choices = choiceQueue(context);
 
     // What he decided in the room, read back out of the run's own record.
     const held = heldFrom(context.soul.shards);
@@ -1105,10 +1172,19 @@ export const dmtHyperspaceScene: SceneDefinition = {
     let askedShow = false;
     let askedFork = false;
     let handedOver = false;
-    let holdBeganAt: number | undefined;
     let leaving = false;
     let lastElapsed = 0;
     const scratch = new Vector3();
+
+    /** Either side of the fork, taken once, by the player. */
+    function leave(exitId: string): void {
+      if (leaving) {
+        return;
+      }
+      leaving = true;
+      choices.answered();
+      void context.takeExit(exitId);
+    }
 
     /**
      * The third choice. Meeting it is attention paid to something that is
@@ -1130,7 +1206,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
         context.soul.will = clamp01(context.soul.will + 0.15);
         context.captions.show('You keep your eyes on the architecture. They come nearer regardless.', 9);
       }
-      slot.close();
+      choices.answered();
     }
 
     /**
@@ -1161,7 +1237,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
         context.soul.attachment = clamp01(context.soul.attachment + 0.05);
         context.captions.show('You keep it. It waits a while, and then stops asking.', 10);
       }
-      slot.close();
+      choices.answered();
     }
 
     return {
@@ -1175,10 +1251,15 @@ export const dmtHyperspaceScene: SceneDefinition = {
         const frameSeconds = Math.max(0, elapsed - lastElapsed);
         lastElapsed = elapsed;
 
-        // --- the choices, on the clock -----------------------------------
+        // --- the choices, queued on the clock -----------------------------
+        // Three in a row through one slot. Each cue only enqueues, so a question
+        // whose beat has arrived waits behind the one the player is still
+        // answering instead of replacing it. The fork is third, which is to say
+        // the player cannot be carried past the two questions in front of it —
+        // and cannot be put on either side of it — by the clock.
         if (!askedMeet && beat.id === 'noticed') {
           askedMeet = true;
-          slot.offer({
+          choices.enqueue(() => ({
             title: 'Something is looking at you.',
             body:
               'It is not a shape that happens to be facing this way. It has turned, and it is '
@@ -1188,63 +1269,41 @@ export const dmtHyperspaceScene: SceneDefinition = {
               { id: 'meet', label: 'Meet it', onPick: () => { meet(true); } },
               { id: 'look-away', label: 'Look away', onPick: () => { meet(false); } },
             ],
-            hint: 'Decide, or you will have looked away by default.',
-          });
+            hint: 'Not deciding is not looking away. It is still turned toward you, still waiting.',
+          }));
         }
-        if (beat.id === 'attended' || beat.id === 'shown' || beat.id === 'release' || beat.id === 'held') {
-          if (met === undefined) {
-            meet(false);
-          }
-          if (!askedShow) {
-            askedShow = true;
-            const what = held?.phrase ?? 'whatever he came in holding';
-            slot.offer({
-              title: 'It wants to see what you brought.',
-              body:
-                `You came in holding ${what}. It is asking for it — not to keep, as far as you `
-                + 'can tell. You can show it, or you can keep it to yourself, and it will not '
-                + 'ask twice.',
-              actions: [
-                { id: 'show', label: 'Show it', onPick: () => { show(true); } },
-                { id: 'keep', label: 'Keep it', onPick: () => { show(false); } },
-              ],
-              hint: 'Decide, or you will have kept it. Look down afterwards: your own light answers.',
-            });
-          }
+        if (
+          !askedShow
+          && (beat.id === 'attended' || beat.id === 'shown' || beat.id === 'release' || beat.id === 'held')
+        ) {
+          askedShow = true;
+          const what = held?.phrase ?? 'whatever he came in holding';
+          choices.enqueue(() => ({
+            title: 'It wants to see what you brought.',
+            body:
+              `You came in holding ${what}. It is asking for it — not to keep, as far as you `
+              + 'can tell. You can show it, or you can keep it to yourself, and it will not '
+              + 'ask twice.',
+            actions: [
+              { id: 'show', label: 'Show it', onPick: () => { show(true); } },
+              { id: 'keep', label: 'Keep it', onPick: () => { show(false); } },
+            ],
+            hint: 'It asked once, and it is waiting. Look down afterwards: your own light answers.',
+          }));
         }
-        if (beat.id === 'shown' || beat.id === 'release' || beat.id === 'held') {
-          if (showed === undefined) {
-            show(false);
-          }
-          if (!askedFork) {
-            askedFork = true;
-            slot.offer({
-              title: 'Not yet.',
-              body:
-                'This is the one death you can survive. Being sent back is the classic case, and '
-                + 'it is what happens if you do nothing. Going on leads into the Threshold — the '
-                + 'same one the other six deaths lead into.',
-              actions: [
-                {
-                  id: 'sent-back',
-                  label: 'Be sent back',
-                  onPick: () => {
-                    leaving = true;
-                    void context.takeExit('sent-back');
-                  },
-                },
-                {
-                  id: 'cross-over',
-                  label: 'Go on',
-                  onPick: () => {
-                    leaving = true;
-                    void context.takeExit('cross-over');
-                  },
-                },
-              ],
-              hint: 'Do nothing and you will be sent back.',
-            });
-          }
+        if (!askedFork && (beat.id === 'shown' || beat.id === 'release' || beat.id === 'held')) {
+          askedFork = true;
+          choices.enqueue(() => ({
+            title: 'Not yet.',
+            body:
+              'This is the one death you can survive. Being sent back is the classic case. Going '
+              + 'on leads into the Threshold — the same one the other six deaths lead into.',
+            actions: [
+              { id: 'sent-back', label: 'Be sent back', onPick: () => { leave('sent-back'); } },
+              { id: 'cross-over', label: 'Go on', onPick: () => { leave('cross-over'); } },
+            ],
+            hint: 'Neither way opens by itself. This one is yours.',
+          }));
         }
 
         // How far the place has opened out, 0..1 across the whole scene. A man
@@ -1358,13 +1417,10 @@ export const dmtHyperspaceScene: SceneDefinition = {
           context.soul.will = Math.min(context.soul.will, 1 - context.soul.attachment * 0.5);
         }
 
-        if (beat.id === 'held' && t >= 1) {
-          holdBeganAt ??= elapsed;
-          if (!leaving && elapsed - holdBeganAt >= GRACE_SECONDS) {
-            leaving = true;
-            void context.takeExit('sent-back');
-          }
-        }
+        // No closing-image timer here on purpose. The fork *is* this scene's
+        // closing image: it is up, it is the thing to do, and the scene holds on
+        // it until the player answers. A grace period here would hand the game
+        // the single most consequential choice in Act 1.
       },
       resize(width, height) {
         field.resize(width, height);
@@ -1489,7 +1545,7 @@ export const dmtSentBackScene: SceneDefinition = {
       }
     });
 
-    const slot = choiceSlot(context);
+    const choices = choiceQueue(context);
     const held = heldFrom(context.soul.shards);
 
     // On his back on the carpet where he was sitting, coming up to sitting again
@@ -1526,8 +1582,18 @@ export const dmtSentBackScene: SceneDefinition = {
     let returned = false;
     let carried: Carry | undefined;
     let askedCarry = false;
-    let holdBeganAt: number | undefined;
+    let askedOnward = false;
     let leaving = false;
+
+    /** Back into the life, taken once, by the player. */
+    function leave(exitId: string): void {
+      if (leaving) {
+        return;
+      }
+      leaving = true;
+      choices.answered();
+      void context.takeExit(exitId);
+    }
 
     /**
      * The scene's choice, and the durable one.
@@ -1551,7 +1617,7 @@ export const dmtSentBackScene: SceneDefinition = {
       flat.setHeld(choice.anchor === undefined ? undefined : flat.anchors[choice.anchor]);
       context.captions.show(choice.caption, 10);
       recordUnlock(choice.shard, choice.wisdom);
-      slot.close();
+      choices.answered();
     }
 
     return {
@@ -1559,10 +1625,13 @@ export const dmtSentBackScene: SceneDefinition = {
         director.updateTo(elapsed);
         const { beat, t } = director.state;
 
+        // The durable choice in the thread, and the clock does not get to make
+        // it. `recordUnlock` writes the answer into the incarnation, where it
+        // outlives the run — which is exactly why it has to be the player's.
         if (!askedCarry && beat.id !== 'falling-back') {
           askedCarry = true;
           const what = held?.phrase ?? 'nothing in particular';
-          slot.offer({
+          choices.enqueue(() => ({
             title: 'He gets to keep it. All of it.',
             body:
               `He went in holding ${what} and he has been handed the whole life back. What he `
@@ -1575,11 +1644,8 @@ export const dmtSentBackScene: SceneDefinition = {
                 carry(entry.id);
               },
             })),
-            hint: 'Decide, or he tells nobody, which is what most people do.',
-          });
-        }
-        if ((beat.id === 'what-he-carries' || beat.id === 'onward') && !carried) {
-          carry('say-nothing');
+            hint: 'Most people tell nobody. He has not decided to be one of them yet.',
+          }));
         }
 
         // One curve runs the whole scene: 1 is still out there, 0 is all the way
@@ -1638,12 +1704,25 @@ export const dmtSentBackScene: SceneDefinition = {
           recordUnlock(RETURN_SHARD, RETURN_WISDOM);
         }
 
+        // Queued behind the carry question, so a player who has not answered it
+        // is asked that first and cannot be walked back into the life without
+        // having decided what he takes into it. Only `live-on` is offered: the
+        // other declared exit leads to `past-life.memory-shard`, which is
+        // planned and not built, and offering a door onto nothing would be a
+        // softlock dressed as a choice.
         if (beat.id === 'onward' && t >= 1) {
           context.captions.show('He has a whole Monday to get through.', 9);
-          holdBeganAt ??= elapsed;
-          if (!leaving && elapsed - holdBeganAt >= GRACE_SECONDS) {
-            leaving = true;
-            void context.takeExit('live-on');
+          if (!askedOnward) {
+            askedOnward = true;
+            choices.enqueue(() => ({
+              title: 'He gets to stay.',
+              body:
+                'The rest of it is in front of him, and so is the death he was just shown. What '
+                + 'he decided tonight goes with him into it.',
+              actions: [
+                { id: 'live-on', label: 'Back into the life', onPick: () => { leave('live-on'); } },
+              ],
+            }));
           }
         }
       },
