@@ -314,8 +314,8 @@ Recorded so that nothing invented is later mistaken for sourced.
 
 ## 13. Representation — what the sources do and do not license
 
-CLAUDE.md § Content rules govern the police shooting and the lynching: the camera
-centres the victim, and the perpetrators are never its subject. Nothing in this
+CLAUDE.md § Content rules govern the police shooting and the soldier's death: the
+camera centres the dying person, and those doing the killing are never its subject. Nothing in this
 file softens that, and no source here is a reason to depict either event in more
 detail than the rule allows.
 

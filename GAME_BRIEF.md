@@ -61,7 +61,7 @@ should care about this person before they die.
 3. Shot by a police officer
 4. Killed in a bomb blast
 5. Heart attack
-6. Lynched by a group of racist men
+6. Shot as a soldier in a war
 7. Smoke DMT (the edge case: the player may be sent back, the classic
    "it is not your time" NDE, which unlocks an alternate thread)
 
@@ -71,8 +71,10 @@ watches still crosses over in time, and a player who wants to go sooner always c
 
 Treatment rule: death is conveyed through perception, not gore. Time slows, sound
 drops out, color drains, then the camera lifts out of the body and sees the scene
-from above. The police shooting and the lynching center the victim's humanity and
-the injustice; the perpetrators are never the camera's subject. Content notes appear
+from above. The police shooting centers the victim's humanity and
+the injustice. The soldier's death centers the person dying, not the enemy and
+not the act, and carries no verdict on the war itself. In both, those doing the
+killing are never the camera's subject. Content notes appear
 before the game, and the player chooses a vignette or takes a random death.
 
 Each death sets the starting state of the afterlife: violent, unjust deaths begin

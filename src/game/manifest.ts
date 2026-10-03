@@ -34,7 +34,7 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'death.police-shooting', act: 'act1', status: 'planned', note: 'Vignette 3. Camera centers the victim.' },
   { id: 'death.bomb-blast', act: 'act1', status: 'planned', note: 'Vignette 4.' },
   { id: 'death.heart-attack', act: 'act1', status: 'implemented', note: 'Vignette 5. Grounded in cardiac-arrest NDE research.' },
-  { id: 'death.lynching', act: 'act1', status: 'planned', note: 'Vignette 6. Camera centers the victim; perpetrators never the subject.' },
+  { id: 'death.soldier', act: 'act1', status: 'planned', note: 'Vignette 6: shot as a soldier in a war. Camera centers the dying soldier; the enemy is never the subject.' },
   { id: 'death.dmt', act: 'act1', status: 'implemented', note: 'Vignette 7. Experience only, no dosing or preparation detail.' },
 
   // Act 2 — the Threshold, built from Moody's recurring elements.

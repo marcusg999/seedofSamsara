@@ -34,8 +34,8 @@ If a test is wrong, fix the test and say why in the commit message.
 
 ## Content rules
 - Deaths are conveyed through perception, not gore (see GAME_BRIEF.md).
-- In the police shooting and the lynching, the camera centers the victim. The
-  perpetrators are never the subject.
+- In the police shooting and the soldier's death, the camera centers the dying
+  person. Those doing the killing are never the subject.
 - The DMT vignette depicts the experience only. No dosing or preparation detail.
 - Content notes appear before play.
 - Lore claims trace back to research/lore-bible.md with a source.
