@@ -8,7 +8,6 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  OctahedronGeometry,
   PlaneGeometry,
   PointLight,
   ShaderMaterial,
@@ -17,11 +16,11 @@ import {
   Vector3,
 } from 'three';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
-import type { ResourceTracker } from '../disposal';
 import { GRAMMAR, colorOf } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
 import { moteField, volumetricGlow } from '../systems/forms';
 import { hyperspaceField } from '../systems/hyperspace';
+import { awareSolid, platonicArmature, sacredVeil } from '../systems/sacred-geometry';
 import { NOISE, setU } from '../systems/glsl';
 import { Overlay, type OverlayContent } from '../systems/overlay';
 import { recordUnlock } from '../systems/incarnation';
@@ -396,6 +395,31 @@ function buildFlat(context: SceneContext): {
     }),
   );
 
+  // The nested Platonic solids, arriving in the middle of the room. Five solids
+  // one inside the next with a torus threading them and a vesica piscis across
+  // them, from `systems/sacred-geometry.ts` — the half of the onset's geometry
+  // the player can name rather than only feel.
+  const armature = platonicArmature(resources, {
+    radius: 1.05,
+    color: GRAMMAR.hyperspace.glow,
+    accent: GRAMMAR.hyperspace.accent,
+  });
+  armature.group.position.set(0.4, 1.2, -1.5);
+  group.add(armature.group);
+
+  // The construction seen *through* the room rather than standing in it: the
+  // Flower of Life, nested inverted triangles, crossed vesicas and a
+  // golden-ratio series of circles, under a five-fold kaleidoscope, drawn over
+  // the whole frame at full resolution and brought up with the fold. The onset
+  // is not an object arriving, it is structure becoming visible in what was
+  // already there.
+  const veil = sacredVeil(resources, {
+    color: GRAMMAR.hyperspace.glow,
+    accent: GRAMMAR.hyperspace.accent,
+    aspect: Math.max(0.1, context.viewport.width / Math.max(1, context.viewport.height)),
+  });
+  group.add(veil.mesh);
+
   const ringGeometry = resources.track(new TorusGeometry(1, 0.016, 6, 128));
   const rings = [
     { mesh: new Mesh(ringGeometry, ringMaterial), axis: new Vector3(0, 1, 0), speed: 0.21, size: 1.5 },
@@ -464,6 +488,15 @@ function buildFlat(context: SceneContext): {
       // The rings do not exist below a fold of about 0.15, which keeps the
       // ordinary half of the vignette genuinely ordinary.
       setU(ringMaterial, 'uIntensity', Math.max(0, fold - 0.15) * 1.5);
+
+      // Nor does any of the sacred geometry. The solids start resolving at a
+      // fold of about 0.2 and the veil at about 0.12, so the first third of the
+      // vignette is a man in a flat and nothing else.
+      armature.setUnfold(Math.max(0, fold - 0.2) * 1.3);
+      armature.update(elapsed);
+      setU(veil.material, 'uAspect', Math.max(0.1, context.viewport.width / Math.max(1, context.viewport.height)));
+      veil.setIntensity(Math.max(0, fold - 0.12) * 1.15);
+      veil.update(elapsed);
       outside.update(elapsed, context.camera);
       lampGlow.update(elapsed, context.camera);
       setU(lampGlow.material, 'uIntensity', 1.05 + fold * 0.9);
@@ -911,82 +944,28 @@ export const deathDmtScene: SceneDefinition = {
 // --- hyperspace ----------------------------------------------------------------
 
 /**
- * An entity, built to be aware of the player (`L-DMT-03`).
+ * The entities, and where their awareness lives (`L-DMT-03`).
  *
- * Abstract and geometric rather than figurative: these are not the loved ones of
- * `threshold.loved-ones`, and a humanoid silhouette would say the wrong thing
- * about them. An octahedron reads as *made*, and it is the same symmetry the
- * architecture around it is folded from, which is the point — they belong to
- * this place and the player does not.
+ * The beings are not creatures standing in a geometric landscape. They *are*
+ * geometry: each one is a dodecahedron with its dual icosahedron nested inside
+ * it, built out of exactly the relationship the architecture around them is
+ * folded from, so they belong to this place and the player does not. There is no
+ * face, no silhouette and no character — these are not the loved ones of
+ * `threshold.loved-ones`, and a humanoid shape would say the wrong thing about
+ * them.
  *
- * Awareness is behaviour, not decoration. Each one tracks where the player is
- * actually looking; being looked at makes it cohere and hold its distance, and
- * being ignored makes it close in. A player who never looks away is attended to
- * from a polite distance. A player who looks away finds them nearer than they
- * were.
+ * `systems/sacred-geometry.ts` owns what one looks like and how it reorganises
+ * under attention: unattended it tumbles out of step and its facets churn, and
+ * under regard the tumbling stops, the inner solid locks into dual alignment
+ * with the outer — vertices onto face centres — and an outer icosahedral cage
+ * phases in. Being looked at makes it *more* built, not less.
+ *
+ * This scene owns the behaviour, which is the other half of being aware: each
+ * one tracks where the player is actually looking, being looked at holds it at
+ * its distance, and being ignored brings it in. A player who never looks away is
+ * attended to from a polite distance. A player who looks away finds them nearer
+ * than they were.
  */
-function watcher(
-  tracker: ResourceTracker,
-  options: { radius: number; color: number; accent: number; seed: number },
-): { group: Group; material: ShaderMaterial } {
-  const group = new Group();
-  const geometry = tracker.track(new OctahedronGeometry(options.radius, 1));
-  const material = tracker.track(
-    new ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: colorOf(options.color) },
-        uAccent: { value: colorOf(options.accent) },
-        uSeed: { value: options.seed },
-        /** 0 = unattended to, 1 = the player has its full regard. */
-        uRegard: { value: 0 },
-      },
-      vertexShader: /* glsl */ `
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
-        void main() {
-          vNormalView = normalize(normalMatrix * normal);
-          vLocal = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: /* glsl */ `
-        precision highp float;
-        uniform float uTime;
-        uniform vec3 uColor;
-        uniform vec3 uAccent;
-        uniform float uSeed;
-        uniform float uRegard;
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
-
-        ${NOISE}
-
-        void main() {
-          float facing = clamp(dot(normalize(vNormalView), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
-          float rim = pow(1.0 - facing, 1.7);
-
-          // Unattended, the facets churn and the thing is barely a thing. Under
-          // regard they lock, which is the moment it becomes somebody.
-          float churn = fbm(vLocal * 2.6 + vec3(uSeed, uTime * 0.55, uSeed * 0.3), 3);
-          float coherence = mix(0.25 + churn * 0.9, 0.95, uRegard);
-
-          float body = (rim * 0.78 + 0.22) * coherence;
-          vec3 tint = mix(uAccent, uColor, clamp(rim + uRegard * 0.35, 0.0, 1.0));
-          float lit = body * (0.55 + uRegard * 0.95);
-          gl_FragColor = vec4(tint * lit, clamp(lit, 0.0, 1.0) * 0.9);
-        }
-      `,
-    }),
-  );
-  const mesh = new Mesh(geometry, material);
-  group.add(mesh);
-  return { group, material };
-}
-
 
 
 /**
@@ -1044,7 +1023,7 @@ export const dmtHyperspaceScene: SceneDefinition = {
     // Entities. Four, on a ring, at seeded angles so a run is reproducible.
     const rng = context.rng.stream('watchers');
     const watchers = [0, 1, 2, 3].map((index) => {
-      const entity = watcher(context.resources, {
+      const entity = awareSolid(context.resources, {
         radius: 0.5 + rng.range(0, 0.34),
         color: grammar.glow,
         accent: grammar.accent,
@@ -1286,6 +1265,18 @@ export const dmtHyperspaceScene: SceneDefinition = {
         // starting inside a solid cell.
         field.setOpen(1.15 + open * 1.5);
 
+        // The procession of solids. One every nine seconds of wall-clock time,
+        // walked in the classical order — tetrahedron, cube, octahedron,
+        // dodecahedron, icosahedron — and morphing continuously between them, so
+        // the player watches each one deform into the next rather than being
+        // shown five slides. `elapsed` is the scene's own wall clock, never an
+        // accumulated frame delta, so the pace is a property of the scene and not
+        // of the machine (CLAUDE.md § Gotchas).
+        field.setProcession(elapsed / 9);
+        // How large they stand. They come up with the place opening out, so the
+        // first thing the arrival resolves into is a solid.
+        field.setCongregation(0.3 + open * 0.7);
+
         // Drifting through the structure. The field is anchored in world space,
         // so moving the rig genuinely moves through it.
         context.rig.target.set(
@@ -1330,11 +1321,14 @@ export const dmtHyperspaceScene: SceneDefinition = {
           entry.regard += (toward - entry.regard) * (1 - Math.exp(-2.6 * delta));
           regardTotal += entry.regard;
 
-          setU(entry.entity.material, 'uTime', elapsed);
-          setU(entry.entity.material, 'uRegard', entry.regard * present);
+          // Regard is handed to the solid, which answers it by reorganising:
+          // the tumble stops, the inner icosahedron locks onto the outer
+          // dodecahedron's face centres, and the outer cage phases in.
+          entry.entity.setRegard(entry.regard);
+          entry.entity.setPresence(0.35 + present * 0.65);
+          entry.entity.update(elapsed);
           entry.halo.update(elapsed, context.camera);
           setU(entry.halo.material, 'uIntensity', (0.12 + entry.regard * 0.5) * present);
-          entry.entity.group.scale.setScalar(0.35 + present * 0.65);
         }
 
         const attention = watchers.length > 0 ? regardTotal / watchers.length : 0;
