@@ -34,8 +34,8 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'death.police-shooting', act: 'act1', status: 'planned', note: 'Vignette 3. Camera centers the victim.' },
   { id: 'death.bomb-blast', act: 'act1', status: 'planned', note: 'Vignette 4.' },
   { id: 'death.heart-attack', act: 'act1', status: 'implemented', note: 'Vignette 5. Grounded in cardiac-arrest NDE research.' },
-  { id: 'death.lynching', act: 'act1', status: 'planned', note: 'Vignette 6. Camera centers the victim; perpetrators never the subject.' },
-  { id: 'death.dmt', act: 'act1', status: 'planned', note: 'Vignette 7. Experience only, no dosing or preparation detail.' },
+  { id: 'death.soldier', act: 'act1', status: 'planned', note: 'Vignette 6: shot as a soldier in a war. Camera centers the dying soldier; the enemy is never the subject.' },
+  { id: 'death.dmt', act: 'act1', status: 'implemented', note: 'Vignette 7. Experience only, no dosing or preparation detail.' },
 
   // Act 2 — the Threshold, built from Moody's recurring elements.
   { id: 'threshold.pronounced-dead', act: 'act2', status: 'implemented', note: 'Hearing yourself pronounced dead.' },
@@ -71,8 +71,8 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'refuse.city-of-light', act: 'pathB', status: 'planned', note: 'Architecture made of sound and light.' },
 
   // Threads that cut across both paths.
-  { id: 'dmt.hyperspace', act: 'thread', status: 'planned', note: 'Raymarched fractal hyperspace; entities aware of the player.' },
-  { id: 'dmt.sent-back', act: 'thread', status: 'planned', note: '“It is not your time” — unlocks the alternate thread.' },
+  { id: 'dmt.hyperspace', act: 'thread', status: 'implemented', note: 'Raymarched fractal hyperspace; entities aware of the player.' },
+  { id: 'dmt.sent-back', act: 'thread', status: 'implemented', note: '“It is not your time” — unlocks the alternate thread.' },
   { id: 'past-life.memory-shard', act: 'thread', status: 'planned', note: 'Shards reveal earlier incarnations; a death wound can become a birthmark.' },
 ];
 

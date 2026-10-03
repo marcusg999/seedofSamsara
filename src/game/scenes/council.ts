@@ -1,15 +1,16 @@
-import {
-  BoxGeometry,
-  CylinderGeometry,
-  Group,
-  Mesh,
-  MeshBasicMaterial,
-  AdditiveBlending,
-  Vector3,
-} from 'three';
+import { Quaternion, Vector3 } from 'three';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
 import { Director, ease, type Beat } from '../systems/director';
 import { airShell, figureOfLight, moteField, radianceShell, volumetricGlow } from '../systems/forms';
+import {
+  distantColonnade,
+  emberCluster,
+  featherOfMaat,
+  heartOfTheLife,
+  leanToward,
+  luminousGround,
+  weighingBalance,
+} from '../systems/weighing-hall';
 import { setU } from '../systems/glsl';
 import type { CartItem } from '../soul';
 
@@ -27,6 +28,18 @@ import type { CartItem } from '../soul';
  * the one who chooses, not to a god. So the guides are not a tribunal and the
  * balance is not a sentence. It is a reading of what is already there, and the
  * scene has to feel like being seen accurately rather than like being judged.
+ * `L-THRESH-06` is the hard limit on the staging: the beings of the Light are
+ * felt as wholly loving and without judgement, so nothing here may read as
+ * accusation or verdict. They are around the instrument with the player, not
+ * ranged against them behind it — the arc is wide enough to be an embrace, the
+ * guides lean toward the balance rather than squaring up to the soul, and the
+ * one nearest steps in during the reading rather than back.
+ *
+ * `L-FRAN-03` is why nobody has to be told anything: the spirit body is the
+ * soul's own record and its state is visible to others, so what the player is
+ * carrying is already plain to everyone standing here. The balance is not
+ * discovering it. It is only making it legible to the one person in the room who
+ * cannot see it — the player.
  *
  * This is also where the ledger stops being inert. The review writes karma; the
  * Council is what reads it, and sets the lessons that the Life Market will not
@@ -42,6 +55,16 @@ const BEATS: readonly Beat[] = [
   { id: 'what-carries', seconds: 22, caption: 'This is what the next life will ask of you.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
+
+/** Beat lengths by id, so a beat's own wall-clock seconds are readable in `update`. */
+const BEAT_SECONDS: Readonly<Record<string, number>> = Object.fromEntries(
+  BEATS.map((beat) => [beat.id, beat.seconds]),
+);
+
+/** Beat order by id, so "have we passed X yet" is a comparison and not a search. */
+const BEAT_ORDER: Readonly<Record<string, number>> = Object.fromEntries(
+  BEATS.map((beat, index) => [beat.id, index]),
+);
 
 /**
  * What a karma debt obliges the next life to face.
@@ -94,6 +117,15 @@ export function obligationsFor(karma: number): CartItem[] {
   }));
 }
 
+/**
+ * Where the five stand: an angle off straight-back, in degrees, around the
+ * instrument. Wide, and unevenly spaced once the seeded jitter is on, because an
+ * evenly spaced rank of five facing one way is a tribunal and this is not one.
+ */
+const GUIDE_ANGLES = [-53, -28, -12, 18, 46];
+/** How far out from the instrument they stand. */
+const GUIDE_RING = 4.0;
+
 export const councilScene: SceneDefinition = {
   id: 'light.council',
   title: 'The Council',
@@ -105,84 +137,121 @@ export const councilScene: SceneDefinition = {
   create(context: SceneContext): SceneInstance {
     const { resources, scene, soul } = context;
 
-    const air = airShell(resources, { radius: 120, ground: 0x151230, glow: 0x4a3f7a, density: 0.6 });
+    const air = airShell(resources, { radius: 120, ground: 0x151230, glow: 0x584a8e, density: 0.6 });
     scene.add(air.mesh);
 
     const radiance = radianceShell(resources, { radius: 110, color: 0xffeccd, accent: 0x8f7bf0 });
     scene.add(radiance.mesh);
-    radiance.setFocus(0, 0.4, -1);
+    // Focused almost straight up, and dim. The shell's filaments converge on
+    // the focus direction, and a convergence point left in frame reads as a lens
+    // flare — exactly the artefact this scene was carrying before. Overhead, it
+    // is a sky with a light somewhere above the hall instead.
+    radiance.setFocus(0, 1, -0.18);
 
-    // The council, seated in an arc rather than a ring: an arc has a front, and
-    // the player needs somewhere to be rather than to be surrounded.
+    // The hall. Ground first: it is opaque, so it also takes the bottom half of
+    // the frame away from the two full-screen noise shells above, which is why
+    // the place can afford to exist at all.
+    const ground = luminousGround(resources, {
+      radius: 95,
+      near: 0x2b2452,
+      far: 0x161331,
+      line: 0xffe0b8,
+      ringSpacing: 2.1,
+    });
+    scene.add(ground.mesh);
+
+    const colonnade = distantColonnade(resources, context.rng.stream('council-hall'), {
+      count: 18,
+      innerRadius: 38,
+      outerRadius: 70,
+      minHeight: 11,
+      maxHeight: 31,
+      color: 0xffe6c4,
+      accent: 0x7f68cc,
+    });
+    colonnade.setIntensity(0.55);
+    scene.add(colonnade.group);
+
+    // --- the council -------------------------------------------------------
     const rng = context.rng.stream('council');
-    const guides = [-2.9, -1.5, 0, 1.5, 2.9].map((x, index) => {
-      const height = 1.7 + rng.range(-0.1, 0.14);
+    const guides = GUIDE_ANGLES.map((degrees, index) => {
+      const angle = ((degrees + rng.range(-4, 4)) * Math.PI) / 180;
+      const ring = GUIDE_RING + rng.range(-0.35, 0.45);
+      const home = new Vector3(Math.sin(angle) * ring, 0, -Math.cos(angle) * ring);
+      // Taller than a person, and unequal. Beings who have known this soul
+      // before (`L-BETWEEN-02`) should not be the same size as each other or as
+      // the player — equal heights in a row is the tribunal reading again.
+      const height = 2.42 + rng.range(-0.18, 0.34) + (index === 2 ? 0.16 : 0);
       const figure = figureOfLight(resources, {
         height,
-        color: 0xffeccd,
-        accent: 0xc9a9ff,
+        color: 0xffd9a0,
+        accent: 0xa98cff,
         seed: rng.range(0, 40),
+        // Lit from above and from the player's side, which is where the Light
+        // and the instrument both are.
+        light: [0.15, 0.55, 0.82],
       });
-      // Arc: the outer guides sit further back, so the group reads as curved.
-      const depth = -6.4 - Math.abs(x) * 0.42;
-      figure.group.position.set(x, 0.1, depth);
+      figure.group.position.copy(home);
       scene.add(figure.group);
 
-      const halo = volumetricGlow(resources, {
-        radius: 1.35,
-        color: 0xffeccd,
-        intensity: 0.45,
-        softness: 2.5,
-      });
-      halo.mesh.position.copy(figure.group.position).add(new Vector3(0, height * 0.55, 0));
-      scene.add(halo.mesh);
-
-      return { figure, halo, phase: rng.range(0, Math.PI * 2), index };
+      return {
+        figure,
+        home,
+        height,
+        index,
+        phase: rng.range(0, Math.PI * 2),
+        lean: new Quaternion(),
+      };
     });
 
-    // --- the balance -------------------------------------------------------
-    const balance = new Group();
-    balance.position.set(0, 0.95, -3.4);
-    scene.add(balance);
+    // --- the instrument ----------------------------------------------------
+    const balance = weighingBalance(resources, { base: 0xc49a5e, cool: 0x6f7fd8, spec: 0xfff4de });
+    scene.add(balance.group);
 
-    const brass = resources.track(
-      new MeshBasicMaterial({
-        color: 0xd8b67a,
-        transparent: true,
-        opacity: 0.85,
-        blending: AdditiveBlending,
-        depthWrite: false,
-      }),
-    );
+    // The heart: the life, as it was actually lived. It enters from where the
+    // player is, because it is theirs and nobody fetches it for them.
+    const heart = heartOfTheLife(resources, { radius: 0.155, color: 0xff9f6e, accent: 0xff5f3c });
+    heart.mesh.visible = false;
+    scene.add(heart.mesh);
 
-    const columnGeometry = resources.track(new CylinderGeometry(0.035, 0.06, 1.3, 14));
-    const column = new Mesh(columnGeometry, brass);
-    column.position.y = -0.65;
-    balance.add(column);
+    const heartGlow = volumetricGlow(resources, {
+      radius: 0.42,
+      color: 0xff9f6e,
+      intensity: 1.2,
+      softness: 2.1,
+    });
+    heartGlow.mesh.visible = false;
+    scene.add(heartGlow.mesh);
 
-    const beamGeometry = resources.track(new BoxGeometry(2.3, 0.035, 0.035));
-    const beam = new Mesh(beamGeometry, brass);
-    balance.add(beam);
+    // The feather: unchanging, and much lighter than it looks (`L-ER-05`).
+    const feather = featherOfMaat(resources, {
+      length: 0.82,
+      width: 0.16,
+      color: 0xeaf7ff,
+      accent: 0x8fd6ff,
+    });
+    feather.mesh.visible = false;
+    scene.add(feather.mesh);
 
-    const panGeometry = resources.track(new CylinderGeometry(0.42, 0.42, 0.02, 24));
-    const leftPan = new Mesh(panGeometry, brass);
-    const rightPan = new Mesh(panGeometry, brass);
-    balance.add(leftPan, rightPan);
-
-    // The heart: the life, as it was actually lived.
-    const heart = volumetricGlow(resources, { radius: 0.5, color: 0xff9f6e, intensity: 1.5, softness: 2.0 });
-    balance.add(heart.mesh);
-
-    // The feather: unchanging, and much lighter than it looks.
-    const feather = volumetricGlow(resources, { radius: 0.34, color: 0xd8f0ff, intensity: 1.1, softness: 2.6 });
-    balance.add(feather.mesh);
+    // What the reading will lock into the cart. Read once, here, so the scene
+    // can show the right number of them — karma is not written anywhere in this
+    // scene, so this is the same list the beat below commits.
+    const obligations = obligationsFor(soul.karma);
+    const embers = emberCluster(resources, {
+      count: obligations.length,
+      radius: 0.075,
+      color: 0xffd9a0,
+      accent: 0xff8f5a,
+    });
+    scene.add(embers.group);
 
     const motes = moteField(resources, context.rng.stream('council-motes'), {
-      count: 1100,
-      radius: 14,
+      count: 700,
+      radius: 20,
       color: 0xffe3bd,
-      size: 0.16,
+      size: 0.1,
     });
+    motes.points.position.y = 3;
     scene.add(motes.points);
 
     // --- state -------------------------------------------------------------
@@ -194,9 +263,9 @@ export const councilScene: SceneDefinition = {
     });
 
     context.rig.setMode('drifting');
-    context.rig.position.set(0, 1.5, 2.0);
-    context.rig.target.set(0, 1.5, 0.6);
-    context.rig.orient(0, -0.04);
+    context.rig.position.set(0, 1.55, 5.1);
+    context.rig.target.set(0, 1.55, 4.3);
+    context.rig.orient(0, -0.02);
     context.rig.setSway(0.3);
     context.rig.setRoll(0);
     context.rig.setPulse(0);
@@ -204,9 +273,11 @@ export const councilScene: SceneDefinition = {
     const grade = context.post.grade;
     grade.drain = 0.05;
     grade.grain = 0.04;
-    grade.vignette = 0.3;
+    // Lighter than it was: the floor now runs to the edge of frame, and a heavy
+    // vignette would throw away the only thing giving the hall its size.
+    grade.vignette = 0.26;
     grade.aberration = 0.0022;
-    grade.distortion = 0.024;
+    grade.distortion = 0.018;
     grade.exposure = 1.08;
     grade.washColor = [1, 0.97, 0.9];
     grade.washAmount = 0.02;
@@ -218,51 +289,183 @@ export const councilScene: SceneDefinition = {
     context.audio.room(0.05, 800);
     context.audio.heartbeat(false);
 
-    // How far the beam tilts. Karma is a ledger, so the reading is proportional
-    // but bounded — the balance leans, it never slams.
-    const targetTilt = Math.max(-0.42, Math.min(0.42, -soul.karma * 0.12));
-    let tilt = 0;
+    /**
+     * How far the beam leans once it has settled. Karma is a ledger, so the
+     * reading is proportional but bounded — the balance leans, it never slams.
+     * Positive dips the pan carrying the heart, which is the one that gets
+     * heavier as the debt does.
+     */
+    const settledTilt = Math.max(-0.38, Math.min(0.38, -soul.karma * 0.17));
+    /**
+     * The kick the beam gets when its catch is released. Independent of the
+     * reading, and that is deliberate: a soul that owes nothing settles level,
+     * and if the only motion came from the result then the one player who
+     * arrives clear would watch an instrument that never moves at all. The
+     * swing is the event; where it stops is the reading.
+     */
+    const releaseSwing = 0.085 + Math.abs(settledTilt) * 0.42;
+
+    // Reused per frame so the hall costs no allocation.
+    const pools: [number, number, number][] = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+    ];
+    const stance = new Vector3();
+    const toward = new Vector3();
+    const toPlayer = new Vector3();
     let readingDone = false;
 
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
+        const local = t * (BEAT_SECONDS[beat.id] ?? 1);
+        const here = BEAT_ORDER[beat.id] ?? 0;
+        const past = (id: string): boolean => here > (BEAT_ORDER[id] ?? 0);
 
         setU(air.material, 'uTime', elapsed);
         radiance.update(elapsed);
+        ground.update(elapsed);
+        colonnade.update(elapsed);
+        balance.update(elapsed);
+        heart.update(elapsed);
+        feather.update(elapsed);
+        embers.update(elapsed);
         motes.drift(delta, elapsed);
-        heart.update(elapsed, context.camera);
-        feather.update(elapsed, context.camera);
+
+        // --- the guides ----------------------------------------------------
+        const arriving = beat.id === 'gathering' ? ease.out(t) : 1;
+        // In the reading they turn a little from the instrument toward the
+        // player. Attention is the only expression a form without a face has.
+        const attending = beat.id === 'the-reading'
+          ? ease.inOut(t)
+          : past('the-reading') ? 1 : 0;
 
         for (const guide of guides) {
           setU(guide.figure.material, 'uTime', elapsed);
-          guide.halo.update(elapsed, context.camera);
-          const arrive = beat.id === 'gathering' ? ease.out(t) : 1;
-          setU(guide.figure.material, 'uResolve', Math.min(1, arrive * (0.85 + Math.sin(guide.phase) * 0.15)));
-          guide.figure.group.position.y = 0.1 + Math.sin(elapsed * 0.3 + guide.phase) * 0.03;
+          setU(
+            guide.figure.material,
+            'uResolve',
+            Math.min(1, arriving * (0.86 + Math.sin(guide.phase) * 0.14)),
+          );
+
+          // The one in the middle steps in while the reading happens. Toward,
+          // never away: `L-THRESH-06` leaves no room for a guide who withdraws
+          // from what it has just seen.
+          const step = guide.index === 2 ? attending * 0.8 : attending * 0.18;
+          stance.copy(guide.home).multiplyScalar(1 - step / guide.home.length());
+          stance.y = Math.sin(elapsed * 0.28 + guide.phase) * 0.035;
+          guide.figure.group.position.copy(stance);
+
+          // Lean: toward the instrument while it is being read, blending toward
+          // the player as the guides turn their attention to them.
+          toward.set(-stance.x, 0, -stance.z).normalize();
+          const player = context.rig.position;
+          toPlayer.set(player.x - stance.x, 0, player.z - stance.z).normalize();
+          toward.lerp(toPlayer, attending * 0.55);
+          const amount = (0.1 + attending * 0.08) * arriving;
+          guide.figure.group.quaternion.copy(
+            leanToward(guide.lean, toward.x, toward.z, amount),
+          );
+
+          const pool = pools[guide.index];
+          if (pool) {
+            pool[0] = guide.figure.group.position.x;
+            pool[1] = guide.figure.group.position.z;
+            pool[2] = arriving * (0.5 + (guide.index === 2 ? attending * 0.3 : attending * 0.1));
+          }
         }
 
-        // The weighing happens over one beat and then stays where it settled.
-        const weighing = beat.id === 'weighing' ? ease.inOut(t) : beat.id === 'gathering' || beat.id === 'the-balance' ? 0 : 1;
-        tilt = targetTilt * weighing;
-        beam.rotation.z = tilt;
+        // --- the weighing --------------------------------------------------
+        // Level and caught until the beam is released; then a real release, a
+        // damped swing, and wherever it settles is the reading. Nothing about it
+        // is a verdict: it is an instrument finding its own equilibrium.
+        let tilt = 0;
+        let releasing = 0;
+        if (beat.id === 'weighing') {
+          releasing = ease.out(Math.min(1, local / 3));
+          const decay = Math.exp(-0.85 * local);
+          tilt = settledTilt * (1 - decay * Math.cos(1.45 * local))
+            + releaseSwing * decay * Math.sin(1.45 * local);
+        } else if (past('weighing')) {
+          releasing = 1;
+          tilt = settledTilt;
+        }
+        // A live instrument is never quite still, and a sensitive one least of all.
+        tilt += Math.sin(elapsed * 0.73) * 0.0045 * releasing;
+        balance.setTilt(tilt);
 
-        // Pans hang from the beam ends, so they follow the tilt without rotating.
-        const arm = 1.15;
-        const dy = Math.sin(tilt) * arm;
-        const dx = Math.cos(tilt) * arm;
-        leftPan.position.set(-dx, -dy - 0.3, 0);
-        rightPan.position.set(dx, dy - 0.3, 0);
-        heart.mesh.position.copy(leftPan.position).add(new Vector3(0, 0.3, 0));
-        feather.mesh.position.copy(rightPan.position).add(new Vector3(0, 0.22, 0));
+        const loaded = beat.id === 'the-balance' ? ease.inOut(t) : past('the-balance') ? 1 : 0;
+        balance.setGlow(0.05 + loaded * 0.22 + releasing * 0.3);
 
-        setU(heart.material, 'uIntensity', 1.5 + Math.sin(elapsed * 0.9) * 0.12);
-        setU(feather.material, 'uIntensity', 1.1 + Math.sin(elapsed * 0.7 + 1.4) * 0.08);
+        // --- what is in the pans -------------------------------------------
+        // The heart comes up out of the player; the feather comes down out of
+        // the light. Neither is handed over by anybody.
+        if (beat.id === 'the-balance' || past('the-balance')) {
+          const carry = beat.id === 'the-balance'
+            ? ease.inOut(Math.max(0, Math.min(1, (local - 1.5) / 7.5)))
+            : 1;
+          const fall = beat.id === 'the-balance'
+            ? ease.inOut(Math.max(0, Math.min(1, (local - 4) / 9)))
+            : 1;
 
-        radiance.setIntensity(0.26 + weighing * 0.1);
-        context.rig.target.set(0, 1.5, 0.6 - weighing * 0.5);
+          heart.mesh.visible = carry > 0.001;
+          heartGlow.mesh.visible = heart.mesh.visible;
+          const player = context.rig.position;
+          heart.mesh.position.set(
+            player.x * (1 - carry) + balance.heartSeat.x * carry,
+            (player.y - 0.5) * (1 - carry) + balance.heartSeat.y * carry + Math.sin(carry * Math.PI) * 0.45,
+            (player.z - 0.6) * (1 - carry) + balance.heartSeat.z * carry,
+          );
+          heart.mesh.rotation.y = elapsed * 0.18;
+          heart.setIntensity(0.5 + carry * 0.9);
+          heartGlow.mesh.position.copy(heart.mesh.position);
+          heartGlow.update(elapsed, context.camera);
+          setU(heartGlow.material, 'uIntensity', (0.4 + carry * 0.9) * (0.9 + Math.sin(elapsed * 0.9) * 0.1));
 
+          feather.mesh.visible = fall > 0.001;
+          feather.mesh.position.set(
+            1.5 * (1 - fall) + balance.featherSeat.x * fall - 0.26,
+            5.6 * (1 - fall) + balance.featherSeat.y * fall,
+            -2 * (1 - fall) + balance.featherSeat.z * fall,
+          );
+          // It never falls straight: it is a feather. The turn settles as it lands.
+          // It never falls straight, and it does not lie flat when it lands: a
+          // plume comes to rest against the rim of the pan, standing up out of
+          // it, which is the only way its shape reads at all from here.
+          feather.mesh.rotation.set(
+            Math.sin(elapsed * 0.5) * 0.18 * (1 - fall * 0.7),
+            -0.5 + Math.sin(elapsed * 0.33) * 0.5 * (1 - fall) + fall * 0.82,
+            0.25 + Math.sin(elapsed * 0.41) * 0.35 * (1 - fall * 0.5) + fall * 0.55,
+          );
+          feather.setIntensity(0.8 + fall * 0.5);
+        }
+
+        // --- the hall ------------------------------------------------------
+        const instrumentPool = pools[5];
+        if (instrumentPool) {
+          instrumentPool[0] = 0;
+          instrumentPool[1] = 0;
+          instrumentPool[2] = 0.55 + loaded * 0.35 + releasing * 0.25;
+        }
+        ground.setPools(pools);
+        colonnade.setIntensity(0.44 + arriving * 0.14 + attending * 0.08);
+        radiance.setIntensity(0.15 + releasing * 0.05);
+
+        // A slow drift in and across. The columns are 50 metres out and the
+        // instrument is four, so a very small move gives the hall its depth.
+        context.rig.target.set(
+          Math.sin(elapsed * 0.045) * 0.42,
+          1.55,
+          4.3 - arriving * 0.5 - loaded * 0.25 - attending * 0.2,
+        );
+        grade.exposure = 1.08 + releasing * 0.05;
+
+        // --- what carries --------------------------------------------------
         // The reading is what the next life will be asked to carry. Written once,
         // and locked: the Market may add to the cart but cannot take these out.
         if (!readingDone && (beat.id === 'what-carries' || beat.id === 'wait')) {
@@ -276,6 +479,29 @@ export const councilScene: SceneDefinition = {
           if (locked.length === 0) {
             context.captions.show('You arrive owing nothing. That is rarer than you think.', 9);
           }
+        }
+
+        if (beat.id === 'what-carries' || beat.id === 'wait') {
+          const player = context.rig.position;
+          embers.meshes.forEach((ember, index) => {
+            const start = 2 + index * 1.7;
+            const travel = beat.id === 'wait'
+              ? 1
+              : ease.inOut(Math.max(0, Math.min(1, (local - start) / 7)));
+            ember.visible = travel > 0.001;
+            // Out of the heart, up, and then to rest beside the player — beside,
+            // not above and not in front, because this is what they are taking
+            // with them rather than something being put on them.
+            const restX = player.x + (index - (embers.meshes.length - 1) / 2) * 0.46;
+            const restY = 1.12 + Math.sin(elapsed * 0.6 + index) * 0.04;
+            const restZ = player.z - 0.95;
+            ember.position.set(
+              balance.heartSeat.x * (1 - travel) + restX * travel,
+              balance.heartSeat.y * (1 - travel) + restY * travel + Math.sin(travel * Math.PI) * 0.7,
+              balance.heartSeat.z * (1 - travel) + restZ * travel,
+            );
+            ember.rotation.set(elapsed * 0.3 + index, elapsed * 0.22, 0);
+          });
         }
       },
       beat() {

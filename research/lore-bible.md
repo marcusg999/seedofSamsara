@@ -69,11 +69,22 @@ Moody's composite, not a finding about dying.**
 | `L-THRESH-07` | A review of the life is shown, panoramic and often simultaneous rather than sequential. | `MOODY-1975` | P | `light.life-review` |
 | `L-THRESH-08` | A border or limit is reached, understood as the point of no return. | `MOODY-1975` | P | `threshold.border` |
 | `L-THRESH-09` | Many report reluctance to come back, and lasting change afterwards. | `MOODY-1975`, `VANLOMMEL-2001` | P/E | `threshold.choice`, `dmt.sent-back` |
+| `L-THRESH-10` | The review is not watched alone: in Moody's composite the being of light is present through it, and what it puts to the traveller is reported as prompting reflection rather than as accusation — the accounts are emphatic that no condemnation is felt from it. | `MOODY-1975` | P | `light.life-review` |
 
 Design note: the life review is reported as panoramic and *felt*, not watched
 (`L-THRESH-07`). GAME_BRIEF.md § Path A makes the player re-live moments from
 other people's point of view, which is the game's way of staging that reported
 quality. The mechanic is the game's; the quality it stages is Moody's.
+
+`L-THRESH-10` is the claim that the review happens in company, and it is the
+one that keeps `light.life-review` from being a slideshow the player watches
+alone. It must be read together with `L-THRESH-06`: the presence in the
+accounts is felt as wholly loving and *without judgement*, and the questions
+reported are not an interrogation. Anything the game builds on it therefore has
+to be present without weighing — the weighing is `light.council`'s job
+(`L-BETWEEN-02`, `L-ER-05`), and the two must not blur into each other. Added
+when the witnesses were built for that scene; the claim is Moody's composite,
+not a finding about dying, on the same terms as the rest of this section.
 
 ## 3. Intensity — the Greyson scale
 
@@ -132,7 +143,7 @@ what the strongest reports look like.
 | --- | --- | --- | --- |
 | `L-DMT-01` | In a within-subjects, placebo-controlled, single-blind study, 13 healthy volunteers received intravenous DMT; their experiences were scored on the Greyson NDE scale and compared with 67 age- and gender-matched people reporting actual NDEs. | `TIMMERMANN-2018` | E |
 | `L-DMT-02` | DMT experiences overlapped with actual NDEs on nearly all of the scale's phenomenological features, with the strongest convergence on transcendental and mystical items. | `TIMMERMANN-2018` | E |
-| `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | 
+| `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | `dmt.hyperspace` |
 
 Design note: `L-DMT-02` is the licence for the DMT vignette to lead into the
 same Threshold as the six deaths — the overlap is measured, not asserted. The
@@ -144,6 +155,14 @@ CLAUDE.md § Content rules: the vignette depicts the experience only. This file
 deliberately records no dosing, route or preparation detail, and the scene must
 not either. The study's method is cited above at the level of study design, which
 is what traceability needs — nothing more.
+
+As built, `death.dmt` opens with the experience already beginning. There is no
+object in the room that belongs to one, no action is depicted, and no substance,
+quantity, route or method is named anywhere in the scene, its captions, its
+content notes or its code. What the vignette contains is a carpet, a lamp, a
+window, a half-painted wall and a doorframe with pencil marks on it — which is
+to say a person, which is the only subject the rule leaves and the only one
+worth having.
 
 ## 7. Past lives and birthmarks
 
@@ -287,6 +306,16 @@ Recorded so that nothing invented is later mistaken for sourced.
    awkwardly between Franchezzo's astral plane and the DMT hyperspace of
    `L-DMT-03`. Unassigned for now; collapsing them into one population would be
    a lore decision worth making consciously rather than by accident.
+
+   *Decided, consciously, when `dmt.hyperspace` was built:* the entities in that
+   scene are built from `L-DMT-03` alone, and are **not** Franchezzo's astral
+   population. They are geometric rather than figurative, they share the
+   architecture's own symmetry, and the scene never claims they exist anywhere
+   but there. `L-FRAN-09` stays unassigned. Two sources a century and a
+   tradition apart both reporting non-human company is interesting; it is not
+   evidence that they reported the *same* company, and the game should not spend
+   that coincidence by accident. If the two are ever merged it should be a
+   deliberate choice recorded here, not a side effect of needing a monster.
 6. **The seven vignettes' link to starting attachment.** GAME_BRIEF.md says
    violent and unjust deaths start heavy. `L-PAST-03` shows violent deaths are
    where reported past-life cases cluster, and `L-ARREST-02` shows depth of
@@ -296,8 +325,8 @@ Recorded so that nothing invented is later mistaken for sourced.
 
 ## 13. Representation — what the sources do and do not license
 
-CLAUDE.md § Content rules govern the police shooting and the lynching: the camera
-centres the victim, and the perpetrators are never its subject. Nothing in this
+CLAUDE.md § Content rules govern the police shooting and the soldier's death: the
+camera centres the dying person, and those doing the killing are never its subject. Nothing in this
 file softens that, and no source here is a reason to depict either event in more
 detail than the rule allows.
 
