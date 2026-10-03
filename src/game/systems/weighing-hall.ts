@@ -246,9 +246,11 @@ export function distantColonnade(
       vertexShader: /* glsl */ `
         varying float vUpward;
         varying vec3 vWorldPos;
+        varying vec3 vWorldNormal;
         void main() {
           // The unit cylinder spans -0.5..0.5, so this is 0 at the foot.
           vUpward = position.y + 0.5;
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
           vec4 world = modelMatrix * vec4(position, 1.0);
           vWorldPos = world.xyz;
           gl_Position = projectionMatrix * viewMatrix * world;
@@ -262,15 +264,20 @@ export function distantColonnade(
         uniform float uIntensity;
         varying float vUpward;
         varying vec3 vWorldPos;
+        varying vec3 vWorldNormal;
 
         void main() {
           // No hard edge anywhere on it: a column with a visible top is an
           // object, and these have to read as architecture standing too far away
           // to make out.
           float fade = pow(max(0.0, 1.0 - vUpward), 2.3) * smoothstep(0.0, 0.1, vUpward);
+          // Thickest where the shell faces the eye and gone at its own edge, so
+          // a column has no flat sides to give away that it is a cylinder.
+          vec3 toEye = normalize(cameraPosition - vWorldPos);
+          float girth = pow(abs(dot(normalize(vWorldNormal), toEye)), 0.55);
           float shimmer = 0.84 + 0.16 * sin(uTime * 0.26 + vWorldPos.x * 0.18 + vWorldPos.z * 0.15);
           vec3 color = mix(uAccent, uColor, clamp(vUpward * 0.7, 0.0, 1.0));
-          float density = fade * uIntensity * shimmer;
+          float density = fade * girth * uIntensity * shimmer;
           gl_FragColor = vec4(color * density, clamp(density * 0.6, 0.0, 1.0));
         }
       `,
@@ -381,7 +388,7 @@ export function weighingBalance(
       float highlight = pow(max(dot(normal, normalize(key + view)), 0.0), 54.0);
       float edge = pow(1.0 - max(dot(normal, view), 0.0), 3.4);
 
-      vec3 color = uBase * (0.16 + lit * 0.95)
+      vec3 color = uBase * (0.14 + lit * 0.82)
         + uCool * bounced * 0.42
         + uSpec * highlight * 1.25
         + uBase * edge * 0.4
@@ -403,8 +410,8 @@ export function weighingBalance(
   const group = new Group();
 
   // Plinth: two courses, so the instrument is set down on something.
-  const lowerPlinth = tracker.track(new CylinderGeometry(0.62, 0.68, 0.09, 28));
-  const upperPlinth = tracker.track(new CylinderGeometry(0.42, 0.5, 0.08, 24));
+  const lowerPlinth = tracker.track(new CylinderGeometry(0.46, 0.52, 0.075, 28));
+  const upperPlinth = tracker.track(new CylinderGeometry(0.3, 0.37, 0.065, 24));
   const lower = new Mesh(lowerPlinth, brass);
   lower.position.y = 0.045;
   const upper = new Mesh(upperPlinth, brass);
@@ -415,15 +422,15 @@ export function weighingBalance(
   const columnGeometry = tracker.track(
     new LatheGeometry(
       lathePoints([
-        [0.0, 0.17],
-        [0.21, 0.17],
-        [0.17, 0.24],
-        [0.085, 0.4],
-        [0.062, 0.78],
-        [0.058, 1.2],
-        [0.082, 1.36],
-        [0.062, 1.44],
-        [0.05, 1.56],
+        [0.0, 0.14],
+        [0.155, 0.14],
+        [0.125, 0.21],
+        [0.062, 0.38],
+        [0.045, 0.78],
+        [0.042, 1.2],
+        [0.062, 1.36],
+        [0.046, 1.44],
+        [0.038, 1.56],
         [0.0, 1.58],
       ]),
       18,
@@ -434,16 +441,16 @@ export function weighingBalance(
   // The mark the pointer is read against: two slender posts and a crossbar,
   // fixed to the column and never moving. This is how the scene says "level"
   // without a caption — the needle either sits between the posts or it does not.
-  const postGeometry = tracker.track(new CylinderGeometry(0.009, 0.009, 0.44, 6));
-  for (const x of [-0.085, 0.085]) {
+  const postGeometry = tracker.track(new CylinderGeometry(0.008, 0.008, 0.3, 6));
+  for (const x of [-0.07, 0.07]) {
     const post = new Mesh(postGeometry, brass);
-    post.position.set(x, PIVOT_Y + 0.18, -0.1);
+    post.position.set(x, PIVOT_Y + 0.17, -0.07);
     group.add(post);
   }
-  const crossbarGeometry = tracker.track(new CylinderGeometry(0.008, 0.008, 0.2, 6));
+  const crossbarGeometry = tracker.track(new CylinderGeometry(0.007, 0.007, 0.155, 6));
   const crossbar = new Mesh(crossbarGeometry, brass);
   crossbar.rotation.z = Math.PI / 2;
-  crossbar.position.set(0, PIVOT_Y + 0.4, -0.1);
+  crossbar.position.set(0, PIVOT_Y + 0.32, -0.07);
   group.add(crossbar);
 
   // Beam. A round bar rather than a flat bar: a cylinder carries a highlight
@@ -469,9 +476,9 @@ export function weighingBalance(
 
   // The pointer. It rises from the pivot and tilts with the beam, so the gap
   // between it and the two posts is the reading.
-  const needleGeometry = tracker.track(new CylinderGeometry(0.004, 0.013, 0.36, 6));
+  const needleGeometry = tracker.track(new CylinderGeometry(0.004, 0.013, 0.3, 6));
   const needle = new Mesh(needleGeometry, brass);
-  needle.position.set(0, 0.18, 0);
+  needle.position.set(0, 0.15, 0);
   beam.add(needle);
 
   // Pans. Each is a vessel on three cords, built once and then only moved: the

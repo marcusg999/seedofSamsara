@@ -169,7 +169,7 @@ export const councilScene: SceneDefinition = {
       color: 0xffe6c4,
       accent: 0x7f68cc,
     });
-    colonnade.setIntensity(0.55);
+    colonnade.setIntensity(0.8);
     scene.add(colonnade.group);
 
     // --- the council -------------------------------------------------------
@@ -181,7 +181,7 @@ export const councilScene: SceneDefinition = {
       // Taller than a person, and unequal. Beings who have known this soul
       // before (`L-BETWEEN-02`) should not be the same size as each other or as
       // the player — equal heights in a row is the tribunal reading again.
-      const height = 2.42 + rng.range(-0.18, 0.34) + (index === 2 ? 0.16 : 0);
+      const height = 2.68 + rng.range(-0.2, 0.38) + (index === 2 ? 0.18 : 0);
       const figure = figureOfLight(resources, {
         height,
         color: 0xffd9a0,
@@ -205,7 +205,7 @@ export const councilScene: SceneDefinition = {
     });
 
     // --- the instrument ----------------------------------------------------
-    const balance = weighingBalance(resources, { base: 0xc49a5e, cool: 0x6f7fd8, spec: 0xfff4de });
+    const balance = weighingBalance(resources, { base: 0xab8148, cool: 0x6f7fd8, spec: 0xfff1d6 });
     scene.add(balance.group);
 
     // The heart: the life, as it was actually lived. It enters from where the
@@ -450,10 +450,10 @@ export const councilScene: SceneDefinition = {
         if (instrumentPool) {
           instrumentPool[0] = 0;
           instrumentPool[1] = 0;
-          instrumentPool[2] = 0.55 + loaded * 0.35 + releasing * 0.25;
+          instrumentPool[2] = 0.2 + loaded * 0.16 + releasing * 0.12;
         }
         ground.setPools(pools);
-        colonnade.setIntensity(0.44 + arriving * 0.14 + attending * 0.08);
+        colonnade.setIntensity(0.66 + arriving * 0.2 + attending * 0.1);
         radiance.setIntensity(0.15 + releasing * 0.05);
 
         // A slow drift in and across. The columns are 50 metres out and the
