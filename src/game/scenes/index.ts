@@ -1,6 +1,7 @@
 import { SceneGraph } from '../state-machine';
 import { contentNotesScene, vignetteSelectScene } from './front-matter';
 import { deathHeartAttackScene } from './death-heart-attack';
+import { deathSoldierScene } from './death-soldier';
 import { deathDmtScene, dmtHyperspaceScene, dmtSentBackScene } from './dmt';
 import { pronouncedDeadScene, buzzingScene, outOfBodyScene } from './threshold-early';
 import { tunnelScene, lovedOnesScene, beingOfLightScene } from './threshold-light';
@@ -19,12 +20,20 @@ import { riverOfForgettingScene, rebirthScene } from './rebirth';
  * This is the vertical slice: one complete path from an ordinary evening to the
  * life review, plus the DMT thread, which forks off it — the one death the
  * player can survive (GAME_BRIEF.md § Act 1, vignette 7).
+ *
+ * `death.soldier` is vignette 6 and the second of the six deaths to be built.
+ * It is not on SLICE_PATH, which is deliberately one path and not a tour: it is
+ * reached from `vignette-select` and hands over to `threshold.pronounced-dead`,
+ * so it joins the slice at the Threshold rather than lengthening it. The gate's
+ * `vignette: death.soldier` journey in `tests/gate/journeys.spec.ts` starts
+ * enforcing it the moment this registration lands.
  */
 export function createSceneGraph(): SceneGraph {
   return new SceneGraph().register(
     contentNotesScene,
     vignetteSelectScene,
     deathHeartAttackScene,
+    deathSoldierScene,
     deathDmtScene,
     dmtHyperspaceScene,
     dmtSentBackScene,

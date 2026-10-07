@@ -22,7 +22,7 @@ import {
 } from '../systems/higher-dimensional';
 import { Overlay } from '../systems/overlay';
 import { luminousPanel, rememberedMoment, type MomentSpec } from '../systems/remembered';
-import { ThresholdPrompt, clamp01 } from './threshold-early';
+import { RELEASE_SECONDS, ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
  * The border, the choice, and the life review.
@@ -112,6 +112,7 @@ export const borderScene: SceneDefinition = {
   exits: [
     { id: 'set-it-down', label: 'Set down what you are carrying', to: 'threshold.choice' },
     { id: 'carry-it', label: 'Carry it across', to: 'threshold.choice' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.choice' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -271,6 +272,7 @@ export const borderScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('This is the last place you can put anything down. Do you?', [
       {
         id: 'set-it-down',
@@ -964,10 +966,34 @@ export const lifeReviewScene: SceneDefinition = {
       return { presence, halo, side: spec.side };
     });
 
+    /**
+     * Whether he rang his daughter back before his heart went.
+     *
+     * The vignette offers that choice and records it, and the review used to
+     * ignore it: it said he thought there would be time to call her back even
+     * when the player had him pick up the phone, so the most consequential
+     * thing in the vignette was contradicted by the scene that reviews it.
+     *
+     * The moment is the same either way — two places with the dark between
+     * them — and only its meaning inverts. He rang and got her machine, or he
+     * did not ring at all. She waited up for both.
+     */
+    const rang = context.soul.shards.includes('heart-attack.rang-her');
+    const SPOKEN: Readonly<Record<string, string>> = rang
+      ? {
+        'his-side': 'He rang. Four rings, and then her machine, and he did not know what to say to it.',
+        'her-side': 'She waited up. She saw the missed call in the morning, and by then she knew.',
+      }
+      : {
+        'his-side': 'He thought there would be time to call her back.',
+        'her-side': 'She waited up. She told herself he was just tired.',
+      };
+
     const director = new Director(REVIEW_BEATS);
     director.onBeat((beat) => {
-      if (beat.caption !== undefined) {
-        context.captions.show(beat.caption, 10);
+      const caption = SPOKEN[beat.id] ?? beat.caption;
+      if (caption !== undefined) {
+        context.captions.show(caption, 10);
       }
     });
 
@@ -1145,10 +1171,15 @@ export const lifeReviewScene: SceneDefinition = {
           //
           // Automatic, and it must stay automatic: `tests/gate/brief.spec.ts`
           // drives this scene with `advanceBeat()` and never clicks.
-          context.soul.karma -= 1;
+          // The cost is the night she spent waiting without him. If he rang and
+          // reached her machine she still spent it, but he is not carrying a
+          // call he never made, so the debit belongs to the evening he left it.
+          if (!rang) {
+            context.soul.karma -= 1;
+          }
           // HARMONY rises because the moment was faced rather than passed over.
           context.soul.harmony += 1;
-          context.soul.shards.push('review.the-phone-call');
+          context.soul.shards.push(rang ? 'review.the-call-he-made' : 'review.the-phone-call');
         }
       },
       beat() {

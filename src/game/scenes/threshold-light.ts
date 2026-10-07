@@ -14,7 +14,7 @@ import { GRAMMAR, colorOf } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
 import { airShell, figureOfLight, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
-import { ThresholdPrompt, clamp01 } from './threshold-early';
+import { RELEASE_SECONDS, ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
  * The tunnel, the ones who come to meet you, and the Being of Light
@@ -158,6 +158,7 @@ export const tunnelScene: SceneDefinition = {
   exits: [
     { id: 'take-it', label: 'Take hold of the memory', to: 'threshold.loved-ones' },
     { id: 'let-it-pass', label: 'Let the memory go past', to: 'threshold.loved-ones' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.loved-ones' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -283,6 +284,7 @@ export const tunnelScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('Something is keeping pace with you, and it is not from this life.', [
       {
         id: 'take-it',
@@ -398,6 +400,7 @@ export const lovedOnesScene: SceneDefinition = {
   exits: [
     { id: 'as-real', label: 'Take them as they come', to: 'threshold.being-of-light' },
     { id: 'as-mind', label: 'Recognise them as your own mind', to: 'threshold.being-of-light' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.being-of-light' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -533,6 +536,7 @@ export const lovedOnesScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('Four of them, and you know every one. Who are they?', [
       {
         id: 'as-real',
@@ -637,6 +641,7 @@ export const beingOfLightScene: SceneDefinition = {
   exits: [
     { id: 'recognise', label: 'Recognise it as your own nature', to: 'threshold.border' },
     { id: 'be-held', label: 'Let it hold you', to: 'threshold.border' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.border' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -755,6 +760,7 @@ export const beingOfLightScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('It is in front of you and it is glad. What is it?', [
       {
         id: 'recognise',

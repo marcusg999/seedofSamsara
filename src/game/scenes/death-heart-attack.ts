@@ -78,7 +78,7 @@ const BEATS: readonly Beat[] = [
   { id: 'settle', seconds: 11, caption: 'Tuesday. The kettle, again.' },
   { id: 'the-room', seconds: 16 },
   { id: 'second-cup', seconds: 15 },
-  { id: 'the-drawing', seconds: 12, caption: 'She drew that the year she turned six.' },
+  { id: 'the-drawing', seconds: 12, caption: 'Their daughter drew that the year she turned six.' },
   { id: 'first-twinge', seconds: 10 },
   { id: 'wrong', seconds: 12 },
   { id: 'grip', seconds: 11 },
@@ -184,7 +184,7 @@ const CUPS: readonly Pick[] = [
     id: 'both',
     label: 'Fill both',
     trade: 'The place stays set. He carries more of this room out of it.',
-    caption: 'He fills both. The far one will be cold by the time he sits down, the way it always is.',
+    caption: 'He fills both. Nine years widowed, and he has never once filled only one.',
     shard: 'heart-attack.set-the-place',
     attachment: 0.14,
     harmony: 0,
@@ -994,8 +994,8 @@ export const deathHeartAttackScene: SceneDefinition = {
           choices.enqueue(() =>
             question(
               'The light on the machine is still blinking.',
-              'She rang on Sunday. He has not rung her back. It is twenty past seven on a Tuesday '
-                + 'and she will be in.',
+              'His daughter rang on Sunday and he has not rung her back. She is the only one left '
+                + 'to ring. It is twenty past seven on a Tuesday and she will be in.',
               MESSAGE,
               'The light goes on blinking either way. Nothing answers it for him.',
               takeMessage,
