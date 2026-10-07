@@ -989,6 +989,22 @@ export const lifeReviewScene: SceneDefinition = {
         'her-side': 'She waited up. She told herself he was just tired.',
       };
 
+    /**
+     * The way out of the review.
+     *
+     * This scene declared "To the Council" and "Begin again" and then never
+     * offered either: it reached its last beat and simply held, which is
+     * exactly where the owner's playthrough stopped. The exits were declared
+     * and registered, so the gate's reachable-exit rule was satisfied the whole
+     * time — the third time that rule has passed a scene a player could not
+     * leave. Declaring an exit is not offering one.
+     */
+    let onwardPrompt: ThresholdPrompt | undefined;
+    context.resources.onDispose(() => {
+      onwardPrompt?.dispose();
+      onwardPrompt = undefined;
+    });
+
     const director = new Director(REVIEW_BEATS);
     director.onBeat((beat) => {
       const caption = SPOKEN[beat.id] ?? beat.caption;
@@ -1179,6 +1195,26 @@ export const lifeReviewScene: SceneDefinition = {
           }
           // HARMONY rises because the moment was faced rather than passed over.
           context.soul.harmony += 1;
+        }
+        if (beat.id === 'wait' && onwardPrompt === undefined) {
+          onwardPrompt = new ThresholdPrompt();
+          onwardPrompt.ask('The life has been shown. Nothing has been weighed.', [
+            {
+              id: 'council',
+              label: 'To the Council',
+              detail: 'They have been here the whole time, and they already know.',
+              onPick: () => { void context.takeExit('council'); },
+            },
+            {
+              id: 'again',
+              label: 'Begin again',
+              detail: 'Put this one down and take another.',
+              onPick: () => { void context.takeExit('again'); },
+            },
+          ]);
+          // And it lets go by itself, recording nothing, so nobody is held here
+          // again.
+          onwardPrompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('council'); });
           context.soul.shards.push(rang ? 'review.the-call-he-made' : 'review.the-phone-call');
         }
       },
