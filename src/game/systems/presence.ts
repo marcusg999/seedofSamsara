@@ -72,15 +72,15 @@ const PROFILE: readonly (readonly [number, number, number])[] = [
   [0.812, 0.112, 0.52],
   [0.828, 0.098, 0.56],
   [0.843, 0.070, 0.70],
-  [0.857, 0.047, 0.88],
-  [0.872, 0.036, 0.96],
-  [0.888, 0.038, 1.00],
-  [0.905, 0.048, 1.04],
-  [0.925, 0.055, 1.06],
-  [0.945, 0.056, 1.06],
-  [0.963, 0.052, 1.03],
-  [0.978, 0.043, 1.00],
-  [0.990, 0.028, 0.97],
+  [0.857, 0.055, 0.88],
+  [0.872, 0.048, 0.96],
+  [0.888, 0.049, 1.00],
+  [0.905, 0.051, 1.04],
+  [0.925, 0.053, 1.06],
+  [0.945, 0.052, 1.06],
+  [0.963, 0.048, 1.03],
+  [0.978, 0.041, 1.00],
+  [0.990, 0.027, 0.97],
 ];
 
 /** Where the base profile puts the shoulder line and the throat. */
@@ -153,19 +153,19 @@ export function bearingFromSeed(seed: number): PresenceBearing {
   const side = rng.chance(0.5) ? 1 : -1;
 
   return {
-    shoulderWidth: 1 + bulk * 0.17,
-    depth: 1 + bulk * 0.15 + rng.range(-0.05, 0.05),
-    waist: 1 + bulk * 0.13,
-    hem: 1 + bulk * 0.2 + rng.range(-0.08, 0.1),
-    headSize: 1 - bulk * 0.07 + rng.range(-0.05, 0.05),
-    neck: 1 + poise * 0.2,
-    shoulderT: BASE_SHOULDER + poise * 0.02,
-    lean: rng.range(-0.016, 0.016),
-    stoop: -poise * 0.014 + rng.range(-0.006, 0.01),
-    hip: side * rng.range(0.004, 0.019),
-    shoulderDrop: -side * rng.range(0.002, 0.013),
-    headTilt: side * rng.range(-0.03, 0.13),
-    headNod: -poise * 0.07 + rng.range(-0.02, 0.06),
+    shoulderWidth: 1 + bulk * 0.23,
+    depth: 1 + bulk * 0.18 + rng.range(-0.07, 0.07),
+    waist: 1 + bulk * 0.17,
+    hem: 1 + bulk * 0.26 + rng.range(-0.1, 0.12),
+    headSize: 1 - bulk * 0.09 + rng.range(-0.07, 0.07),
+    neck: 1 + poise * 0.16,
+    shoulderT: BASE_SHOULDER + poise * 0.028,
+    lean: rng.range(-0.026, 0.026),
+    stoop: -poise * 0.022 + rng.range(-0.008, 0.014),
+    hip: side * rng.range(0.006, 0.026),
+    shoulderDrop: -side * rng.range(0.003, 0.018),
+    headTilt: side * rng.range(-0.05, 0.17),
+    headNod: -poise * 0.1 + rng.range(-0.03, 0.08),
     regard: rng.range(0.62, 1),
     turn: rng.range(-0.3, 0.3),
     gaze: rng.range(-0.22, 0.22),
@@ -497,12 +497,20 @@ const FRAGMENT_SHADER = /* glsl */ `
     //    what makes the shoulder line an event instead of a width;
     //  - the front of the head, where attention lives;
     //  - the chest, a slow warm centre, because a presence is lit from inside.
-    float shelf = window(vUpward, uShoulder, 0.055) * smoothstep(0.0, 0.75, normal.y);
+    float shelf = window(vUpward, uShoulder, 0.05) * smoothstep(0.0, 0.75, normal.y);
     float front = clamp(dot(normal, vFacing), 0.0, 1.0);
-    float attention = pow(front, 2.2) * window(vUpward, 0.93, 0.07);
+    float attention = pow(front, 2.2) * window(vUpward, 0.905, 0.055);
     float heart = pow(front, 3.0) * window(vUpward, 0.66, 0.1);
-    float foot = 1.0 - smoothstep(0.0, 0.42, vUpward);
-    float crown = smoothstep(0.80, 1.0, vUpward);
+    float foot = 1.0 - smoothstep(0.0, 0.40, vUpward);
+    float crown = window(vUpward, 0.925, 0.075);
+
+    // Both ends dissolve. A presence of light does not have a skull and does not
+    // have a hem you could pick up: the head gives its top away to the glow it
+    // stands in, and the form lets go of its edge where it meets the ground.
+    // Without this the figure reads as a mannequin — a solid object the right
+    // shape — which is a different failure from the cone but just as fatal.
+    float fadeTop = 1.0 - 0.78 * smoothstep(0.895, 1.005, vUpward);
+    float fadeFoot = mix(0.3, 1.0, smoothstep(0.0, 0.075, vUpward));
 
     if (vPart > 0.5) {
       // The shell: radiance standing off the form. Lit where the surface turns
@@ -510,9 +518,11 @@ const FRAGMENT_SHADER = /* glsl */ `
       // aura has the shape of someone rather than the shape of a sphere.
       float aura = pow(1.0 - facing, 1.9) * coherence * present;
       float breath = 0.82 + 0.18 * sin(uTime * 0.6 + uSeed);
-      aura *= 0.72 + shelf * 1.1 + crown * 0.5 + attention * 0.5;
+      // Gathered at the head, which is what carries the dissolve above: the
+      // crown goes to light and the aura is what is left standing there.
+      aura *= 0.7 + shelf * 1.0 + crown * 1.35 + attention * 0.55;
       vec3 glow = mix(uAccent, uColor, 0.45);
-      gl_FragColor = vec4(glow * aura * 0.5 * breath, clamp(aura * 0.28, 0.0, 1.0));
+      gl_FragColor = vec4(glow * aura * 0.6 * breath, clamp(aura * 0.34, 0.0, 1.0));
       return;
     }
 
@@ -528,14 +538,14 @@ const FRAGMENT_SHADER = /* glsl */ `
     // Rim-dominant, so the interior stays thin enough to see the hall through —
     // a presence that occludes the floor behind it is an object. The wrapped
     // diffuse turns the form; it is not allowed to make it a surface.
-    float body = (rim * 1.2 + lambert * 0.44 + 0.15)
-      * (0.46 + foot * 0.5 + crown * 0.42 + shelf * 1.15 + attention * 0.8 + heart * 0.5);
-    body *= (0.86 + weave * 0.28) * coherence * present;
+    float body = (rim * 1.45 + lambert * 0.42 + 0.145)
+      * (0.5 + foot * 0.5 + crown * 0.35 + shelf * 1.1 + attention * 1.0 + heart * 0.5);
+    body *= (0.8 + weave * 0.4) * coherence * present * fadeTop * fadeFoot;
 
     // Warm at the core, cooling toward the edge: a presence lit from inside is
     // warmest where it is thickest.
-    vec3 tint = mix(uColor, uAccent, clamp(rim * 0.62 - crown * 0.3 + 0.12, 0.0, 1.0));
-    gl_FragColor = vec4(tint * body, clamp(body * 0.74, 0.0, 1.0));
+    vec3 tint = mix(uColor, uAccent, clamp(rim * 0.62 - crown * 0.25 + 0.12, 0.0, 1.0));
+    gl_FragColor = vec4(tint * body, clamp(body * 0.7, 0.0, 1.0));
   }
 `;
 

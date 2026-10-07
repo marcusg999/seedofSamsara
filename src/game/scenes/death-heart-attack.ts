@@ -274,7 +274,7 @@ const MESSAGE: readonly Pick[] = [
 const KNOWING: readonly Pick[] = [
   {
     id: 'chair',
-    label: 'The chair across the table',
+    label: 'The empty chair',
     trade: 'The heaviest thing in the room, and the one he would stay for. He leaves holding it.',
     caption: 'He is looking at the far side of the table. There is nobody in it and he looks anyway.',
     shard: 'heart-attack.looked-at-the-chair',
@@ -747,7 +747,9 @@ export const deathHeartAttackScene: SceneDefinition = {
     const REGARD: Record<RegardId, Vector3> = {
       cups: new Vector3(0.46, 0.9, 0.84),
       phone: new Vector3(led.position.x, led.position.y, led.position.z),
-      chair: new Vector3(0.78, 0.62, 0.75),
+      // The chair's back, not its seat: the seat is tucked under the table top
+      // and a glow there is drawn behind it, which looks like nothing at all.
+      chair: new Vector3(0.98, 0.92, 0.75),
       drawing: new Vector3(-1.86, 1.42, -roomDepth / 2 + 0.1),
       window: new Vector3(0, 1.62, -roomDepth / 2 + 0.18),
     };
