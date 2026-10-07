@@ -4,17 +4,13 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  Group,
-  LatheGeometry,
   Mesh,
   PlaneGeometry,
   Points,
   ShaderMaterial,
   SphereGeometry,
-  Vector2,
   Vector3,
   type Camera,
-  type Object3D,
 } from 'three';
 import type { Rng } from '../rng';
 import type { ResourceTracker } from '../disposal';
@@ -124,210 +120,18 @@ export function volumetricGlow(
 }
 
 /**
- * The silhouette of a presence, as a lathe profile of (radius, height) pairs on
- * a unit height.
+ * The presences of this game — the beings of the Light, the loved ones at the
+ * Threshold, the two still living in the room where you died — are built in
+ * `./presence`, because a presence turned out to be a geometry problem before it
+ * was a shading one and the construction is long enough to deserve its own file.
  *
- * Original, abstract, and deliberately not a body: a tall slender mantle of
- * light that gathers where it meets the ground and narrows the whole way to a
- * rounded crown, like a standing flame. There is no face anywhere in it and
- * there never will be — this world is made of light (GAME_BRIEF.md § The
- * Threshold, "figures that resolve out of glow").
- *
- * Three silhouettes were tried and thrown away before this one, and the failures
- * are worth keeping written down, because each is a thing the eye does with a
- * lathe profile whether you want it to or not. A capsule reads as a pill. A
- * tapered body with a pinched neck and a ball on top reads, instantly and
- * irreversibly, as a chess piece. A shoulder shelf sharp enough to see reads as
- * a collar on a bottle. What survives is proportion: tall, narrow, flaring only
- * at the hem, continuous from foot to crown. The presence then comes from how it
- * is lit and how it leans, which is where it should come from.
- *
- * What a capsule could not do, and why this exists: a capsule has exactly one
- * silhouette event, its own radius, so at any distance it reads as a pill. The
- * eye reads a standing presence off three events — a base, a waist and a
- * shoulder line — and those are cheap to put in a lathe profile. The form is
- * then legible at the distance the Council places it at, which is the whole
- * problem the Council had.
+ * Re-exported here so the scenes keep one import for the forms they build from.
+ * `figureOfLight(resources, { height, color, accent, seed, light? })` still
+ * returns `{ group, material }` with the group's origin at the figure's feet and
+ * `uTime` / `uResolve` on the material, exactly as before.
  */
-const PRESENCE_PROFILE: readonly (readonly [number, number])[] = [
-  [0.012, 0.000],
-  [0.100, 0.000],
-  [0.158, 0.018],
-  [0.152, 0.060],
-  [0.138, 0.150],
-  [0.122, 0.280],
-  [0.110, 0.410],
-  [0.103, 0.520],
-  [0.100, 0.600],
-  [0.098, 0.670],
-  [0.093, 0.730],
-  [0.085, 0.790],
-  [0.074, 0.845],
-  [0.061, 0.895],
-  [0.046, 0.938],
-  [0.031, 0.970],
-  [0.016, 0.991],
-  [0.000, 1.000],
-];
-
-function presenceGeometry(height: number, swell: number, lift: number): LatheGeometry {
-  const points = PRESENCE_PROFILE.map(
-    ([radius, y]) => new Vector2(radius * height * swell + (swell > 1 ? 0.016 : 0), y * height * lift),
-  );
-  // 16 radial segments: enough that the silhouette curve is smooth at the size
-  // these are drawn, and few enough that five of them cost nothing.
-  return new LatheGeometry(points, 16);
-}
-
-/** Tag every vertex of a geometry so one shared material can shade two parts. */
-function tagPart(geometry: BufferGeometry, part: number): BufferGeometry {
-  const count = geometry.getAttribute('position').count;
-  const parts = new Float32Array(count);
-  parts.fill(part);
-  geometry.setAttribute('aPart', new BufferAttribute(parts, 1));
-  return geometry;
-}
-
-/**
- * A presence: a being of light standing somewhere, with enough form to read as
- * one and no more detail than that.
- *
- * Two surfaces share one material, which is what lets a scene drive the whole
- * figure through the single `material` this returns — the shell outside the body
- * is tagged by a vertex attribute and shaded as the radiance coming off it. That
- * replaces the billboard halo scenes used to hang above a figure: a camera-facing
- * sprite with a radial streak reads as a lens flare, which is an artefact of a
- * camera that is not in this world, while a shell that follows the form turns
- * with it and reads as light coming off a body.
- *
- * Form comes from a wrapped diffuse term as well as the rim. Rim alone is what
- * made the old figure flat: every silhouette is equally bright and nothing in
- * between is lit at all, so the shape has an outline and no interior. One
- * directional term costs a dot product and gives the body a lit side.
- */
-export function figureOfLight(
-  tracker: ResourceTracker,
-  options: {
-    height: number;
-    color: number;
-    accent: number;
-    seed: number;
-    /** Where the light on this figure comes from, in world space. */
-    light?: readonly [number, number, number];
-  },
-): { group: Object3D; material: ShaderMaterial } {
-  const light = options.light ?? [0.22, 0.34, 1];
-  const material = tracker.track(
-    new ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new Color(options.color) },
-        uAccent: { value: new Color(options.accent) },
-        uSeed: { value: options.seed },
-        uHeight: { value: options.height },
-        uLight: { value: new Vector3(light[0], light[1], light[2]) },
-        /** 0 = not yet resolved out of the glow, 1 = fully present. */
-        uResolve: { value: 0 },
-      },
-      vertexShader: /* glsl */ `
-        attribute float aPart;
-        uniform float uHeight;
-        varying float vPart;
-        varying vec3 vWorldNormal;
-        varying vec3 vWorldPos;
-        varying float vUpward;
-        void main() {
-          vPart = aPart;
-          // World space rather than view space: the light on a presence belongs
-          // to the place it is standing in, so it must not swing with the head.
-          vWorldNormal = normalize(mat3(modelMatrix) * normal);
-          vec4 world = modelMatrix * vec4(position, 1.0);
-          vWorldPos = world.xyz;
-          vUpward = position.y / max(0.001, uHeight);
-          gl_Position = projectionMatrix * viewMatrix * world;
-        }
-      `,
-      fragmentShader: /* glsl */ `
-        precision highp float;
-        uniform float uTime;
-        uniform vec3 uColor;
-        uniform vec3 uAccent;
-        uniform vec3 uLight;
-        uniform float uSeed;
-        uniform float uResolve;
-        varying float vPart;
-        varying vec3 vWorldNormal;
-        varying vec3 vWorldPos;
-        varying float vUpward;
-
-        ${NOISE}
-
-        void main() {
-          vec3 normal = normalize(vWorldNormal);
-          vec3 view = normalize(cameraPosition - vWorldPos);
-          float facing = clamp(dot(normal, view), 0.0, 1.0);
-          float rim = pow(1.0 - facing, 2.3);
-
-          float resolve = clamp(uResolve, 0.0, 1.4);
-          // Before it resolves the form is still coming apart into the light it
-          // is made of; as uResolve rises the noise tightens into a silhouette.
-          // Two octaves rather than four: at the size a figure is drawn the
-          // upper octaves are below a pixel, and this shader runs on every
-          // figure in every scene of the Light.
-          float grain = fbm(vWorldPos * 2.1 + vec3(uSeed, uTime * 0.16, uSeed * 0.5), 2);
-          float coherence = mix(grain * 1.5, 1.0, clamp(resolve, 0.0, 1.0));
-          float present = smoothstep(0.0, 0.32, resolve);
-
-          if (vPart > 0.5) {
-            // The shell: lit only where it turns away from the eye, so what
-            // reads is radiance coming off the figure rather than a sprite.
-            float aura = pow(1.0 - facing, 1.9) * coherence * present;
-            float breath = 0.82 + 0.18 * sin(uTime * 0.6 + uSeed);
-            vec3 glow = mix(uAccent, uColor, 0.45);
-            gl_FragColor = vec4(glow * aura * 0.55 * breath, clamp(aura * 0.3, 0.0, 1.0));
-            return;
-          }
-
-          // Wrapped diffuse: never fully dark on the turned-away side, because a
-          // being of light has no shadow side, but still directional enough that
-          // the body has a near face and a far one.
-          float lambert = clamp(dot(normal, normalize(uLight)) * 0.5 + 0.5, 0.0, 1.0);
-          // Filaments running up the form, so the surface is light rather than
-          // plastic. Cheap: one sine, no noise.
-          float around = atan(normal.z, normal.x);
-          float weave = sin(around * 5.0 + vUpward * 7.0 - uTime * 0.3) * 0.5 + 0.5;
-          weave *= weave;
-          // Brightest at the foot, where the figure stands in the light, and at
-          // the crown. The dip between them is what gives the form a waist.
-          float foot = 1.0 - smoothstep(0.0, 0.46, vUpward);
-          float crown = smoothstep(0.62, 0.97, vUpward);
-          // Rim-dominant, so the interior stays thin enough to see the hall
-          // through — a presence that occludes the floor behind it is an object.
-          // The wrapped diffuse is a fifth of the weight: enough to turn the
-          // form, not enough to make it a surface.
-          float body = (rim * 1.3 + lambert * 0.45 + 0.16) * (0.5 + foot * 0.55 + crown * 0.8);
-          body *= (0.86 + weave * 0.28) * coherence * present;
-
-          // Warm at the core and cooling toward the edge, rather than the other
-          // way round: a presence lit from inside is warmest where it is thickest.
-          vec3 tint = mix(uColor, uAccent, clamp(rim * 0.62 - crown * 0.4 + 0.12, 0.0, 1.0));
-          gl_FragColor = vec4(tint * body, clamp(body * 0.74, 0.0, 1.0));
-        }
-      `,
-    }),
-  );
-
-  const group = new Group();
-  const body = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1, 1), 0)), material);
-  const shell = new Mesh(tracker.track(tagPart(presenceGeometry(options.height, 1.09, 1.02), 1)), material);
-  group.add(body, shell);
-  // The group's origin is where the figure stands, as it was when this was a
-  // capsule offset by half its height. Every caller positions feet, not centre.
-  return { group, material };
-}
+export { figureOfLight, bearingFromSeed } from './presence';
+export type { Figure, FigureOptions, PresenceBearing } from './presence';
 
 /** Drifting motes. Dust in a sunbeam, or souls at a distance. */
 export function moteField(

@@ -1,11 +1,7 @@
 import {
   AdditiveBlending,
-  BufferGeometry,
   CylinderGeometry,
-  Float32BufferAttribute,
   Group,
-  LineBasicMaterial,
-  LineSegments,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
@@ -25,6 +21,7 @@ import {
   witnessOfLight,
 } from '../systems/higher-dimensional';
 import { Overlay } from '../systems/overlay';
+import { luminousPanel, rememberedMoment, type MomentSpec } from '../systems/remembered';
 import { ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
@@ -552,99 +549,175 @@ function carriedLight(soul: SoulState): number {
 }
 
 /**
- * The kitchen again, as a memory: the room, the table, two chairs, two cups, all
- * of it in outline.
+ * The rest of the life, standing in the same dark at the same time.
  *
- * This was a table and two cups floating in black, and three reviews in a row
- * reported the review as unreadable — the player could see a couple of hairlines
- * and a white bloom and nothing else. Outline is the right language for a
- * remembered room, but an outline needs enough edges to be a room: the floor and
- * ceiling rectangles and the four corner posts are what tell the eye it is
- * inside somewhere, and the chairs are what tell it two people sat here.
+ * `L-THRESH-07` says the review is panoramic and often *simultaneous* rather
+ * than sequential, and the brief takes the same line: a whole life present at
+ * once. A slideshow is the one staging that cannot be either. So the moments do
+ * not take turns. They are all built at load, all lit from the first frame, and
+ * none of them is ever removed — the evening the caption is about is simply the
+ * one the player is sitting inside, and the others are further off in the dark
+ * at different depths and different heights, found by turning the head.
  *
- * Everything is one `LineSegments`, so the whole room is a single draw call and
- * one geometry to dispose.
+ * Each one is a held instant of space rather than a picture of an event: a floor
+ * with an edge, a door open or shut, and one or two people standing at a chosen
+ * distance from each other and from the light. That is deliberately almost no
+ * information — and distance, orientation and light between two forms is how
+ * much of it a person can read anyway.
+ *
+ * GAME_BRIEF.md § Systems measures karma as effect on another person, not as a
+ * tally, so these are not three charges. The first is a moment that landed well
+ * and it is the warmest and nearest of the three. `L-THRESH-06`: wholly loving,
+ * and without judgement. Nothing here scores, and nothing here is captioned.
  */
-function rememberedRoom(context: SceneContext, color: number): LineSegments {
-  const vertices: number[] = [];
-  const edge = (
-    ax: number, ay: number, az: number,
-    bx: number, by: number, bz: number,
-  ): void => {
-    vertices.push(ax, ay, az, bx, by, bz);
-  };
-  /** The four edges of an axis-aligned rectangle at height `y`. */
-  const rectangle = (y: number, hx: number, hz: number): void => {
-    edge(-hx, y, -hz, hx, y, -hz);
-    edge(hx, y, -hz, hx, y, hz);
-    edge(hx, y, hz, -hx, y, hz);
-    edge(-hx, y, hz, -hx, y, -hz);
-  };
-
-  // The room. No walls, only their edges — so the presences outside are visible
-  // straight through a room that is not really there.
-  const ROOM_X = 3.35;
-  const ROOM_Z = 2.25;
-  const ROOM_Y = 2.5;
-  rectangle(0, ROOM_X, ROOM_Z);
-  rectangle(ROOM_Y, ROOM_X, ROOM_Z);
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      edge(sx * ROOM_X, 0, sz * ROOM_Z, sx * ROOM_X, ROOM_Y, sz * ROOM_Z);
-    }
-  }
-
-  // The lamp's flex. Without it the light over the table is a star in the dark
-  // rather than something somebody in this house once switched on.
-  edge(0, ROOM_Y, 0, 0, 1.9, 0);
-
-  // The table, with its legs.
-  const TABLE_X = 0.85;
-  const TABLE_Z = 0.48;
-  const TABLE_Y = 0.76;
-  rectangle(TABLE_Y, TABLE_X, TABLE_Z);
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      edge(sx * TABLE_X, 0, sz * TABLE_Z, sx * TABLE_X, TABLE_Y, sz * TABLE_Z);
-    }
-  }
-
-  // Two chairs, one each side, pulled out a little. Seat, legs, and a back that
-  // leans away from the table, which is the detail that stops a chair outline
-  // reading as a crate.
-  for (const side of [-1, 1] as const) {
-    const cx = side * 1.28;
-    const seat = 0.46;
-    const half = 0.22;
-    for (let i = 0; i < 4; i += 1) {
-      const sx = i < 2 ? -1 : 1;
-      const sz = i % 2 === 0 ? -1 : 1;
-      edge(cx + sx * half, 0, sz * half, cx + sx * half, seat, sz * half);
-    }
-    edge(cx - half, seat, -half, cx + half, seat, -half);
-    edge(cx + half, seat, -half, cx + half, seat, half);
-    edge(cx + half, seat, half, cx - half, seat, half);
-    edge(cx - half, seat, half, cx - half, seat, -half);
-    const backX = cx + side * half;
-    const leanX = backX + side * 0.1;
-    edge(backX, seat, -half, leanX, seat + 0.48, -half);
-    edge(backX, seat, half, leanX, seat + 0.48, half);
-    edge(leanX, seat + 0.48, -half, leanX, seat + 0.48, half);
-  }
-
-  const geometry = context.resources.track(new BufferGeometry());
-  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
-  const material = context.resources.track(
-    new LineBasicMaterial({
-      color,
-      transparent: true,
-      opacity: 0.8,
-      blending: AdditiveBlending,
-      depthWrite: false,
-    }),
-  );
-  return new LineSegments(geometry, material);
+interface DistantMoment {
+  /** Where the moment stands, in the review's space. */
+  readonly at: readonly [number, number, number];
+  /** Which way the place is turned. No two share an orientation. */
+  readonly turn: number;
+  /** How present it is before the moment being spoken about lands. */
+  readonly rest: number;
+  readonly spec: MomentSpec;
 }
+
+const DISTANT_MOMENTS: readonly DistantMoment[] = [
+  /**
+   * Two of them close together under one light, the smaller one nearer to it.
+   * Nothing between them: no table, no door, no distance worth measuring.
+   */
+  {
+    at: [15.5, -2.2, 10.5],
+    turn: -0.62,
+    rest: 0.9,
+    spec: {
+      floor: { width: 6.4, depth: 5.0, color: 0xffc38a, intensity: 0.4, edge: 0.6 },
+      shared: { at: [-0.25, 1.75, 0.3], radius: 1.3, color: 0xffcf9a, intensity: 0.8 },
+      presences: [
+        { at: [-1.3, 0.35], height: 2.7, color: 0xffd9a4, intensity: 1.35 },
+        { at: [0.45, -0.05], height: 1.7, width: 0.5, color: 0xffe3bc, intensity: 1.3 },
+      ],
+      seed: 2.1,
+    },
+  },
+  /**
+   * A door standing wide open with the light on behind it, and one person a
+   * long way across the floor from it, turned the other way. The whole content
+   * is the gap between the two — an open door nobody is going through.
+   */
+  {
+    at: [27, -6.2, -12],
+    turn: 0.55,
+    rest: 0.8,
+    spec: {
+      floor: { width: 11, depth: 8, color: 0xb59ad8, intensity: 0.3, edge: 0.7 },
+      opening: {
+        at: [-3.8, -1.4],
+        width: 2.1,
+        height: 3.8,
+        color: 0xffd8a8,
+        intensity: 1.0,
+        turn: Math.PI / 2,
+        open: 1,
+        reach: 5.0,
+      },
+      presences: [{ at: [3.4, 1.7], height: 3.3, color: 0xd8c6ff, intensity: 1.25 }],
+      seed: 7.4,
+    },
+  },
+  /**
+   * Two of them on one floor with the whole floor between them, and the only
+   * light in the place standing at one end of it. No door, no furniture and no
+   * event: just how far apart two people were, and which of them the light was
+   * near. It is the near moment's own shape at another scale, which is what a
+   * life looks like when all of it is present at once.
+   */
+  {
+    at: [-18, -3.4, -10],
+    turn: 2.5,
+    rest: 0.85,
+    spec: {
+      floor: { width: 9.5, depth: 5.4, color: 0xc9a7d8, intensity: 0.34, edge: 0.64 },
+      shared: { at: [-3.1, 1.6, 0.1], radius: 1.0, color: 0xffd3a0, intensity: 0.9 },
+      presences: [
+        { at: [-3.8, 0.2], height: 2.8, color: 0xffd3a0, intensity: 1.3 },
+        { at: [3.6, -0.5], height: 2.7, color: 0xbda7e8, intensity: 0.8 },
+      ],
+      seed: 13.7,
+    },
+  },
+  /**
+   * Three of them standing close in, with the light down among them rather than
+   * over them. The review is not a charge sheet — GAME_BRIEF.md § Systems
+   * measures karma as effect on another person, not as a tally — so two of the
+   * four moments standing in this dark are ones where the effect was warmth.
+   */
+  {
+    at: [-24, -5.6, 11],
+    turn: -2.1,
+    rest: 0.82,
+    spec: {
+      floor: { width: 6.8, depth: 5.2, color: 0xffcb9a, intensity: 0.38, edge: 0.58 },
+      shared: { at: [0.1, 0.75, 0.15], radius: 1.15, color: 0xffd9ac, intensity: 0.85 },
+      presences: [
+        { at: [-1.5, 0.3], height: 3.0, color: 0xffd9a4, intensity: 1.3 },
+        { at: [-0.1, -0.5], height: 2.2, width: 0.6, color: 0xffe6c4, intensity: 1.25 },
+        { at: [1.35, 0.25], height: 2.6, color: 0xffcf9a, intensity: 1.2 },
+      ],
+      seed: 19.2,
+    },
+  },
+];
+
+/**
+ * The evening itself: two places, not one room.
+ *
+ * It used to be one kitchen table with the two of them sitting across it, which
+ * contradicted its own captions — he thought there would be time to call her
+ * back, and she waited up, which means they were nowhere near each other. So
+ * the moment is staged as what it says it is: two islands of floor with a dark
+ * gap between them, and the gap is the distance the call did not cross.
+ *
+ * Each island has one opening, and the two openings are the moment's whole
+ * argument. Hers stands wide open with the hall light on and the light lying
+ * across her floor; his is shut to a seam. Neither is a verdict — a shut door
+ * is just a shut door — but a player who never reads a caption can see which
+ * side of the evening they are on from the shape of the light alone.
+ */
+const HIS_FLOOR: readonly [number, number, number] = [-4.5, 0, 0.1];
+const HER_FLOOR: readonly [number, number, number] = [4.6, 0, 0.3];
+
+const HIS_PLACE: MomentSpec = {
+  floor: { width: 5.4, depth: 3.8, color: 0xc8a37e, intensity: 0.34, edge: 0.5 },
+  opening: {
+    at: [-1.6, 0.8],
+    width: 1.15,
+    height: 2.1,
+    color: 0xffcf9a,
+    intensity: 1.15,
+    turn: Math.PI / 2,
+    // Shut, and the light still on behind it.
+    open: 0.05,
+    reach: 1.1,
+  },
+  presences: [],
+  seed: 21.3,
+};
+
+const HER_PLACE: MomentSpec = {
+  floor: { width: 5.4, depth: 3.8, color: 0xffc08a, intensity: 0.4, edge: 0.48 },
+  opening: {
+    at: [1.3, -1.6],
+    width: 1.1,
+    height: 2.15,
+    color: 0xffc98e,
+    intensity: 0.92,
+    turn: -Math.PI / 2,
+    open: 1,
+    reach: 3.2,
+  },
+  presences: [],
+  seed: 29.8,
+};
 
 export const lifeReviewScene: SceneDefinition = {
   id: 'light.life-review',
@@ -662,55 +735,101 @@ export const lifeReviewScene: SceneDefinition = {
     // Lifted off black deliberately. A review held in a void reads as a slide
     // projected in an empty room; the air has to be a place for the presences to
     // be standing in.
-    const air = airShell(context.resources, { radius: 100, ground: 0x1d1726, glow: 0x584273, density: 1 });
+    const air = airShell(context.resources, { radius: 100, ground: 0x201829, glow: 0x6b4f8c, density: 1 });
     context.scene.add(air.mesh);
 
+    /**
+     * The evening, built as two places rather than one room.
+     *
+     * Everything in it is a sheet of light: a floor with an edge, a surface at
+     * waist height, a door. See `systems/remembered.ts` for why outline was the
+     * wrong language — an outline is a diagram of a place, and this has to be a
+     * memory of one.
+     */
     const memory = new Group();
-    memory.add(rememberedRoom(context, grammar.glow));
 
-    const tableSurfaceGeometry = context.resources.track(new PlaneGeometry(1.7, 0.96));
-    const tableSurfaceMaterial = context.resources.track(
-      new MeshBasicMaterial({
-        color: 0x6a4428,
-        transparent: true,
-        opacity: 0.5,
-        blending: AdditiveBlending,
-        depthWrite: false,
-      }),
-    );
-    const tableSurface = new Mesh(tableSurfaceGeometry, tableSurfaceMaterial);
-    tableSurface.rotation.x = -Math.PI / 2;
-    tableSurface.position.y = 0.755;
-    memory.add(tableSurface);
+    const hisPlace = rememberedMoment(context.resources, HIS_PLACE);
+    hisPlace.group.position.set(HIS_FLOOR[0], HIS_FLOOR[1], HIS_FLOOR[2]);
+    memory.add(hisPlace.group);
 
-    // The lamp over the table, and the pool it throws on the table top.
-    //
-    // This was one large billboarded glow sitting 1.7m from the camera, which on
-    // a 60° lens is a brown dome across the bottom third of every frame — it is
-    // the single biggest reason this scene read as a white smear with a hairline
-    // in it. A lamp is a small bright thing high up, and the pool is a flat disc
-    // lying on the table, so neither is ever in the lens.
+    const herPlace = rememberedMoment(context.resources, HER_PLACE);
+    herPlace.group.position.set(HER_FLOOR[0], HER_FLOOR[1], HER_FLOOR[2]);
+    memory.add(herPlace.group);
+
+    // Where he was: a surface at the height of a desk with one cold light on it.
+    const hisSurface = luminousPanel(context.resources, {
+      width: 1.3,
+      height: 0.82,
+      color: 0xd8a877,
+      intensity: 0.48,
+      softness: 0.5,
+      churn: 0.25,
+      seed: 4.2,
+    });
+    hisSurface.mesh.rotation.x = -Math.PI / 2;
+    hisSurface.mesh.position.set(-2.95, 0.74, 0.16);
+    memory.add(hisSurface.mesh);
+
+    // Where she was: the same surface, warmer, with a lamp over it.
+    const herSurface = luminousPanel(context.resources, {
+      width: 1.35,
+      height: 0.9,
+      color: 0xffbe84,
+      intensity: 0.6,
+      softness: 0.5,
+      churn: 0.25,
+      seed: 8.6,
+    });
+    herSurface.mesh.rotation.x = -Math.PI / 2;
+    herSurface.mesh.position.set(2.95, 0.745, 0.25);
+    memory.add(herSurface.mesh);
+
+    /**
+     * Her lamp, the pool it throws, and the flex it hangs on.
+     *
+     * The lamp was a large billboarded glow a metre and a half from the camera,
+     * which on a 60° lens is a dome across the bottom third of every frame and
+     * was most of why this scene read as a white smear. It is now a small bright
+     * thing a long way off, over the only table in the frame — and the flex is
+     * what says somebody in that house reached up and switched it on.
+     */
     const lamp = volumetricGlow(context.resources, {
-      radius: 0.2,
+      radius: 0.17,
       color: 0xffcf96,
-      intensity: 1.15,
+      intensity: 0.62,
       softness: 2.0,
     });
-    lamp.mesh.position.set(0, 1.86, 0);
+    lamp.mesh.position.set(2.95, 1.8, 0.25);
     memory.add(lamp.mesh);
 
+    const flex = luminousPanel(context.resources, {
+      width: 0.03,
+      height: 0.5,
+      color: 0xffcf96,
+      intensity: 0.34,
+      softness: 0.3,
+      lean: 0.6,
+      churn: 0,
+      seed: 6.1,
+      facing: 'upright',
+    });
+    flex.mesh.position.set(2.95, 2.14, 0.25);
+    memory.add(flex.mesh);
+
     const pool = volumetricGlow(context.resources, {
-      radius: 0.62,
+      radius: 0.5,
       color: 0xffb877,
-      intensity: 0.5,
+      intensity: 0.42,
       softness: 2.6,
     });
-    // Laid flat on the table rather than billboarded: `update` is never called
-    // on it, so it keeps this orientation and stays a pool of light.
+    // Laid flat rather than billboarded: `update` is never called on it, so it
+    // keeps this orientation and stays a pool of light on the table.
     pool.mesh.rotation.x = -Math.PI / 2;
-    pool.mesh.position.set(0, 0.772, 0.02);
+    pool.mesh.position.set(2.95, 0.768, 0.25);
     memory.add(pool.mesh);
 
+    // One cup, on her side. It used to be two, on one table, which said they had
+    // sat down together — the opposite of what the captions say happened.
     const cupGeometry = context.resources.track(new CylinderGeometry(0.05, 0.042, 0.1, 16));
     const cupMaterial = context.resources.track(
       new MeshBasicMaterial({
@@ -721,23 +840,21 @@ export const lifeReviewScene: SceneDefinition = {
         depthWrite: false,
       }),
     );
-    for (const [x, z] of [[-0.42, 0.1], [0.44, -0.06]] as const) {
-      const cup = new Mesh(cupGeometry, cupMaterial);
-      cup.position.set(x, 0.82, z);
-      memory.add(cup);
-    }
+    const cup = new Mesh(cupGeometry, cupMaterial);
+    cup.position.set(3.2, 0.81, 0.08);
+    memory.add(cup);
     context.scene.add(memory);
 
-    // Him in his chair, her in hers. Both abstract presences, each sitting just
-    // inside their own vantage — so whoever is being inhabited is behind the
-    // camera's eye and the other one is across the table where they can be seen.
+    // Him in his place, her in hers, each sitting just behind their own vantage
+    // — so whoever is being inhabited is behind the camera's eye and out of
+    // frame, and the other one is across the gap where they can be seen.
     const him = figureOfLight(context.resources, {
       height: 1.22,
       color: 0xffd9a4,
       accent: 0xc2884a,
       seed: 3.1,
     });
-    him.group.position.set(-1.3, 0.44, 0.14);
+    him.group.position.set(-4.0, 0.34, 0.16);
     context.scene.add(him.group);
 
     const her = figureOfLight(context.resources, {
@@ -746,19 +863,29 @@ export const lifeReviewScene: SceneDefinition = {
       accent: 0x8a73d6,
       seed: 11.4,
     });
-    her.group.position.set(1.34, 0.46, -0.08);
+    her.group.position.set(4.15, 0.36, 0.47);
     context.scene.add(her.group);
 
-    // The phone that did not get picked up: one small, specific light. Small is
-    // the whole point of it, and it had grown into the brightest object in the
-    // game.
-    const phone = volumetricGlow(context.resources, { radius: 0.1, color: 0x9fe6ff, intensity: 1.1, softness: 2.2 });
-    phone.mesh.position.set(0.12, 0.84, 0.28);
+    // The phone that did not get picked up: one small, specific, cold light, on
+    // his side of a three-metre gap of nothing. Small is the whole point of it,
+    // and it had grown into the brightest object in the game.
+    const phone = volumetricGlow(context.resources, { radius: 0.09, color: 0x9fe6ff, intensity: 0.9, softness: 2.2 });
+    phone.mesh.position.set(-2.87, 0.8, 0.22);
     context.scene.add(phone.mesh);
 
+    // The rest of the life, already there. See `DISTANT_MOMENTS`.
+    const distant = DISTANT_MOMENTS.map((entry) => {
+      const moment = rememberedMoment(context.resources, entry.spec);
+      moment.group.position.set(entry.at[0], entry.at[1], entry.at[2]);
+      moment.group.rotation.y = entry.turn;
+      moment.setPresence(entry.rest);
+      context.scene.add(moment.group);
+      return { moment, rest: entry.rest };
+    });
+
     const motes = moteField(context.resources, context.rng.stream('review-motes'), {
-      count: 1100,
-      radius: 7,
+      count: 900,
+      radius: 11,
       color: grammar.accent,
       size: 0.07,
     });
@@ -787,13 +914,14 @@ export const lifeReviewScene: SceneDefinition = {
      * Placement is the other half of keeping this from reading as a tribunal
      * (`L-THRESH-06`: wholly loving, and without judgement):
      *
-     * - Two sit beyond his side of the table and two beyond hers, at different
-     *   distances and heights, so there is no arc, no ring and no symmetry
-     *   anywhere in the arrangement. A semicircle of figures facing a seated
-     *   person is a jury; this is deliberately not one.
-     * - All four are twelve metres away or more and well above the eyeline. They
-     *   are enormous in the frame and nowhere near the player, which is the
-     *   difference between vast and looming.
+     * - Two sit beyond his side and two beyond hers, at different distances and
+     *   heights, so there is no arc, no ring and no symmetry anywhere in the
+     *   arrangement. A semicircle of figures facing a seated person is a jury;
+     *   this is deliberately not one.
+     * - All four are fifteen metres away or more and well above the eyeline —
+     *   and they have been moved further out and further up again, because the
+     *   remembered moments now lie below the horizon and the company belongs
+     *   above it. The life is underneath; the ones watching it are overhead.
      * - None of them ever moves. Their positions are set here and never touched
      *   again, and nothing in their update reads the player's position, the
      *   camera, or the soul's ledger.
@@ -801,10 +929,10 @@ export const lifeReviewScene: SceneDefinition = {
     const carried = carriedLight(context.soul);
     const witnesses = (
       [
-        { x: 13.4, y: 3.3, z: 2.6, radius: 3.4, distance: 2.1, weight: 0.6, side: 1 },
-        { x: 19.0, y: 6.4, z: -6.0, radius: 4.3, distance: 3.6, weight: 0.48, side: 1 },
-        { x: -12.8, y: 3.1, z: -3.0, radius: 3.2, distance: 1.9, weight: 0.6, side: -1 },
-        { x: -19.4, y: 6.8, z: 5.0, radius: 4.6, distance: 4.4, weight: 0.46, side: -1 },
+        { x: 15.0, y: 6.0, z: 4.5, radius: 3.4, distance: 2.1, weight: 0.6, side: 1 },
+        { x: 24.0, y: 9.0, z: -3.5, radius: 4.3, distance: 3.6, weight: 0.48, side: 1 },
+        { x: -15.0, y: 5.6, z: -4.0, radius: 3.2, distance: 1.9, weight: 0.6, side: -1 },
+        { x: -24.0, y: 10.0, z: 7.5, radius: 4.6, distance: 4.4, weight: 0.46, side: -1 },
       ] as const
     ).map((spec, index) => {
       const vantage = WITNESS_VANTAGES[index] ?? WITNESS_VANTAGES[0] ?? [];
@@ -822,12 +950,12 @@ export const lifeReviewScene: SceneDefinition = {
 
       // Light the lattice is drawn on, so an appearance reads as a body of
       // light with a structure inside it rather than as a wireframe diagram.
-      // Held very low: it is twelve metres away and the size of a house, and at
+      // Held very low: it is fifteen metres away and the size of a house, and at
       // any real intensity it would be the brightest thing in the frame.
       const halo = volumetricGlow(context.resources, {
         radius: spec.radius * 1.15,
         color: grammar.accent,
-        intensity: 0.26,
+        intensity: 0.16,
         softness: 2.8,
       });
       halo.mesh.position.set(spec.x, spec.y, spec.z);
@@ -843,26 +971,33 @@ export const lifeReviewScene: SceneDefinition = {
       }
     });
 
-    // Two vantages: his chair, and hers. The move between them is the mechanic,
-    // so it is slow enough to be felt and short enough not to be a journey.
-    //
-    // Both seats were a metre and a half from the table centre, which put the
-    // near figure inside the lens and the whole memory in a strip along the
-    // bottom of the frame. Pulled back and raised, the table, both chairs, both
-    // people and the room's edges are all in shot at once.
-    const hisSeat = new Vector3(-2.78, 1.46, 0.24);
-    const herSeat = new Vector3(2.84, 1.44, -0.18);
+    /**
+     * Two vantages: where he was, and where she was. The move between them is
+     * the mechanic, so it is slow enough to be felt and short enough not to be a
+     * journey.
+     *
+     * Each seat sits just in front of its own figure and just behind its own
+     * table, which puts both out of frame from inside them: a person looking up
+     * does not see their own hands. What is in frame is the other place, six and
+     * a half metres away across the dark, with everything in it — the surface,
+     * the one light over it, the person, and the door behind them — inside a
+     * twenty-degree cone. One look takes the whole of it in.
+     */
+    const hisSeat = new Vector3(-3.4, 1.44, 0.1);
+    const herSeat = new Vector3(3.55, 1.42, 0.4);
 
-    // From the left-hand seat the table is to the camera's +X, so the yaw must
-    // face that way. It was pointing the opposite direction, which aimed the
-    // whole scene off-screen and is why the frame measured as empty.
+    // From his place hers is to the camera's +X, so the yaw must face that way.
     const HIS_YAW = -Math.PI * 0.5;
     const HER_YAW = Math.PI * 0.5;
+    // Tipped a little further down than the rest of the game: the remembered
+    // moments lie below the horizon and the company stands above it, and this is
+    // the angle that holds the near floor's own edge in the bottom of the frame.
+    const REVIEW_PITCH = -0.15;
 
     context.rig.setMode('drifting');
     context.rig.position.copy(hisSeat);
     context.rig.target.copy(hisSeat);
-    context.rig.orient(HIS_YAW, -0.1);
+    context.rig.orient(HIS_YAW, REVIEW_PITCH);
     context.rig.setSway(0.3);
     context.rig.setRoll(0);
     context.rig.setPulse(0);
@@ -883,14 +1018,14 @@ export const lifeReviewScene: SceneDefinition = {
     const grade = context.post.grade;
     grade.drain = 0.26;
     grade.grain = grammar.grain;
-    grade.vignette = 0.3;
+    grade.vignette = 0.24;
     grade.aberration = 0.002;
     grade.distortion = 0.028;
-    grade.exposure = 1.12;
+    grade.exposure = 1.18;
     grade.washColor = [1, 0.95, 0.9];
     grade.washAmount = 0.015;
     grade.smear = 0;
-    context.post.setBloom(0.52, 0.72, 0.8);
+    context.post.setBloom(0.5, 0.72, 0.84);
 
     context.audio.drone(0.18, 54, 5);
     context.audio.shimmer(0.14);
@@ -919,6 +1054,12 @@ export const lifeReviewScene: SceneDefinition = {
         setU(pool.material, 'uTime', elapsed);
         motes.drift(delta, elapsed);
 
+        hisPlace.update(elapsed, context.camera);
+        herPlace.update(elapsed, context.camera);
+        hisSurface.update(elapsed, context.camera);
+        herSurface.update(elapsed, context.camera);
+        flex.update(elapsed, context.camera);
+
         // 0 = his vantage, 1 = hers.
         const side = beat.id === 'his-side'
           ? 0
@@ -931,10 +1072,10 @@ export const lifeReviewScene: SceneDefinition = {
 
         if (side > 0.5 && facing === 'his') {
           facing = 'hers';
-          context.rig.orient(HER_YAW, -0.1);
+          context.rig.orient(HER_YAW, REVIEW_PITCH);
         } else if (side <= 0.5 && facing === 'hers') {
           facing = 'his';
-          context.rig.orient(HIS_YAW, -0.1);
+          context.rig.orient(HIS_YAW, REVIEW_PITCH);
         }
 
         // Whoever is being inhabited goes out; the other one resolves. You are
@@ -948,19 +1089,28 @@ export const lifeReviewScene: SceneDefinition = {
         // Her side is cooler and closer. The grade carries the change of
         // interior, so the switch is felt before it is read.
         grade.washColor = [1 - side * 0.06, 0.95 + side * 0.02, 0.9 + side * 0.08];
-        grade.vignette = 0.3 + side * 0.05;
+        grade.vignette = 0.24 + side * 0.05;
         context.audio.drone(0.18, 54 - side * 6, 5 + side * 5);
 
         // The phone pulses at the moment it is being understood.
         const understanding = beat.id === 'felt' ? ease.out(t) : beat.id === 'carried' || beat.id === 'wait' ? 1 : 0;
-        setU(phone.material, 'uIntensity', 1.1 + understanding * 1.1 + Math.sin(elapsed * 1.4) * 0.08);
-        setU(lamp.material, 'uIntensity', 1.15 + understanding * 0.2);
+        setU(phone.material, 'uIntensity', 0.9 + understanding * 0.95 + Math.sin(elapsed * 1.4) * 0.07);
+        setU(lamp.material, 'uIntensity', 0.62 + understanding * 0.14);
+
+        // The rest of the life comes further up as this one moment lands. It
+        // was already there and it stays where it is — what changes is only how
+        // much of it the soul is able to hold at once, which is `L-THRESH-07`'s
+        // panoramic quality arriving rather than a cue being played.
+        for (const entry of distant) {
+          entry.moment.setPresence(entry.rest * (1 + understanding * 0.5));
+          entry.moment.update(elapsed, context.camera);
+        }
         // Colour comes back as the moment lands, which is mostly the company's
         // colour arriving: they are the only thing in frame with a hue the rest
         // of the room does not have.
         grade.drain = 0.26 - side * 0.06 - understanding * 0.1;
-        grade.exposure = 1.12 + understanding * 0.05;
-        context.post.setBloom(0.52 + understanding * 0.22, 0.72, 0.8 - understanding * 0.04);
+        grade.exposure = 1.18 + understanding * 0.05;
+        context.post.setBloom(0.5 + understanding * 0.2, 0.72, 0.84 - understanding * 0.04);
         context.audio.shimmer(0.14 + understanding * 0.26);
 
         /**
@@ -985,7 +1135,7 @@ export const lifeReviewScene: SceneDefinition = {
           witness.presence.setWarmth(understanding);
           witness.presence.update(elapsed, rotation);
           witness.halo.update(elapsed, context.camera);
-          setU(witness.halo.material, 'uIntensity', lit * (0.26 + understanding * 0.18));
+          setU(witness.halo.material, 'uIntensity', lit * (0.18 + understanding * 0.14));
         }
         if (!credited && (beat.id === 'carried' || beat.id === 'wait')) {
           credited = true;
