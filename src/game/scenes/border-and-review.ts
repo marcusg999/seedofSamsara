@@ -22,7 +22,7 @@ import {
 } from '../systems/higher-dimensional';
 import { Overlay } from '../systems/overlay';
 import { luminousPanel, rememberedMoment, type MomentSpec } from '../systems/remembered';
-import { ThresholdPrompt, clamp01 } from './threshold-early';
+import { RELEASE_SECONDS, ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
  * The border, the choice, and the life review.
@@ -112,6 +112,7 @@ export const borderScene: SceneDefinition = {
   exits: [
     { id: 'set-it-down', label: 'Set down what you are carrying', to: 'threshold.choice' },
     { id: 'carry-it', label: 'Carry it across', to: 'threshold.choice' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.choice' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -271,6 +272,7 @@ export const borderScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('This is the last place you can put anything down. Do you?', [
       {
         id: 'set-it-down',

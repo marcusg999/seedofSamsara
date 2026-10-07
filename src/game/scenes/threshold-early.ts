@@ -56,10 +56,21 @@ export interface PromptOption {
   readonly onPick: () => void;
 }
 
+/**
+ * How long a Threshold question waits before the scene goes on without it.
+ *
+ * Long enough to read the question twice and think about it; short enough that
+ * a player who is not going to answer is not stranded. The release moves no
+ * state at all, so answering remains the only way to change anything.
+ */
+export const RELEASE_SECONDS = 45;
+
 export class ThresholdPrompt {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private disposed = false;
+  private answered = false;
+  private releaseTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(parent: HTMLElement = document.body) {
     this.root = document.createElement('div');
@@ -142,6 +153,8 @@ export class ThresholdPrompt {
       // So a test can drive a choice by what it is, not by button order.
       button.dataset['choice'] = option.id;
       button.addEventListener('click', () => {
+        this.answered = true;
+        this.clearRelease();
         option.onPick();
       });
 
@@ -158,6 +171,8 @@ export class ThresholdPrompt {
    * always move: nothing here waits out a timer.
    */
   settle(outcome: string, ledger: string, onward: { id: string; label: string; onPick: () => void }): void {
+    this.answered = true;
+    this.clearRelease();
     this.panel.replaceChildren();
     this.panel.appendChild(line(outcome, 'question'));
     this.panel.appendChild(line(ledger, 'ledger'));
@@ -173,8 +188,50 @@ export class ThresholdPrompt {
     this.panel.appendChild(button);
   }
 
+  /**
+   * Let the scene go on by itself if the question is never answered.
+   *
+   * The owner's rule stands: the game never decides for the player. So the
+   * release records NOTHING — no karma, no harmony, no will, no attachment, no
+   * shard. It only stops the corridor holding a player who is not going to
+   * answer, which is a softlock in all but name and is what stopped the owner
+   * reaching the Council. Answering is still the only way to move the ledger,
+   * and the window is long enough to read the question twice.
+   */
+  releaseAfter(seconds: number, onRelease: () => void): void {
+    this.clearRelease();
+    this.releaseTimer = setTimeout(() => {
+      this.releaseTimer = undefined;
+      if (this.answered || this.disposed) {
+        return;
+      }
+      this.answered = true;
+      this.settle(
+        'The moment passes, and you let it. Nothing is decided here.',
+        'nothing moved · the question was yours and you kept it',
+        { id: 'unanswered', label: 'Go on', onPick: onRelease },
+      );
+      // A player who answers nothing is also not going to click "Go on", so the
+      // scene lets go by itself a beat later (GAME_BRIEF.md § Act 1 pacing).
+      this.releaseTimer = setTimeout(() => {
+        this.releaseTimer = undefined;
+        if (!this.disposed) {
+          onRelease();
+        }
+      }, 6000);
+    }, seconds * 1000);
+  }
+
+  private clearRelease(): void {
+    if (this.releaseTimer !== undefined) {
+      clearTimeout(this.releaseTimer);
+      this.releaseTimer = undefined;
+    }
+  }
+
   dispose(): void {
     this.disposed = true;
+    this.clearRelease();
     this.root.remove();
   }
 }
@@ -388,6 +445,7 @@ export const pronouncedDeadScene: SceneDefinition = {
   exits: [
     { id: 'accept', label: 'Take the hour as true', to: 'threshold.buzzing' },
     { id: 'refuse', label: 'Refuse the hour', to: 'threshold.buzzing' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.buzzing' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -473,6 +531,7 @@ export const pronouncedDeadScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('They have said the hour. Is it yours?', [
       {
         id: 'accept',
@@ -553,6 +612,7 @@ export const buzzingScene: SceneDefinition = {
   exits: [
     { id: 'go-with-it', label: 'Go with the sound', to: 'threshold.out-of-body' },
     { id: 'hold-together', label: 'Hold yourself together', to: 'threshold.out-of-body' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.out-of-body' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -636,6 +696,7 @@ export const buzzingScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('The sound is taking the room apart. And you.', [
       {
         id: 'go-with-it',
@@ -716,6 +777,7 @@ export const outOfBodyScene: SceneDefinition = {
   exits: [
     { id: 'the-body', label: 'Stay with your own body', to: 'threshold.tunnel' },
     { id: 'the-living', label: 'Stay with the ones in the room', to: 'threshold.tunnel' },
+    { id: 'unanswered', label: 'Go on', to: 'threshold.tunnel' },
   ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
@@ -824,6 +886,7 @@ export const outOfBodyScene: SceneDefinition = {
       }
     };
 
+    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
     prompt.ask('You are above it now. What do you watch?', [
       {
         id: 'the-body',
