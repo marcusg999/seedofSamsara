@@ -123,7 +123,7 @@ const OUTSIDE = GRAMMAR.outside;
  * for the content rule: a scene with exactly one light direction, fixed before
  * anything happens, cannot acquire a second one at the moment of the shot.
  */
-const DAWN = new Vector3(0.34, 0.1, -0.94).normalize();
+const DAWN = new Vector3(0.34, 0.17, -0.92).normalize();
 
 const BEATS: readonly Beat[] = [
   { id: 'cold', seconds: 9, caption: 'The fourth morning in this ditch. The sky is already going.' },
@@ -242,7 +242,7 @@ const SMELL: readonly Pick[] = [
   {
     id: 'yard',
     label: 'The yard he grew up in',
-    trade: 'A house, and the tree at the back of it. He carries more of it out of here.',
+    trade: 'A house and an unpruned tree. He carries more of it out.',
     caption: 'It is the yard behind the house. Wet earth, and the tree nobody ever pruned.',
     shard: 'soldier.the-yard',
     attachment: 0.12,
@@ -254,7 +254,7 @@ const SMELL: readonly Pick[] = [
   {
     id: 'market',
     label: 'Fruit under a tarp, in a town he walked through',
-    trade: 'Somebody planted this and somebody was going to pick it. He arrives lighter for knowing that.',
+    trade: 'Somebody planted this and meant to pick it. He arrives lighter.',
     caption: 'Crates, a tarp, somebody weighing things by hand. Whoever owns these trees meant to pick them.',
     shard: 'soldier.somebody-planted-this',
     attachment: -0.02,
@@ -265,8 +265,8 @@ const SMELL: readonly Pick[] = [
   },
   {
     id: 'nothing',
-    label: 'Nothing. It smells of the orchard.',
-    trade: 'He stopped letting things do that a while ago. It costs him nothing and it keeps him standing.',
+    label: 'Nothing. It smells of an orchard.',
+    trade: 'He stopped letting things do that. It keeps him standing.',
     caption: 'It smells of the orchard. He has got good at not going any further than that.',
     shard: 'soldier.stopped-letting-it',
     attachment: 0.04,
@@ -289,7 +289,7 @@ const LETTER: readonly Pick[] = [
   {
     id: 'hand-it-over',
     label: 'Put it in the other man’s pack',
-    trade: 'It goes out of here whatever happens to him. Karma is effect on others, and that is one.',
+    trade: 'It gets out of here either way. That is an effect on somebody.',
     caption: 'He tucks it into the top of the other man’s pack, where it will be found and not asked about.',
     shard: 'soldier.handed-it-over',
     attachment: -0.08,
@@ -300,8 +300,8 @@ const LETTER: readonly Pick[] = [
   },
   {
     id: 'finish-it',
-    label: 'Finish the line he stopped on',
-    trade: 'Four days he has not been able to write it. Nobody may ever read it. He will have said it.',
+    label: 'Finish the line',
+    trade: 'Nobody may ever read it. He will have said it.',
     caption: 'He writes the line. It takes eleven words and most of the pencil he has left.',
     shard: 'soldier.finished-the-line',
     attachment: 0.1,
@@ -313,7 +313,7 @@ const LETTER: readonly Pick[] = [
   {
     id: 'keep-it',
     label: 'Fold it back into his pocket',
-    trade: 'He would rather say it to her face. The thing unsaid stays with him, and goes with him.',
+    trade: 'He would rather say it to her face. It goes with him unsaid.',
     caption: 'Back in the pocket, against his chest, folded along the same four folds as yesterday.',
     shard: 'soldier.kept-it',
     attachment: 0.16,
@@ -335,8 +335,8 @@ const LETTER: readonly Pick[] = [
 const WATCH: readonly Pick[] = [
   {
     id: 'wake-him',
-    label: 'Wake him up for it',
-    trade: 'Somebody else sees the light come up. He will remember who woke him.',
+    label: 'Wake him for it',
+    trade: 'Somebody else sees it. He will remember who woke him.',
     caption: 'A hand on the shoulder. The other man swears at him, sits up, and then stops swearing.',
     shard: 'soldier.woke-him',
     attachment: 0.06,
@@ -348,7 +348,7 @@ const WATCH: readonly Pick[] = [
   {
     id: 'let-him-sleep',
     label: 'Let him sleep',
-    trade: 'Two nights awake. A kindness nobody will ever know was done — which is harmony, not karma.',
+    trade: 'Two nights awake. A kindness nobody will know was done.',
     caption: 'He lets him sleep. The groundsheet goes up and down and the light comes up on it anyway.',
     shard: 'soldier.let-him-sleep',
     attachment: 0,
@@ -360,7 +360,7 @@ const WATCH: readonly Pick[] = [
   {
     id: 'count-the-rows',
     label: 'Count the rows',
-    trade: 'Nobody planted them for him and they go past where he can see. His hands stay empty.',
+    trade: 'They go past where he can see. His hands stay empty.',
     caption: 'Fourteen rows. Then he starts on the trees in one of them and loses count in the mist.',
     shard: 'soldier.counted-the-rows',
     attachment: -0.06,
@@ -384,7 +384,7 @@ const KNOWING: readonly Pick[] = [
   {
     id: 'the-sky',
     label: 'The strip of sky over the rows',
-    trade: 'It is going from grey to a colour. Nothing out there is owed him and nothing is asked.',
+    trade: 'Going grey to a colour. Nothing out there is owed him.',
     caption: 'The strip over the rows has gone the colour of the inside of a shell. It is not frightening.',
     shard: 'soldier.looked-at-the-sky',
     attachment: -0.1,
@@ -396,7 +396,7 @@ const KNOWING: readonly Pick[] = [
   {
     id: 'the-letter',
     label: 'The corner of the letter',
-    trade: 'The heaviest thing in the ditch, and the one he would stay for. He leaves holding it.',
+    trade: 'The heaviest thing here, and the one he would stay for.',
     caption: 'A pale corner against the pack. He is looking at it the way you look at a door.',
     shard: 'soldier.looked-at-the-letter',
     attachment: 0.16,
@@ -407,8 +407,8 @@ const KNOWING: readonly Pick[] = [
   },
   {
     id: 'the-voice',
-    label: 'Whoever is talking very close to his ear',
-    trade: 'He cannot make out a word of it. Somebody stayed, and that is worth hearing anyway.',
+    label: 'Whoever is talking close to his ear',
+    trade: 'He cannot make out a word of it. Somebody stayed.',
     caption: 'Somebody is right at his ear, saying the same short thing over and over, and it is gone.',
     shard: 'soldier.heard-the-voice',
     attachment: 0.08,
@@ -436,7 +436,7 @@ const CARRY: readonly Pick[] = [
   {
     id: 'set-it-down',
     label: 'Set the morning down',
-    trade: 'He stops holding any of it. He arrives light, with his hands open.',
+    trade: 'He arrives light, with his hands open.',
     caption: 'He puts it down — the ditch, the four days, the line he did or did not write.',
     shard: 'soldier.set-it-down',
     attachment: -0.16,
@@ -447,7 +447,7 @@ const CARRY: readonly Pick[] = [
   {
     id: 'the-unsaid',
     label: 'Take the thing he did not get to say',
-    trade: 'He keeps his grip on all of it. None of it stays. The holding does.',
+    trade: 'None of it stays. The holding does.',
     caption: 'He takes it with him, whole and unsaid, and it is heavier than he is.',
     shard: 'soldier.took-the-unsaid',
     attachment: 0.18,
@@ -458,7 +458,7 @@ const CARRY: readonly Pick[] = [
   {
     id: 'the-orchard',
     label: 'Take the orchard',
-    trade: 'Not the war and not the ditch. The rows, the mist in them, the smell. The last ordinary thing.',
+    trade: 'The rows, the mist, the smell. The last ordinary thing.',
     caption: 'He takes the orchard. Fourteen rows of somebody else’s trees, going grey to gold.',
     shard: 'soldier.took-the-orchard',
     attachment: 0.06,
@@ -722,8 +722,8 @@ function mistBodies(
           float edge = 1.0 - smoothstep(0.35, 1.0, r);
 
           vec3 p = vec3(centred * 3.4 + vOrigin.xz * 0.06, uTime * 0.025 + vOrigin.z * 0.11);
-          float churn = fbm(p, 4);
-          float density = smoothstep(0.3, 0.74, churn) * edge * uLevel;
+          float churn = fbm(p, 3);
+          float density = smoothstep(0.2, 0.62, churn) * edge * uLevel;
 
           gl_FragColor = vec4(uColor * density, density);
         }
@@ -786,11 +786,11 @@ function orchard(
   // Base at the origin, so an instance's y scale is its height.
   trunkGeometry.translate(0, 0.5, 0);
   const trunkMaterial = tracker.track(
-    new MeshStandardMaterial({ color: 0x33281f, roughness: 0.93, metalness: 0 }),
+    new MeshStandardMaterial({ color: 0x55442f, roughness: 0.93, metalness: 0 }),
   );
   const canopyGeometry = tracker.track(new IcosahedronGeometry(1, 1));
   const canopyMaterial = tracker.track(
-    new MeshStandardMaterial({ color: 0x2c3626, roughness: 0.95, metalness: 0, flatShading: true }),
+    new MeshStandardMaterial({ color: 0x4a573c, roughness: 0.95, metalness: 0, flatShading: true }),
   );
 
   const trunks = new InstancedMesh(trunkGeometry, trunkMaterial, count);
@@ -871,22 +871,22 @@ export const deathSoldierScene: SceneDefinition = {
 
     // --- materials ---------------------------------------------------------
     const earthMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x2b231c, roughness: 0.97, metalness: 0 }),
+      new MeshStandardMaterial({ color: 0x6e5c48, roughness: 0.97, metalness: 0 }),
     );
     const cutEarthMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x1f1915, roughness: 0.98, metalness: 0 }),
+      new MeshStandardMaterial({ color: 0x5b4a38, roughness: 0.98, metalness: 0 }),
     );
     const bagMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x4a4031, roughness: 0.96, metalness: 0 }),
+      new MeshStandardMaterial({ color: 0x7a6c52, roughness: 0.96, metalness: 0 }),
     );
     const clothMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x3d3a2e, roughness: 0.95, metalness: 0 }),
+      new MeshStandardMaterial({ color: 0x655f4b, roughness: 0.95, metalness: 0 }),
     );
     const metalMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x6f757a, roughness: 0.52, metalness: 0.58 }),
+      new MeshStandardMaterial({ color: 0xa6adb3, roughness: 0.52, metalness: 0.4 }),
     );
     const paintedMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x3a4036, roughness: 0.82, metalness: 0.12 }),
+      new MeshStandardMaterial({ color: 0x626a57, roughness: 0.82, metalness: 0.12 }),
     );
     const paperMaterial = resources.track(
       new MeshStandardMaterial({
@@ -895,7 +895,7 @@ export const deathSoldierScene: SceneDefinition = {
         metalness: 0,
         // A touch of self-lit warmth. The letter is the heaviest object in the
         // ditch and it must not disappear into the shadow at the bottom of it.
-        emissive: 0x30291d,
+        emissive: 0x7d663f,
         emissiveIntensity: 1,
       }),
     );
@@ -903,8 +903,8 @@ export const deathSoldierScene: SceneDefinition = {
     // --- sky ---------------------------------------------------------------
     const sky = preDawnSky(resources, {
       radius: 120,
-      horizon: 0x2a3344,
-      zenith: 0x0d1220,
+      horizon: 0x44536b,
+      zenith: 0x1a2340,
       dawn: 0xff9d5c,
     });
     place.add(sky.mesh);
@@ -916,7 +916,7 @@ export const deathSoldierScene: SceneDefinition = {
     // runs the length of the field the way an irrigation ditch does.
     const DITCH_HALF_WIDTH = 0.95;
     const DITCH_DEPTH = 1.05;
-    const FIELD = 180;
+    const FIELD = 520;
 
     const groundGeometry = resources.track(new PlaneGeometry(FIELD / 2, FIELD));
     for (const side of [-1, 1] as const) {
@@ -959,9 +959,11 @@ export const deathSoldierScene: SceneDefinition = {
 
     // --- the orchard -------------------------------------------------------
     const trees = orchard(resources, rng.stream('orchard'), {
-      rows: [-23.0, -19.6, -16.2, -12.8, -9.4, -6.0, -2.6, 2.6, 6.0, 9.4, 12.8, 16.2, 19.6, 23.0],
+      // Nine rows either side of the ditch, 3.4m apart, none of them closer to
+      // it than 2.6m — the ditch is the gap down the middle of the block.
+      rows: [-29.8, -26.4, -23.0, -19.6, -16.2, -12.8, -9.4, -6.0, -2.6, 2.6, 6.0, 9.4, 12.8, 16.2, 19.6, 23.0, 26.4, 29.8],
       from: 8,
-      to: -62,
+      to: -104,
       spacing: 5,
     });
     place.add(trees.trunks);
@@ -1057,12 +1059,13 @@ export const deathSoldierScene: SceneDefinition = {
     const mist = mistBodies(resources, {
       size: 17,
       color: 0x9fb2c6,
+      // Three, not five. Each is a wide additive quad running an fbm per
+      // fragment, which is the most expensive thing in this frame on a software
+      // rasteriser, and three read as mist in the rows just as well.
       places: [
-        new Vector3(-7.4, 1.5, -13),
-        new Vector3(6.2, 1.8, -21),
-        new Vector3(-4.1, 2.1, -33),
-        new Vector3(8.8, 2.4, -46),
-        new Vector3(0.6, 1.2, -7.5),
+        new Vector3(-6.2, 1.4, -12),
+        new Vector3(6.8, 1.9, -24),
+        new Vector3(-3.0, 2.3, -40),
       ],
     });
     for (const mesh of mist.meshes) {
@@ -1096,7 +1099,7 @@ export const deathSoldierScene: SceneDefinition = {
     dawnGlow.mesh.position.y = 2.2;
     place.add(dawnGlow.mesh);
 
-    const dawnLight = new DirectionalLight(0xffb37c, 0.35);
+    const dawnLight = new DirectionalLight(0xffc294, 0.5);
     dawnLight.position.copy(DAWN).multiplyScalar(40);
     dawnLight.position.y = 7;
     dawnLight.target.position.set(0, 0.6, -14);
@@ -1108,7 +1111,12 @@ export const deathSoldierScene: SceneDefinition = {
 
     // Sky-down and earth-up bounce, so surfaces away from the dawn still carry
     // shape instead of going to pure black.
-    const bounce = new HemisphereLight(0x3c4e68, 0x201812, 0.62);
+    // Before sunrise the sky dome IS the light: the sun is not up, so almost
+    // everything on the ground is lit by a big dim blue hemisphere and only
+    // grazed by the band at the horizon. Pitched as a night scene first, which
+    // put the whole lower half of the frame — the ditch, and therefore every
+    // object the questions are about — at zero.
+    const bounce = new HemisphereLight(0x7d99bd, 0x4a3c2d, 2.0);
     place.add(bounce);
     resources.onDispose(() => {
       bounce.dispose();
@@ -1147,7 +1155,7 @@ export const deathSoldierScene: SceneDefinition = {
     /** Sitting in the ditch with his head just above the lip. */
     const EYE_SIT = 0.26;
     /** Down in the ditch, against the wall. The body, not the view. */
-    const EYE_DOWN = -0.46;
+    const EYE_DOWN = -0.1;
     /** Where the view gets to once it is out of him. */
     const EYE_ABOVE = 15.5;
 
@@ -1169,10 +1177,10 @@ export const deathSoldierScene: SceneDefinition = {
     const grade = context.post.grade;
     grade.drain = LIVING.drain;
     grade.grain = LIVING.grain;
-    grade.vignette = 0.34;
+    grade.vignette = 0.22;
     grade.aberration = 0.0012;
     grade.distortion = 0.02;
-    grade.exposure = 1.22;
+    grade.exposure = 1.4;
     grade.washAmount = 0;
     grade.smear = 0;
     context.post.setBloom(LIVING.bloom, 0.55, 0.82);
@@ -1333,12 +1341,10 @@ export const deathSoldierScene: SceneDefinition = {
           askedAlready.add('smell');
           choices.enqueue(() =>
             question(
-              'The orchard has a smell to it this morning.',
-              'Cold, and wet earth, and something sweet underneath it from whatever is lying under the '
-                + 'trees unpicked. It is the fourth morning he has smelled it and this is the morning it '
-                + 'gets through.',
+              'The orchard smells of something this morning.',
+              'Cold earth, and something sweet under it from the fruit nobody came for.',
               SMELL,
-              'The morning waits on him. Nothing here decides this for him.',
+              'The morning waits on him. Nothing here decides it.',
               takeSmell,
             ),
           );
@@ -1348,10 +1354,9 @@ export const deathSoldierScene: SceneDefinition = {
           choices.enqueue(() =>
             question(
               'The letter is still leaning against the pack.',
-              'Four days, and it stops in the middle of a line. He knows exactly what the rest of the '
-                + 'line is. He has not been able to put it on paper where somebody could read it.',
+              'It stops in the middle of a line. He knows the rest of the line and cannot put it down.',
               LETTER,
-              'It stays where it is until he does something about it. Nothing writes it for him.',
+              'It stays where it is until he moves it. Nothing writes it for him.',
               takeLetter,
             ),
           );
@@ -1361,8 +1366,7 @@ export const deathSoldierScene: SceneDefinition = {
           choices.enqueue(() =>
             question(
               'The light is coming up at the end of the rows.',
-              'It takes about a minute and it is the only thing that is going to happen this morning. '
-                + 'The other man has been asleep under a groundsheet since it was dark.',
+              'It takes a minute, and it is the only thing happening. The other man has been asleep since dark.',
               WATCH,
               'The light comes up either way. What he does with it is his.',
               takeWatch,
@@ -1373,11 +1377,11 @@ export const deathSoldierScene: SceneDefinition = {
           askedAlready.add('knowing');
           choices.enqueue(() =>
             question(
-              'He is sitting differently and he does not remember sitting down.',
-              'The morning is exactly where it was. The mist has not moved. He has a few seconds of '
-                + 'knowing what this is, and whatever he is looking at now is what he takes with him.',
+              'He is sitting differently and does not remember sitting down.',
+              'The morning is exactly where it was. The mist has not moved. Whatever he is looking at now '
+                + 'is what he takes with him.',
               KNOWING,
-              'Nothing here answers for him. The question stays his, however long it takes.',
+              'Nothing here answers for him, however long it takes.',
               takeKnowing,
             ),
           );
@@ -1387,11 +1391,9 @@ export const deathSoldierScene: SceneDefinition = {
           choices.enqueue(() =>
             question(
               'He is above the ditch now, and going up.',
-              'The orchard is not coming back and neither is the morning. What he takes out of it is the '
-                + 'only thing left to decide, and it is the thing that goes across with him.',
+              'The morning is not coming back. What he takes out of it is the only thing left to decide.',
               CARRY,
-              'None of these happens by itself. All three are the end of the morning, and the difference '
-                + 'is only what he is holding when he leaves it.',
+              'All three end the morning. The difference is only what he is holding.',
               takeCarry,
             ),
           );
@@ -1408,9 +1410,9 @@ export const deathSoldierScene: SceneDefinition = {
             ? 0.44 + ease.inOut(t) * 0.56
             : 1;
         sky.update(elapsed, dawn);
-        setU(dawnGlow.material, 'uIntensity', 0.4 + dawn * 0.75);
-        dawnLight.intensity = 0.35 + dawn * 1.0;
-        bounce.intensity = 0.62 + dawn * 0.3;
+        setU(dawnGlow.material, 'uIntensity', (0.4 + dawn * 0.75) * (1 - apart * 0.5));
+        dawnLight.intensity = 0.5 + dawn * 1.15;
+        bounce.intensity = 2.0 + dawn * 0.5;
 
         // --- the crack -----------------------------------------------------
         //
@@ -1476,15 +1478,15 @@ export const deathSoldierScene: SceneDefinition = {
         // monochrome, because what is looking is no longer failing.
         const drained = LIVING.drain + (DYING.drain - LIVING.drain) * distress;
         grade.drain = drained + (OUTSIDE.drain - drained) * apart;
-        grade.vignette = 0.34 + distress * 0.44 - apart * 0.34;
+        grade.vignette = 0.22 + distress * 0.36 - apart * 0.2;
         grade.aberration = 0.0012 + distress * 0.004 - apart * 0.0034;
         grade.distortion = 0.02 + distress * 0.05 - apart * 0.052;
         grade.grain = LIVING.grain + distress * 0.09 - apart * 0.04;
-        grade.exposure = 1.22 - distress * 0.3 + apart * 0.26;
+        grade.exposure = 1.4 - distress * 0.18 + apart * 0.02;
         context.post.setBloom(
-          LIVING.bloom + distress * 0.3 + apart * 0.45,
+          LIVING.bloom + distress * 0.34 + apart * 0.2,
           0.55,
-          0.82 - apart * 0.26,
+          0.82 - distress * 0.26 - apart * 0.04,
         );
         // The one overtly unreal effect, spent in about two seconds at the moment
         // the morning stops being reachable.
@@ -1505,7 +1507,7 @@ export const deathSoldierScene: SceneDefinition = {
 
         // --- the place, still going ---------------------------------------
         sky.mesh.position.copy(context.camera.position);
-        mist.update(elapsed, context.camera, 0.17 + dawn * 0.12 - apart * 0.04);
+        mist.update(elapsed, context.camera, 0.3 + dawn * 0.22 - apart * 0.08);
         dawnGlow.update(elapsed, context.camera);
         regardGlow.update(elapsed, context.camera);
         motes.drift(delta * (1 - distress * 0.75), elapsed);

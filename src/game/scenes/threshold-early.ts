@@ -98,6 +98,12 @@ export class ThresholdPrompt {
     const panel = this.panel.style;
     panel.pointerEvents = 'auto';
     panel.maxWidth = '38rem';
+    // Same reason as `.overlay` in styles.css: this panel holds the scene's
+    // answers, so it must never grow past the window and put them out of reach.
+    // It sits at 16vh from the bottom, so that is the room it has.
+    panel.maxHeight = '78vh';
+    panel.overflowY = 'auto';
+    panel.overscrollBehavior = 'contain';
     panel.display = 'flex';
     panel.flexDirection = 'column';
     panel.alignItems = 'center';
