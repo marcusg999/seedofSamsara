@@ -102,10 +102,17 @@ export const contentNotesScene: SceneDefinition = {
       title: 'Seed of Samsara',
       body:
         'This is a game about dying and what might come after. It is quiet, slow, and '
-        + 'meant to be played with sound on. This slice contains two deaths — and one of '
+        + 'meant to be played with sound on. This slice contains three deaths — and one of '
         + 'them you survive.',
       list: [
         'A death from a heart attack, shown from inside the body.',
+        // Vignette 6's note. Specific about what the vignette contains, and
+        // specific about what it refuses, because for this one the refusals are
+        // the thing a player may actually want to know before they start
+        // (CLAUDE.md § Content rules).
+        'A soldier is shot and dies in a war, shown from inside his own perception. There is no wound and '
+          + 'no blood, and his body is never shown. Whoever fired is never seen, named or placed; no weapon '
+          + 'is fired on screen; no war, country or side is named; and the vignette passes no verdict.',
         'Death is conveyed through perception — time slowing, sound dropping away, colour draining. There is no gore.',
         'A psychedelic experience, shown from inside it, in which you may be sent back. '
           + 'The experience only: nothing is obtained, prepared or taken on screen or in text, and no '
@@ -148,6 +155,9 @@ export const vignetteSelectScene: SceneDefinition = {
   title: 'Choose a death',
   exits: [
     { id: 'heart-attack', label: 'The heart attack', to: 'death.heart-attack' },
+    // Vignette 6. Named for the place and the person rather than for the war,
+    // because there is no war to name (CLAUDE.md § Content rules).
+    { id: 'soldier', label: 'The ditch at the edge of the orchard', to: 'death.soldier' },
     // Vignette 7, the edge case: the one death the player can survive
     // (GAME_BRIEF.md § Act 1).
     { id: 'dmt', label: 'Smoke DMT', to: 'death.dmt' },
@@ -160,11 +170,12 @@ export const vignetteSelectScene: SceneDefinition = {
     context.audio.drone(0.1, 48);
 
     overlay = new Overlay({
-      title: 'Seven deaths. Two are built.',
+      title: 'Seven deaths. Three are built.',
       body:
-        'The finished game lets you choose your death or take a random one. Two of the seven '
-        + 'are built end to end: an ordinary evening and a heart that stops, and the edge case '
-        + '— the only one of the seven you can come back from.',
+        'The finished game lets you choose your death or take a random one. Three of the seven '
+        + 'are built end to end: an ordinary evening and a heart that stops; a fourth morning in '
+        + 'a ditch at the edge of somebody’s orchard; and the edge case — the only one of the '
+        + 'seven you can come back from.',
       actions: [
         {
           id: 'heart-attack',
@@ -172,6 +183,14 @@ export const vignetteSelectScene: SceneDefinition = {
           onPick: () => {
             context.audio.start();
             void context.takeExit('heart-attack');
+          },
+        },
+        {
+          id: 'soldier',
+          label: 'The ditch at the edge of the orchard',
+          onPick: () => {
+            context.audio.start();
+            void context.takeExit('soldier');
           },
         },
         {
@@ -183,7 +202,7 @@ export const vignetteSelectScene: SceneDefinition = {
           },
         },
       ],
-      hint: 'The other five vignettes, refusing the Light, and the past-life thread are planned, not built.',
+      hint: 'The other four vignettes, refusing the Light, and the past-life thread are planned, not built.',
     });
     overlay.focusFirst();
 
