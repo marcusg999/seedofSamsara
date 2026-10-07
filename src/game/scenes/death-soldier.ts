@@ -29,10 +29,11 @@ import { Director, ease, type Beat } from '../systems/director';
 import { moteField, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
 import { choiceQueue } from '../systems/choice-queue';
+import { groundHeave, overpressure } from '../systems/overpressure';
 import type { OverlayContent } from '../systems/overlay';
 
 /**
- * Vignette 6 — shot as a soldier in a war.
+ * Vignette 6 — a soldier, and the blast that takes the ditch he is sitting in.
  *
  * ## The camera rule, which is absolute
  *
@@ -42,15 +43,25 @@ import type { OverlayContent } from '../systems/overlay';
  * camera's subject." Lore bible § 13 restates it and adds that no source in the
  * file licenses any more detail than the rule allows.
  *
- * How that is honoured here, concretely, so it cannot be eroded by a later edit:
+ * A blast makes half of that easier and half of it harder. There is nothing to
+ * point a camera at, because nothing that kills this way is ever in the frame —
+ * but it takes two men instead of one, and the second one is the hard part,
+ * because the obvious ways to show that a man is dead are all forbidden here.
  *
- * - Whoever fired is **not in the scene**. There is no enemy object, no enemy
- *   position, no muzzle flash, no tracer, no incoming light from any direction,
- *   no return fire, and no sound with a direction in it. Nothing is added to the
- *   scene graph at the moment of the shot and nothing is taken away. The camera
- *   does not turn, flinch toward, or away from, any point — because there is no
- *   point to turn toward. What changes is the man's perception of a morning that
- *   is otherwise exactly as it was a second earlier.
+ * How it is honoured, concretely, so it cannot be eroded by a later edit:
+ *
+ * - **Nothing arrives and nothing is named.** No aircraft, no shell, no mine,
+ *   no device, no enemy, and no position for any of them. Not one object is
+ *   added to the scene graph at the moment of the blast, and nothing is taken
+ *   out of it except the one shape that was a person.
+ * - **There is no second light direction, at any point.** `DAWN` is the only
+ *   directional source in this scene; it is fixed on the first frame and it is
+ *   never touched by the blast. Every bit of the blast's light is spent on
+ *   terms that have no direction in them at all: the full-frame wash in the
+ *   grade, the hemisphere bounce, bloom, and the mist in the rows going bright.
+ *   A light with a direction is a light with a source, and a source is a
+ *   perpetrator. `systems/overpressure.ts` says the same thing from the other
+ *   end, so the next person to touch either file meets the rule twice.
  * - **No weapon is modelled anywhere in this scene.** He is a soldier, and that
  *   reads from the kit of waiting rather than the kit of fighting: a helmet off
  *   and upside down on the floor, a canteen, a tin cup, a rolled pack, a coil of
@@ -66,27 +77,59 @@ import type { OverlayContent } from '../systems/overlay';
  *   what he takes out of the orchard. None is about the fighting, and none of
  *   them has a tactical answer.
  *
- * ## Death through perception, not gore
+ * ## Death through perception, not gore — for both of them
  *
  * Nothing in this scene is wounded and nothing bleeds. No body is modelled at
- * all — the dying man *is* the camera — and the one human shape in frame is the
- * other man in the ditch, asleep under a groundsheet, read as a shape. What
- * happens is the treatment rule, in order: time slows (the beat clock holds the
- * crack open for seven seconds), sound drops out (the room's high end collapses
- * and a ring comes up under it), colour drains (`living` → `dying`), and then
- * the camera lifts out of the body and sees the place from above.
+ * all. The dying man *is* the camera, so there has never been a body of his to
+ * show, and the lift at the end does not look back down.
  *
- * The lift deliberately does **not** look back down at him. From the height it
- * reaches, the ditch is a dark seam running away below the frame's edge and the
- * subject of the shot is the orchard; a player who wants to look down may, and
- * finds a ditch with a pack and a helmet in it. CLAUDE.md forbids bodies as
- * spectacle, and the cheapest way to obey that is to not build one.
+ * The blast itself is built out of the order the senses report it in, which is
+ * the whole of what separates it from a loud gunshot — see
+ * `systems/overpressure.ts`, which owns the envelope:
+ *
+ * 1. **pressure, before sound.** The frame is squeezed: pincushion, the
+ *    vignette closing in, exposure dipping, a hard push on the rig. The mix has
+ *    not moved yet. A third of a second.
+ * 2. **light, arriving first and from everywhere.** Wash, hemisphere, bloom,
+ *    and the mist going hot. No direction, no new lamp, no sprite.
+ * 3. **the ground itself moving.** A low heave, 2 to 10Hz, carried on the rig's
+ *    position and roll, with the loose kit in the ditch going over with it: the
+ *    cup, the canteen, the helmet, the shovel, and three of the filled bags off
+ *    the lip and into the slot.
+ * 4. **hearing that does not come back.** The room tone loses its level *and*
+ *    its top, and the ring comes up under it and stays up for the rest of the
+ *    scene. `deaf` is the one value in the envelope with no fall in it. The
+ *    heartbeat stays audible, because a deafened body still hears that one.
+ *
+ * Then the treatment rule's remaining moves, as before: colour drains
+ * (`living` → `dying`), the view sinks and the horizon rolls, and the camera
+ * lifts out and sees the place from above.
+ *
+ * **The other man is carried entirely by absence.** He is asleep under a
+ * groundsheet four feet down the ditch and he is read as a shape, never as a
+ * figure. Under the peak of the light the shape stops being a shape: the
+ * groundsheet is still there, lying flat and open on the floor of the ditch
+ * with nothing under it, and the boot that was sticking out of it is not there
+ * either. He is not thrown, not burnt, not marked and not shown — there is
+ * simply nobody in the ditch. Everything in the ditch that belonged to *no one*
+ * is still in it, jolted about: that contrast is the entire statement, and it
+ * is made with one scale and one `visible` flag rather than with a model.
+ *
+ * The closing aerial carries it into the landscape, because something did
+ * happen there. A stretch of the rows beside the ditch has lost its tops — the
+ * canopy instances along it are shrunk onto their trunks, with a lateral
+ * feather, so from fifteen metres up the orchard has a gap in it that fades
+ * back into orchard. The air over it is thinner than it was, because the
+ * pressure pushed the mist out of the rows and it is only part way back. The
+ * seam of the ditch is no longer clean: the bags are off the lip at one point
+ * along it. No scorch, no crater, no mark that could be read as a remain, and
+ * still nothing that names what did it.
  *
  * ## Lore
  *
- * - `L-THRESH-02` — the buzzing or ringing that accompanies the transition. It
- *   is the only new voice in the mix after the crack, and it is what is left
- *   when the morning's high end has gone.
+ * - `L-THRESH-02` — the buzzing or ringing that accompanies the transition. In
+ *   this version it is not a late arrival: it is what is left of hearing within
+ *   a second of the blast, and it is the only voice in the mix afterwards.
  * - `L-THRESH-03` — the point of view separates from the body and observes from
  *   above. That claim is what the closing two beats are, and it is also why the
  *   vignette can hand straight over to the Threshold.
@@ -99,15 +142,19 @@ import type { OverlayContent } from '../systems/overlay';
  * Nothing here asserts a fact about dying that is not one of those claims. The
  * slowing, the drain and the silence are GAME_BRIEF.md's treatment rule, which
  * is a decision about how this game depicts death, not a finding about death.
+ * The order the senses report a blast in is a staging decision too, recorded in
+ * `systems/overpressure.ts` as one.
  *
  * ## Shape
  *
  * 100 seconds of authored beats, plus a closing hold that lets go by itself
  * after GRACE_SECONDS — 110s for a player who only watches, against the heart
- * attack's 123s. Five questions, cued at 9s, 22s, 36s, 55s and 76s. The first
- * one is live before the tenth second, because the choice is the
- * characterisation: you learn who this man is by deciding what the orchard
- * smells of to him, not by watching him sit in a ditch.
+ * attack's 123s. Unchanged by the restaging: the blast occupies exactly the
+ * seven seconds the shot used to, because what changed is the grammar inside
+ * the beat and not the clock around it. Five questions, cued at 9s, 22s, 36s,
+ * 55s and 76s. The first one is live before the tenth second, because the
+ * choice is the characterisation: you learn who this man is by deciding what
+ * the orchard smells of to him, not by watching him sit in a ditch.
  */
 
 const LIVING = GRAMMAR.living;
@@ -130,13 +177,29 @@ const BEATS: readonly Beat[] = [
   { id: 'the-orchard', seconds: 13 },
   { id: 'waiting', seconds: 14 },
   { id: 'first-light', seconds: 12 },
-  // The crack. Held open rather than cut through: time slowing is the treatment
-  // rule's first move, and seven seconds is how this vignette slows it.
-  { id: 'the-crack', seconds: 7 },
-  { id: 'sitting-down', seconds: 10 },
-  { id: 'quiet', seconds: 11, caption: 'The sound goes out of the morning, a bit at a time.' },
+  // The blast. Held open rather than cut through: time slowing is the treatment
+  // rule's first move, and seven seconds is how this vignette slows it. The
+  // sensory ordering inside the first second and a half of it — pressure, then
+  // light, then the ground, then hearing going — is `systems/overpressure.ts`,
+  // read off the wall clock rather than off this beat's `t`, because quarter-
+  // second phases are the first thing a bad frame rate loses.
+  { id: 'the-blast', seconds: 7 },
+  {
+    id: 'sitting-down',
+    seconds: 10,
+    caption: 'The groundsheet is lying flat, four feet away. There is nothing under it.',
+  },
+  {
+    id: 'quiet',
+    seconds: 11,
+    caption: 'The sound does not come back. Nobody says anything, and nobody is going to.',
+  },
   { id: 'lifting', seconds: 10 },
-  { id: 'above', seconds: 14, caption: 'The rows go on much further than he knew.' },
+  {
+    id: 'above',
+    seconds: 14,
+    caption: 'The rows go on much further than he knew. One stretch of them has no tops left.',
+  },
   // Holds, so the last image is never snatched away — but not forever.
   { id: 'after', seconds: 1, hold: true },
 ];
@@ -289,8 +352,8 @@ const LETTER: readonly Pick[] = [
   {
     id: 'hand-it-over',
     label: 'Put it in the other man’s pack',
-    trade: 'It gets out of here either way. That is an effect on somebody.',
-    caption: 'He tucks it into the top of the other man’s pack, where it will be found and not asked about.',
+    trade: 'Out of his hands and into somebody else’s. That is an effect on somebody.',
+    caption: 'He tucks it into the top of the other man’s pack and says nothing about it.',
     shard: 'soldier.handed-it-over',
     attachment: -0.08,
     harmony: 1,
@@ -336,7 +399,7 @@ const WATCH: readonly Pick[] = [
   {
     id: 'wake-him',
     label: 'Wake him for it',
-    trade: 'Somebody else sees it. He will remember who woke him.',
+    trade: 'Somebody else sees it. Two men awake for the same light.',
     caption: 'A hand on the shoulder. The other man swears at him, sits up, and then stops swearing.',
     shard: 'soldier.woke-him',
     attachment: 0.06,
@@ -376,9 +439,14 @@ const WATCH: readonly Pick[] = [
  *
  * Inside the treatment rule — death here is perception, so the question is
  * perception. Nothing in it resists, calls out, or turns the ditch into a
- * sequence, and nothing in it looks for whoever fired, because the scene does
- * not contain them and a question that searched for them would put them in it.
+ * sequence, and nothing in it looks for what did this, because the scene does
+ * not contain it and a question that searched for it would put it in the scene.
  * Whatever he is looking at is what he is still holding.
+ *
+ * Asked after the blast, so the ditch it is asked in has nobody else in it.
+ * That is why the third answer is a voice with no source rather than the man
+ * who was asleep beside him: the man is gone, and the option saying so plainly
+ * is the one place in the questions where the absence is named.
  */
 const KNOWING: readonly Pick[] = [
   {
@@ -397,7 +465,7 @@ const KNOWING: readonly Pick[] = [
     id: 'the-letter',
     label: 'The corner of the letter',
     trade: 'The heaviest thing here, and the one he would stay for.',
-    caption: 'A pale corner against the pack. He is looking at it the way you look at a door.',
+    caption: 'A pale corner, wherever it ended up. He is looking at it the way you look at a door.',
     shard: 'soldier.looked-at-the-letter',
     attachment: 0.16,
     harmony: 0,
@@ -407,15 +475,14 @@ const KNOWING: readonly Pick[] = [
   },
   {
     id: 'the-voice',
-    label: 'Whoever is talking close to his ear',
-    trade: 'He cannot make out a word of it. Somebody stayed.',
-    caption: 'Somebody is right at his ear, saying the same short thing over and over, and it is gone.',
+    label: 'Whatever is talking close to his ear',
+    trade: 'He cannot make out a word of it. There is nobody there to be saying it.',
+    caption: 'Something is right at his ear, saying the same short thing over and over. The ditch is empty.',
     shard: 'soldier.heard-the-voice',
     attachment: 0.08,
     harmony: 1,
     will: 0.02,
     karma: 0,
-    regard: 'sleeper',
   },
 ];
 
@@ -473,16 +540,17 @@ const CARRY: readonly Pick[] = [
  * Where each question is cued, as the id of the beat it goes up on.
  *
  * Beat starts, in authored seconds: cold 0, the-orchard 9, waiting 22,
- * first-light 36, the-crack 48, sitting-down 55, quiet 65, lifting 76,
+ * first-light 36, the-blast 48, sitting-down 55, quiet 65, lifting 76,
  * above 86, after 100. So the five are cued at 9s, 22s, 36s, 55s and 76s, and
  * the first is live before the tenth second.
  *
  * The longest stretch with nothing to decide is the 21 seconds from the fourth
- * question to the fifth, and it is deliberate: it is the crack, the body going
- * down, and the morning going quiet — the one stretch this vignette has to show
- * rather than ask about. A dialog over it would take the player's eyes off the
- * only thing those beats contain. Everything before it is 9, 13, 14 and 19
- * seconds apart, and the last question is live from the lift onward.
+ * question to the fifth, and it is deliberate: it is the blast, the body going
+ * down, and the ditch going silent — the one stretch this vignette has to show
+ * rather than ask about, and the stretch in which the other man stops being in
+ * the ditch. A dialog over it would take the player's eyes off the only thing
+ * those beats contain. Everything before it is 9, 13, 14 and 19 seconds apart,
+ * and the last question is live from the lift onward.
  *
  * A cue is a beat id and nothing more, so re-timing a beat cannot silently move
  * a question out of the window it was written for.
@@ -761,6 +829,16 @@ function mistBodies(
  * seeded stream. Low facet counts are a choice, not a saving — a faceted canopy
  * has silhouette events for the low raking dawn light to describe, and a smooth
  * sphere has none.
+ *
+ * Returns `stripNear`, which takes the tops off the trees along a stretch of the
+ * rows: it rewrites the canopy instance matrices in place, once, shrinking each
+ * canopy onto its own trunk with a lateral feather so the gap fades back into
+ * orchard rather than ending at a line. That is the closing aerial's only
+ * evidence that anything happened in the ditch, and it is deliberately the
+ * *absence* of canopy and nothing else — no scorch, no colour change, no mark
+ * that a player could read as a remain. The per-instance transforms are kept in
+ * one flat `Float32Array` so the rewrite needs no stored objects and no second
+ * pass of the seeded stream.
  */
 function orchard(
   tracker: ResourceTracker,
@@ -773,7 +851,18 @@ function orchard(
     readonly to: number;
     readonly spacing: number;
   },
-): { trunks: InstancedMesh; canopies: InstancedMesh; count: number } {
+): {
+  trunks: InstancedMesh;
+  canopies: InstancedMesh;
+  count: number;
+  /** Take the tops off the trees along `fromZ`..`toZ`, feathered in x. */
+  stripNear(options: {
+    readonly fromZ: number;
+    readonly toZ: number;
+    readonly halfWidth: number;
+    readonly feather: number;
+  }): void;
+} {
   const places: { x: number; z: number }[] = [];
   for (const x of options.rows) {
     for (let z = options.from; z >= options.to; z -= options.spacing) {
@@ -810,6 +899,17 @@ function orchard(
   const euler = new Euler();
   const scale = new Vector3();
 
+  /**
+   * Every canopy's transform, flat: position (3), quaternion (4), scale (3).
+   *
+   * `stripNear` has to recompose a matrix it did not build, and reading it back
+   * out of `instanceMatrix` would mean decomposing 400-odd matrices. Ten floats
+   * per tree is 16KB for the whole orchard and costs one store in a loop that
+   * was already running.
+   */
+  const CANOPY_STRIDE = 10;
+  const canopyTransforms = new Float32Array(count * CANOPY_STRIDE);
+
   for (let index = 0; index < count; index += 1) {
     const place = places[index];
     if (!place) {
@@ -834,11 +934,64 @@ function orchard(
     scale.set(spread, spread * rng.range(0.62, 0.82), spread * rng.range(0.9, 1.1));
     matrix.compose(position, rotation, scale);
     canopies.setMatrixAt(index, matrix);
+
+    const at = index * CANOPY_STRIDE;
+    canopyTransforms[at] = position.x;
+    canopyTransforms[at + 1] = position.y;
+    canopyTransforms[at + 2] = position.z;
+    canopyTransforms[at + 3] = rotation.x;
+    canopyTransforms[at + 4] = rotation.y;
+    canopyTransforms[at + 5] = rotation.z;
+    canopyTransforms[at + 6] = rotation.w;
+    canopyTransforms[at + 7] = scale.x;
+    canopyTransforms[at + 8] = scale.y;
+    canopyTransforms[at + 9] = scale.z;
   }
   trunks.instanceMatrix.needsUpdate = true;
   canopies.instanceMatrix.needsUpdate = true;
 
-  return { trunks, canopies, count };
+  return {
+    trunks,
+    canopies,
+    count,
+    stripNear(options) {
+      for (let index = 0; index < count; index += 1) {
+        const at = index * CANOPY_STRIDE;
+        const x = canopyTransforms[at] ?? 0;
+        const y = canopyTransforms[at + 1] ?? 0;
+        const z = canopyTransforms[at + 2] ?? 0;
+
+        // Along the ditch: inside the stretch, or feathered off either end.
+        const alongDepth = Math.min(options.fromZ - z, z - options.toZ);
+        const along = Math.min(1, Math.max(0, alongDepth / options.feather));
+        // Across it: full at the ditch, feathered out through the rows.
+        const acrossDepth = options.halfWidth - Math.abs(x);
+        const across = Math.min(1, Math.max(0, acrossDepth / options.feather));
+        const inside = along * across;
+        if (inside <= 0) {
+          continue;
+        }
+
+        // 1 means nothing left but a stub on the trunk; the feather leaves the
+        // trees at the edge of the stretch merely thinned.
+        const keep = 1 - inside * 0.9;
+        const scaleY = (canopyTransforms[at + 8] ?? 1) * keep;
+        scale.set((canopyTransforms[at + 7] ?? 1) * keep, scaleY, (canopyTransforms[at + 9] ?? 1) * keep);
+        rotation.set(
+          canopyTransforms[at + 3] ?? 0,
+          canopyTransforms[at + 4] ?? 0,
+          canopyTransforms[at + 5] ?? 0,
+          canopyTransforms[at + 6] ?? 1,
+        );
+        // Drop what is left onto the top of its own trunk rather than leaving it
+        // floating where the middle of the canopy used to be.
+        position.set(x, y - ((canopyTransforms[at + 8] ?? 1) - scaleY) * 0.8, z);
+        matrix.compose(position, rotation, scale);
+        canopies.setMatrixAt(index, matrix);
+      }
+      canopies.instanceMatrix.needsUpdate = true;
+    },
+  };
 }
 
 export const deathSoldierScene: SceneDefinition = {
@@ -846,10 +999,13 @@ export const deathSoldierScene: SceneDefinition = {
   title: 'Fourth morning',
   exits: [{ id: 'onward', label: 'Go on', to: 'threshold.pronounced-dead' }],
   contentNotes: [
-    'A soldier is shot and dies, shown from inside his own perception. There is no wound and no blood, and his '
-      + 'body is never shown: time slows, sound drops away, colour drains, and the view lifts out of him.',
-    'Whoever fired is never seen, named or placed. No weapon is fired on screen, no war is named, and the '
-      + 'vignette takes no side and passes no verdict.',
+    'A soldier dies in a blast, shown from inside his own perception. There is no wound and no blood, and his '
+      + 'body is never shown: pressure, then light from everywhere, then the ground moving, then hearing that '
+      + 'does not come back — and the view lifts out of him.',
+    'A second man, asleep a few feet away, is killed by the same blast. He is never shown hurt, marked or dead. '
+      + 'What the scene shows is an empty groundsheet and a ditch with nobody in it.',
+    'Nothing that caused the blast is ever seen, named or placed. No weapon is modelled, no war is named, and '
+      + 'the vignette takes no side and passes no verdict.',
   ],
   /**
    * Deliberately NOT `discarnate`.
@@ -884,6 +1040,19 @@ export const deathSoldierScene: SceneDefinition = {
     );
     const metalMaterial = resources.track(
       new MeshStandardMaterial({ color: 0xa6adb3, roughness: 0.52, metalness: 0.4 }),
+    );
+    /**
+     * The groundsheet, on its own material rather than sharing `clothMaterial`.
+     *
+     * It has to read twice and both times it is the only thing in frame that
+     * matters: as a shape with somebody under it, and then as a flat sheet with
+     * nobody under it. At `clothMaterial`'s value it sat four metres away
+     * against a ditch floor only a shade darker, and a change of silhouette
+     * against no contrast is a change nobody sees. Lighter, cooler, and less
+     * rough, so the raking dawn finds it.
+     */
+    const sheetMaterial = resources.track(
+      new MeshStandardMaterial({ color: 0x9aa08c, roughness: 0.68, metalness: 0.04 }),
     );
     const paintedMaterial = resources.track(
       new MeshStandardMaterial({ color: 0x626a57, roughness: 0.82, metalness: 0.12 }),
@@ -944,6 +1113,8 @@ export const deathSoldierScene: SceneDefinition = {
     // against a sky that is the brightest thing in it. Somebody dug this and
     // then stacked what came out of it.
     const bagGeometry = resources.track(new BoxGeometry(0.46, 0.17, 0.3));
+    /** Kept, because three of them go off the lip when the ground moves. */
+    const bags: Mesh[] = [];
     for (let index = 0; index < 14; index += 1) {
       const side = index % 2 === 0 ? -1 : 1;
       const bag = new Mesh(bagGeometry, bagMaterial);
@@ -955,6 +1126,7 @@ export const deathSoldierScene: SceneDefinition = {
       bag.rotation.y = rng.range(-0.22, 0.22);
       bag.rotation.z = rng.range(-0.06, 0.06);
       place.add(bag);
+      bags.push(bag);
     }
 
     // --- the orchard -------------------------------------------------------
@@ -1041,10 +1213,18 @@ export const deathSoldierScene: SceneDefinition = {
      * human form in the scene, he is asleep for most of it, and he is the one
      * other person karma can move through. He is in the ditch, not outside it,
      * and he never does anything to anyone.
+     *
+     * He is built as a shape *so that he can stop being one*. The blast takes
+     * him, and the whole of how that is shown is this group changing: the
+     * capsule flattens into an open groundsheet on the floor of the ditch and
+     * the boot stops being drawn. There is no second model, no "after" variant,
+     * and nothing is added. See `consume` — CLAUDE.md § Content rules forbids a
+     * body as spectacle, and the cheapest way to obey that is to have nothing
+     * that could become one.
      */
     const sleeper = new Group();
     const sheetGeometry = resources.track(new CapsuleGeometry(0.3, 1.1, 5, 12));
-    const sheet = new Mesh(sheetGeometry, clothMaterial);
+    const sheet = new Mesh(sheetGeometry, sheetMaterial);
     sheet.rotation.x = Math.PI / 2;
     sleeper.add(sheet);
     const bootGeometry = resources.track(new BoxGeometry(0.14, 0.13, 0.26));
@@ -1054,6 +1234,80 @@ export const deathSoldierScene: SceneDefinition = {
     sleeper.add(boot);
     sleeper.position.set(0.14, FLOOR + 0.3, -2.7);
     place.add(sleeper);
+
+    // --- what the ground does to the kit ------------------------------------
+    //
+    // The ground itself moving is half the grammar of a blast, and a camera that
+    // moves while nothing in frame does reads as a camera fault. So the loose
+    // kit goes over with it: the cup, the canteen, the helmet, the shovel, and
+    // three of the filled bags off the lip and into the slot.
+    //
+    // Every destination is drawn here, once, off the seeded stream
+    // (CLAUDE.md § Testability) and then reached by lerping from the clock — so
+    // two runs on one seed put the cup in the same place, and nothing in the
+    // frame snaps.
+    //
+    // Note what is NOT in this list: nothing of the other man's. Everything that
+    // belonged to nobody is still in the ditch afterwards, knocked about.
+    interface Heaved {
+      readonly mesh: Mesh;
+      readonly from: Vector3;
+      readonly to: Vector3;
+      readonly fromRotation: Vector3;
+      readonly toRotation: Vector3;
+    }
+    const heaved: Heaved[] = [];
+    const heaveRng = rng.stream('heave');
+    function heave(mesh: Mesh, offset: Vector3, spin: Vector3): void {
+      heaved.push({
+        mesh,
+        from: mesh.position.clone(),
+        to: mesh.position.clone().add(offset),
+        fromRotation: new Vector3(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z),
+        toRotation: new Vector3(
+          mesh.rotation.x + spin.x,
+          mesh.rotation.y + spin.y,
+          mesh.rotation.z + spin.z,
+        ),
+      });
+    }
+
+    // The cup he was holding, over on its side and along the floor.
+    heave(
+      cup,
+      new Vector3(heaveRng.range(-0.3, -0.12), -0.014, heaveRng.range(0.14, 0.34)),
+      new Vector3(Math.PI / 2 + heaveRng.range(-0.3, 0.3), heaveRng.range(-1, 1), 0),
+    );
+    // The canteen, rolling.
+    heave(
+      canteen,
+      new Vector3(heaveRng.range(0.1, 0.26), 0, heaveRng.range(0.2, 0.44)),
+      new Vector3(0, 0, heaveRng.range(1.8, 3.2)),
+    );
+    // The helmet and its rim, skidding together, so they stay one object.
+    const helmetSkid = new Vector3(heaveRng.range(0.16, 0.34), 0, heaveRng.range(-0.3, -0.1));
+    heave(helmet, helmetSkid, new Vector3(0, heaveRng.range(-1.2, 1.2), heaveRng.range(-0.5, 0.5)));
+    heave(rim, helmetSkid.clone(), new Vector3(0, 0, heaveRng.range(-0.2, 0.2)));
+    // The shovel, down flat.
+    heave(shaft, new Vector3(0.1, -0.44, 0.12), new Vector3(Math.PI / 2 - 0.3, 0, -0.5));
+    heave(blade, new Vector3(0.14, 0, 0.1), new Vector3(0.2, 0, -0.4));
+    // Three bags off the lip at one point along it, which is what breaks the
+    // clean seam the closing aerial used to show.
+    for (const index of [6, 7, 8] as const) {
+      const bag = bags[index];
+      if (!bag) {
+        continue;
+      }
+      heave(
+        bag,
+        new Vector3(
+          -bag.position.x + heaveRng.range(-0.34, 0.34),
+          FLOOR + 0.09 - bag.position.y,
+          heaveRng.range(-0.3, 0.3),
+        ),
+        new Vector3(heaveRng.range(-0.6, 0.6), heaveRng.range(-0.9, 0.9), heaveRng.range(-0.8, 0.8)),
+      );
+    }
 
     // --- mist and air ------------------------------------------------------
     const mist = mistBodies(resources, {
@@ -1181,6 +1435,15 @@ export const deathSoldierScene: SceneDefinition = {
     grade.aberration = 0.0012;
     grade.distortion = 0.02;
     grade.exposure = 1.4;
+    /**
+     * What the blast's light washes the frame toward.
+     *
+     * Set here rather than left at the pipeline's default, because the grade is
+     * shared and the previous scene's wash colour would otherwise decide what
+     * this one's light looks like. Warm-white and barely tinted: a blast is not
+     * a colour, and a colour would make it read as a lamp somewhere.
+     */
+    grade.washColor = [1, 0.95, 0.88];
     grade.washAmount = 0;
     grade.smear = 0;
     context.post.setBloom(LIVING.bloom, 0.55, 0.82);
@@ -1207,7 +1470,7 @@ export const deathSoldierScene: SceneDefinition = {
       'the-orchard': 57,
       waiting: 56,
       'first-light': 55,
-      'the-crack': 128,
+      'the-blast': 128,
       'sitting-down': 112,
       quiet: 38,
       lifting: 0,
@@ -1218,12 +1481,22 @@ export const deathSoldierScene: SceneDefinition = {
     let bodyDown = 0;
     let apart = 0;
     let handedOver = false;
-    /** Wall-clock, never accumulated delta: the ring and the grace both read it. */
-    let crackAt: number | undefined;
+    /**
+     * Wall-clock, never accumulated delta: the whole sensory envelope, the ring
+     * and the grace all read it. The envelope's phases are tenths of a second
+     * apart, so a timeline driven by clamped frame deltas would reorder them on
+     * a slow machine — which is the clock gotcha in CLAUDE.md with the stakes
+     * raised, because here the ordering *is* the content.
+     */
+    let blastAt: number | undefined;
     let holdBeganAt: number | undefined;
     let leaving = false;
     let now = 0;
     let regardSince: number | undefined;
+    /** How far the kit has finished going over. 0..1, from the clock. */
+    let heaveSettled = 0;
+    /** The last drone the mix was actually asked for. See the audio block. */
+    let droneAt = { level: 0.07, base: 40 };
 
     // --- the questions -----------------------------------------------------
     const choices = choiceQueue(context);
@@ -1235,8 +1508,14 @@ export const deathSoldierScene: SceneDefinition = {
     const answeredAlready = new Set<string>();
     /** Whether the letter is still in the ditch, and where it ended up. */
     let letterPick: Pick | undefined;
-    /** Whether the other man is awake. He wakes if he is woken, or at the crack. */
+    /**
+     * Whether the other man is awake. He wakes only if the player wakes him for
+     * the light; the blast does not wake anybody, because there is no interval
+     * between it and him in which to be awake.
+     */
     let wokenEarly = false;
+    /** Whether the blast has already taken him. See `consume`. */
+    let consumed = false;
 
     /**
      * What the death hands to the afterlife, in one place.
@@ -1262,6 +1541,58 @@ export const deathSoldierScene: SceneDefinition = {
       }
       context.soul.attachment = clamp01(Math.max(MIN_ATTACHMENT, attachment));
       context.soul.will = clamp01(1 - context.soul.attachment * 0.5 + will);
+    }
+
+    /**
+     * The other man, and the stretch of orchard beside him.
+     *
+     * Runs once, under the peak of the light, and it is the whole of how this
+     * scene says that the blast took both of them. It is all absence:
+     *
+     * - The groundsheet is still in the ditch. It is lying flat and open on the
+     *   floor with nothing under it, which is one scale and one position. The
+     *   boot that was sticking out of it stops being drawn.
+     * - The letter, *if the player put it in his pack*, is on the floor of the
+     *   ditch, because his pack went where he went. The pale corner is still
+     *   somewhere, and it is not with anybody.
+     * - A stretch of the rows loses its tops, which is the closing aerial's
+     *   only evidence and is landscape rather than aftermath.
+     *
+     * What is NOT here: a body, a wound, blood, a mark, a scorch, a crater, a
+     * remain, or anything thrown. Nothing is added to the scene and the only
+     * thing removed is the one shape that was a person. CLAUDE.md § Content
+     * rules, which is absolute, and the strongest version of it is what is not
+     * there afterwards.
+     */
+    function consume(): void {
+      if (consumed) {
+        return;
+      }
+      consumed = true;
+
+      // Flat and open on the floor. The capsule's own axis is its local Y and
+      // the mesh is already turned a quarter so that axis lies along the ditch,
+      // which puts local Z vertical — so flattening is one number.
+      sleeper.position.set(0.1, FLOOR + 0.03, -2.84);
+      sleeper.rotation.set(0, 0.24, 0);
+      sheet.scale.set(1.3, 0.94, 0.1);
+      boot.visible = false;
+
+      if (letterPick?.id === 'hand-it-over') {
+        letter.position.set(-0.24, FLOOR + 0.004, -2.18);
+        letter.rotation.set(-Math.PI / 2, 0, 0.7);
+      }
+
+      // The gap in the canopy runs along the ditch and feathers out through the
+      // rows. Deliberately a *stretch* and not a point: a point would be the
+      // place the thing landed, and this scene does not have one of those.
+      // Tuned against the closing aerial, not against the ground view: from
+      // fifteen metres up the frame's lower edge is already twenty metres down
+      // the rows, so a gap that stopped at the ditch would be behind the camera
+      // by the time anybody could see it. It follows the seam instead — a bare
+      // corridor two or three rows wide either side of the ditch, feathering
+      // out into orchard at both ends and both sides.
+      trees.stripNear({ fromZ: 18, toZ: -36, halfWidth: 13, feather: 9 });
     }
 
     /** Take the scene's one exit. Once, and only from a player's click or the grace. */
@@ -1399,6 +1730,51 @@ export const deathSoldierScene: SceneDefinition = {
           );
         }
 
+        // --- the blast -----------------------------------------------------
+        //
+        // Nothing enters the scene. No flash object, no tracer, no direction, no
+        // second light, nothing with a position. The directional dawn is not
+        // touched. What happens is four senses reporting in their own order
+        // (`systems/overpressure.ts`), and then one shape in the ditch no longer
+        // being there (`consume`). CLAUDE.md § Content rules, lore bible § 13.
+        if (index >= beatIndex('the-blast')) {
+          blastAt ??= elapsed;
+        }
+        // Wall-clock seconds since it happened. `overpressure` returns a morning
+        // with nothing wrong with it for anything at or before zero, so this is
+        // safe to read on every frame of the scene.
+        const since = blastAt === undefined ? 0 : elapsed - blastAt;
+        const blast = overpressure(since);
+
+        // Under the peak of the light, which is the only moment in the scene
+        // where the frame is too bright to resolve what is in it.
+        if (blastAt !== undefined && !consumed && since >= 0.4) {
+          consume();
+        }
+
+        // The kit going over with the ground. Stops touching anything once it
+        // has settled, so the rest of the vignette costs nothing for it.
+        if (blastAt !== undefined && heaveSettled < 1) {
+          heaveSettled = ease.out(Math.min(1, since / 1.25));
+          for (const item of heaved) {
+            item.mesh.position.lerpVectors(item.from, item.to, heaveSettled);
+            item.mesh.rotation.set(
+              item.fromRotation.x + (item.toRotation.x - item.fromRotation.x) * heaveSettled,
+              item.fromRotation.y + (item.toRotation.y - item.fromRotation.y) * heaveSettled,
+              item.fromRotation.z + (item.toRotation.z - item.fromRotation.z) * heaveSettled,
+            );
+          }
+        }
+
+        // The slow curve the rest of the beat rides: colour, vignette, grain.
+        // Separate from the envelope on purpose — the envelope is the first
+        // second and a half, and this is the seven seconds around it.
+        const distress = beat.id === 'the-blast'
+          ? ease.out(t)
+          : index > beatIndex('the-blast')
+            ? 1
+            : 0;
+
         // --- the light coming up ------------------------------------------
         //
         // One monotonic rise through the first four beats, and then it stops
@@ -1410,24 +1786,15 @@ export const deathSoldierScene: SceneDefinition = {
             ? 0.44 + ease.inOut(t) * 0.56
             : 1;
         sky.update(elapsed, dawn);
+        // The dawn's two directional terms are untouched by the blast, which is
+        // the content rule in the lighting: no second direction, ever.
         setU(dawnGlow.material, 'uIntensity', (0.4 + dawn * 0.75) * (1 - apart * 0.5));
         dawnLight.intensity = 0.5 + dawn * 1.15;
-        bounce.intensity = 2.0 + dawn * 0.5;
-
-        // --- the crack -----------------------------------------------------
-        //
-        // Nothing enters the scene and nothing leaves it. No flash, no tracer, no
-        // direction, no second light. What changes is that his hearing narrows
-        // and the frame stops agreeing with itself (CLAUDE.md § Content rules,
-        // and lore bible § 13).
-        if (index >= beatIndex('the-crack')) {
-          crackAt ??= elapsed;
-        }
-        const distress = beat.id === 'the-crack'
-          ? ease.out(t)
-          : index > beatIndex('the-crack')
-            ? 1
-            : 0;
+        // The hemisphere is where the blast's light goes, because a hemisphere
+        // has no direction in it at all: it lights the ditch walls, the bags,
+        // the trunks and the groundsheet from every side at once, which is
+        // exactly what "from everywhere" has to mean to be safe.
+        bounce.intensity = 2.0 + dawn * 0.5 + blast.light * 16;
 
         // --- out of the body ----------------------------------------------
         // `L-THRESH-03`: the point of view separates and observes from above.
@@ -1448,12 +1815,18 @@ export const deathSoldierScene: SceneDefinition = {
         // leaves him, because a rolled horizon is a thing a body has.
         const bodyEye = EYE_SIT + (EYE_DOWN - EYE_SIT) * bodyDown;
         const drift = beat.id === 'above' || beat.id === 'after' ? ease.out(t) : 0;
+        // The ground itself moving, for about three seconds. Carried on the
+        // rig's position rather than on a new shake API: the scene already owns
+        // this transform every frame, the rig's own look stays entirely the
+        // player's (it is never re-aimed), and `groundHeave` is continuous, so
+        // it cannot pop between frames at any frame rate.
+        const heaveNow = groundHeave(since, blast.ground, 0.085);
         context.rig.position.set(
-          bodyDown * 0.08,
-          bodyEye + (EYE_ABOVE - bodyEye) * apart + drift * 1.9,
-          2.0 + apart * 1.6 + drift * 1.3,
+          bodyDown * 0.08 + heaveNow.x,
+          bodyEye + (EYE_ABOVE - bodyEye) * apart + drift * 1.9 + heaveNow.y,
+          2.0 + apart * 1.6 + drift * 1.3 + heaveNow.z,
         );
-        context.rig.setRoll(bodyDown * 0.5 * (1 - apart));
+        context.rig.setRoll(bodyDown * 0.5 * (1 - apart) + heaveNow.roll);
         context.rig.setSway(1 - bodyDown * 0.8 + apart * 0.5);
 
         // The heartbeat, and the frame tightening with it while there is still a
@@ -1461,15 +1834,20 @@ export const deathSoldierScene: SceneDefinition = {
         const bpm = BPM[beat.id] ?? 58;
         const beating = bpm > 0;
         context.audio.heartbeat(beating, Math.max(1, bpm), beat.id === 'quiet' ? 0.46 : 0.3);
-        const pulseStrength = index < beatIndex('the-crack')
+        const pulseStrength = index < beatIndex('the-blast')
           ? 0.1
-          : beat.id === 'the-crack'
+          : beat.id === 'the-blast'
             ? 0.85
             : beat.id === 'sitting-down'
               ? 0.6
               : 0.15;
         const beatPhase = beating ? (elapsed * (bpm / 60)) % 1 : 0;
-        context.rig.setPulse(pulseStrength * Math.pow(1 - beatPhase, 6) * (1 - apart));
+        // The press rides on top of the heartbeat's own push, because it is the
+        // same thing happening to the same chest, and it arrives before
+        // anything else in the scene has moved.
+        context.rig.setPulse(
+          clamp01(pulseStrength * Math.pow(1 - beatPhase, 6) * (1 - apart) + blast.press * 0.9),
+        );
 
         // --- perception, not the place ------------------------------------
         //
@@ -1477,50 +1855,99 @@ export const deathSoldierScene: SceneDefinition = {
         // toward `outside` as the view leaves him: cold and clinical rather than
         // monochrome, because what is looking is no longer failing.
         const drained = LIVING.drain + (DYING.drain - LIVING.drain) * distress;
-        grade.drain = drained + (OUTSIDE.drain - drained) * apart;
-        grade.vignette = 0.22 + distress * 0.36 - apart * 0.2;
-        grade.aberration = 0.0012 + distress * 0.004 - apart * 0.0034;
-        grade.distortion = 0.02 + distress * 0.05 - apart * 0.052;
-        grade.grain = LIVING.grain + distress * 0.09 - apart * 0.04;
-        grade.exposure = 1.4 - distress * 0.18 + apart * 0.02;
+        grade.drain = clamp01(drained + (OUTSIDE.drain - drained) * apart + blast.light * 0.2);
+        // The press closes the frame in and squeezes it; the light opens it out
+        // again, because light from everywhere has no corner to fall off into.
+        grade.vignette = clamp01(0.22 + distress * 0.36 - apart * 0.2 + blast.press * 0.5 - blast.light * 0.16);
+        grade.aberration = 0.0012 + distress * 0.004 - apart * 0.0034
+          + Math.max(blast.press, blast.light) * 0.0055;
+        // Pincushion first — the world pulled inward, which is what pressure
+        // does to a frame — and then a bulge under the light.
+        grade.distortion = 0.02 + distress * 0.05 - apart * 0.052 - blast.press * 0.1 + blast.light * 0.045;
+        grade.grain = LIVING.grain + distress * 0.09 - apart * 0.04 + blast.deaf * 0.025;
+        grade.exposure = (1.4 - distress * 0.18 + apart * 0.02) * (1 - blast.press * 0.3)
+          + blast.light * 0.3;
+        // The light itself: a full-frame wash and bloom, and nothing with a
+        // position. Held back from white on purpose — the gate's clipping bound
+        // is 34% and a blast is exactly the thing that spends it, so the peak is
+        // tuned to keep the orchard's silhouettes inside the light rather than
+        // replacing the image with a rectangle.
+        grade.washAmount = blast.light * 0.78;
         context.post.setBloom(
-          LIVING.bloom + distress * 0.34 + apart * 0.2,
+          LIVING.bloom + distress * 0.34 + apart * 0.2 + blast.light * 1.1,
           0.55,
-          0.82 - distress * 0.26 - apart * 0.04,
+          Math.max(0.14, 0.82 - distress * 0.26 - apart * 0.04 - blast.light * 0.5),
         );
-        // The one overtly unreal effect, spent in about two seconds at the moment
-        // the morning stops being reachable.
-        grade.smear = beat.id === 'the-crack' ? ease.pulse(Math.min(1, t * 3)) * 0.05 : 0;
+        // The one overtly unreal effect, and it now sits exactly on the light
+        // rather than spreading over two seconds: the frame stretches while it
+        // cannot be resolved, and stops when it can.
+        grade.smear = blast.light * 0.055;
 
-        // The air loses its high end: sound dropping out, not fading down. Then
-        // the ring, which is the first thing that belongs to what comes next
-        // (`L-THRESH-02`).
-        context.audio.room(Math.max(0, 0.26 - distress * 0.24), 900 - distress * 740);
-        context.audio.drone(0.07 + distress * 0.07, 40 - distress * 9);
-        if (crackAt === undefined) {
+        // Pressure before sound, and then hearing that does not come back.
+        //
+        // Nothing in the mix moves for the first four tenths of a second: the
+        // frame has already been squeezed, the light has already arrived, and
+        // the morning still sounds exactly like a morning. `deaf` is what then
+        // takes it — level *and* top, together, which is the difference between
+        // sound going out and sound being turned down — and `deaf` has no fall
+        // in it, so nothing in the rest of the scene brings hearing back.
+        context.audio.room(0.26 * (1 - blast.deaf), 900 - 770 * blast.deaf);
+        // The low end is what a body keeps, so the pressure is filed with the
+        // drone rather than with the room: a sub shove that rolls through and
+        // leaves the drone a few hertz lower than it found it.
+        //
+        // Quantised because `AudioEngine.drone` rebuilds its oscillators on
+        // every call. Called once per frame it would tear itself down sixty
+        // times a second and never finish its own two-second gain ramp, so the
+        // sub would be inaudible and the churn pointless.
+        const droneLevel = 0.07 + blast.sub * 0.5 + blast.deaf * 0.04;
+        const droneBase = 40 - blast.sub * 22 - blast.deaf * 5;
+        if (Math.abs(droneLevel - droneAt.level) > 0.015 || Math.abs(droneBase - droneAt.base) > 0.7) {
+          droneAt = { level: droneLevel, base: droneBase };
+          context.audio.drone(droneLevel, droneBase);
+        }
+        // The ring does not creep in here the way it would after a shot. A blast
+        // leaves it already there, and the rest of the vignette is spent inside
+        // it (`L-THRESH-02`).
+        if (blastAt === undefined) {
           context.audio.ring(0, 1900);
         } else {
-          const since = Math.max(0, elapsed - crackAt);
-          context.audio.ring(Math.min(0.2, since * 0.03), 1900 + since * 26);
+          context.audio.ring(0.2 * blast.deaf, 2200 + since * 18);
         }
         context.audio.shimmer(apart * 0.05);
 
         // --- the place, still going ---------------------------------------
         sky.mesh.position.copy(context.camera.position);
-        mist.update(elapsed, context.camera, 0.3 + dawn * 0.22 - apart * 0.08);
+        // The mist does two jobs after the blast. Under the light it is additive
+        // air going bright — the "from everywhere" term that is actually in the
+        // world rather than in the grade. And afterwards there is less of it than
+        // there was, because the pressure pushed it out of the rows and it comes
+        // back slowly: that thinness is what the closing aerial reads as the air
+        // over the orchard not being right.
+        const cleared = blastAt === undefined ? 0 : 0.3 + 0.7 * Math.exp(-since / 20);
+        mist.update(
+          elapsed,
+          context.camera,
+          (0.3 + dawn * 0.22 - apart * 0.08) * (1 - cleared * 0.56) + blast.light * 1.2,
+        );
         dawnGlow.update(elapsed, context.camera);
         regardGlow.update(elapsed, context.camera);
         motes.drift(delta * (1 - distress * 0.75), elapsed);
 
-        // The other man. He breathes, and then he is awake — either because the
-        // player woke him for the light, or because of the crack. What he does
-        // when he is awake is lean over, which is as far as this scene goes: he
-        // is a shape in a ditch and never a performance.
-        const awake = wokenEarly || crackAt !== undefined;
-        const breath = Math.sin(elapsed * 0.52) * 0.012;
-        sleeper.position.y = FLOOR + 0.3 + breath + (awake ? 0.05 : 0);
-        sleeper.rotation.z = awake ? -0.22 : 0;
-        sleeper.rotation.y = awake ? 0.3 : 0;
+        // The other man, while there is still an other man. He breathes, and he
+        // is leaning on an elbow only if the player woke him for the light —
+        // which is as far as this scene ever goes with him: he is a shape in a
+        // ditch and never a performance.
+        //
+        // After `consume` this stops running entirely, which is the point. The
+        // loop does not animate an aftermath, because there is no aftermath to
+        // animate: there is a flat groundsheet, and nothing is moving it.
+        if (!consumed) {
+          const breath = Math.sin(elapsed * 0.52) * 0.012;
+          sleeper.position.y = FLOOR + 0.3 + breath + (wokenEarly ? 0.05 : 0);
+          sleeper.rotation.z = wokenEarly ? -0.22 : 0;
+          sleeper.rotation.y = wokenEarly ? 0.3 : 0;
+        }
 
         // What he is looking at, if he has chosen. Comes up over a second and a
         // half so it reads as attention rather than a light being switched on,
@@ -1538,7 +1965,12 @@ export const deathSoldierScene: SceneDefinition = {
         // position rather than with a caption, which is this scene's habit: it
         // is no longer the pale corner in front of him, it is a pale corner
         // three metres away in somebody else's kit, and he can see that it is.
-        if (letterPick?.id === 'hand-it-over') {
+        //
+        // Only while there is a pack to be in. `consume` puts it on the floor of
+        // the ditch and nothing moves it after that — the trade the player took
+        // was an effect on somebody, and it was, at the time. The scene does not
+        // comment on what the blast did to it.
+        if (!consumed && letterPick?.id === 'hand-it-over') {
           letter.position.set(
             sleeper.position.x - 0.26,
             sleeper.position.y + 0.26,
