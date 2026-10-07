@@ -51,7 +51,7 @@ const JOURNEYS: readonly Journey[] = [
     'death.police-shooting',
     'death.bomb-blast',
     'death.heart-attack',
-    'death.lynching',
+    'death.soldier',
     'death.dmt',
   ].map((vignette) => ({
     name: `vignette: ${vignette}`,

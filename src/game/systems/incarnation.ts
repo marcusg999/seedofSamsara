@@ -162,6 +162,31 @@ export function crossRiver(
   return carried;
 }
 
+/**
+ * Record something a life learned without ending.
+ *
+ * Almost everything persists by way of `crossRiver`, because almost everything
+ * in this game is carried over by dying. The DMT vignette is the one death the
+ * player survives (GAME_BRIEF.md § Act 1, vignette 7), so the thread it unlocks
+ * has to be written down while the person is still alive — there is no river
+ * between them and the next scene.
+ *
+ * `L-THRESH-09`: many who came back report reluctance to return and lasting
+ * change afterwards. That lasting change is the only thing this writes: a memory
+ * and a line of wisdom, both of which survive every later run, and no change at
+ * all to the life count, since no life ended.
+ */
+export function recordUnlock(memory: string, wisdom: string): Incarnation {
+  const previous = loadIncarnation();
+  const carried: Incarnation = {
+    ...previous,
+    wisdom: [...new Set([...previous.wisdom, wisdom])],
+    memories: [...new Set([...previous.memories, memory])],
+  };
+  saveIncarnation(carried);
+  return carried;
+}
+
 /** Apply a carried incarnation to a fresh soul at the start of the next run. */
 export function applyOpening(soul: SoulState, carried: Incarnation): void {
   soul.karma = carried.opening.karma;

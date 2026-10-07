@@ -1,6 +1,7 @@
 import {
   BackSide,
   CircleGeometry,
+  Color,
   CylinderGeometry,
   MeshBasicMaterial,
   Group,
@@ -13,6 +14,7 @@ import { GRAMMAR, colorOf } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
 import { airShell, figureOfLight, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
+import { ThresholdPrompt, clamp01 } from './threshold-early';
 
 /**
  * The tunnel, the ones who come to meet you, and the Being of Light
@@ -144,16 +146,19 @@ function livingTunnel(context: SceneContext): { group: Group; material: ShaderMa
 }
 
 const TUNNEL_BEATS: readonly Beat[] = [
-  { id: 'enter', seconds: 14 },
-  { id: 'moving', seconds: 24 },
-  { id: 'opening', seconds: 22 },
+  { id: 'enter', seconds: 6 },
+  { id: 'moving', seconds: 9 },
+  { id: 'opening', seconds: 9 },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
 export const tunnelScene: SceneDefinition = {
   id: 'threshold.tunnel',
   title: 'The passage',
-  exits: [{ id: 'onward', label: 'Onward', to: 'threshold.loved-ones' }],
+  exits: [
+    { id: 'take-it', label: 'Take hold of the memory', to: 'threshold.loved-ones' },
+    { id: 'let-it-pass', label: 'Let the memory go past', to: 'threshold.loved-ones' },
+  ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.tunnel;
@@ -190,6 +195,23 @@ export const tunnelScene: SceneDefinition = {
     });
     context.scene.add(motes.points);
 
+    /**
+     * Something keeping pace with the player in the passage: an ember of a
+     * different colour from everything else in frame, because it is not from
+     * this life.
+     *
+     * The brief's PAST LIVES system says memory shards surface on both paths,
+     * and the case literature is specific about what surfaces: the reported
+     * previous lives cluster in the violent and the unfinished (`L-PAST-03`),
+     * and a subset carry the death wound into the next body as a birthmark
+     * (`L-PAST-02`). So this is an old wound travelling alongside, and whether
+     * the player picks it up is theirs to decide.
+     */
+    const ember = volumetricGlow(context.resources, { radius: 0.5, color: 0xff7a5a, intensity: 1.2, softness: 2.2 });
+    context.scene.add(ember.mesh);
+    const emberAt = new Vector3();
+    const emberTarget = new Vector3();
+
     const director = new Director(TUNNEL_BEATS);
 
     context.rig.setMode('drifting');
@@ -217,15 +239,86 @@ export const tunnelScene: SceneDefinition = {
     context.audio.ring(0.05, 1400);
     context.audio.heartbeat(false);
 
+    // The tunnel's own accent, which the ember recolours if it is taken. Held as
+    // one Color and mutated in place, so the per-frame path allocates nothing.
+    // Three persistent Colors: the wall's own accent, the wound's, and the one
+    // that is actually handed to the uniform. Mixed in place, because a Color
+    // built per frame is an allocation per frame on the hot path.
+    const baseAccent = new Color(GRAMMAR.tunnel.accent);
+    const emberAccent = new Color(0xff7a5a);
+    const accent = new Color(GRAMMAR.tunnel.accent);
+    const SHARD = 'past-life.the-earlier-wound';
+
+    let picked: 'take-it' | 'let-it-pass' | undefined;
+    let pickedAt: number | undefined;
+    let prompt: ThresholdPrompt | undefined = new ThresholdPrompt();
+
+    const choose = (choice: 'take-it' | 'let-it-pass'): void => {
+      if (picked !== undefined) {
+        return;
+      }
+      picked = choice;
+      if (choice === 'take-it') {
+        // An unfinished life is grip, and grip is weight. It also stays: shards
+        // are what survives the river (GAME_BRIEF.md § META-PROGRESSION).
+        if (!context.soul.shards.includes(SHARD)) {
+          context.soul.shards.push(SHARD);
+        }
+        context.soul.will = clamp01(context.soul.will + 0.2);
+        context.soul.attachment = clamp01(context.soul.attachment + 0.2);
+        prompt?.settle(
+          'It is a body that was not this one, and a wound in a place you have always had a mark. '
+          + 'The passage takes its colour from it and slows.',
+          'will +0.2 · you are carrying more · a shard kept',
+          { id: 'take-it', label: 'Go on toward the end of it', onPick: () => { void context.takeExit('take-it'); } },
+        );
+      } else {
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment - 0.15);
+        prompt?.settle(
+          'You let it go by. It falls behind, the walls open out, and the end of the passage comes up fast.',
+          'harmony +1 · you are carrying less',
+          { id: 'let-it-pass', label: 'Go on toward the end of it', onPick: () => { void context.takeExit('let-it-pass'); } },
+        );
+      }
+    };
+
+    prompt.ask('Something is keeping pace with you, and it is not from this life.', [
+      {
+        id: 'take-it',
+        label: 'Take hold of it',
+        detail: 'Carry the old wound with you. It is grip, and it is weight, and it keeps.',
+        onPick: () => { choose('take-it'); },
+      },
+      {
+        id: 'let-it-pass',
+        label: 'Let it go past',
+        detail: 'Leave it in the passage. You travel lighter and faster.',
+        onPick: () => { choose('let-it-pass'); },
+      },
+    ]);
+
+    context.resources.onDispose(() => {
+      prompt?.dispose();
+      prompt = undefined;
+    });
+
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);
         setU(tunnel.material, 'uTime', elapsed);
         far.update(elapsed, context.camera);
         motes.drift(delta, elapsed);
+
+        if (picked !== undefined && pickedAt === undefined) {
+          pickedAt = elapsed;
+        }
+        const answered = pickedAt === undefined ? 0 : ease.out(Math.min(1, (elapsed - pickedAt) / 3.5));
+        const taken = picked === 'take-it' ? answered : 0;
+        const dropped = picked === 'let-it-pass' ? answered : 0;
 
         const progress = beat.id === 'enter'
           ? ease.out(t) * 0.1
@@ -235,28 +328,48 @@ export const tunnelScene: SceneDefinition = {
               ? 0.5 + ease.inOut(t) * 0.5
               : 1;
 
+        // Letting it go opens the passage early; taking it holds the walls in.
+        const opened = Math.min(1, progress + dropped * 0.35 - taken * 0.15 * progress);
+
         // Travel down the tunnel. The walls also flow, so apparent speed is
         // higher than the camera's actual speed — cheaper and less nauseating.
-        context.rig.target.set(0, 0, 10 - progress * 56);
-        setU(tunnel.material, 'uFlow', 1 + progress * 2.4);
-        setU(tunnel.material, 'uOpen', progress);
-        setU(tunnel.material, 'uBreath', 1 - progress * 0.55);
+        context.rig.target.set(0, 0, 10 - opened * 56);
+        setU(tunnel.material, 'uFlow', 1 + opened * 2.4 + dropped * 0.8 - taken * 0.5);
+        setU(tunnel.material, 'uOpen', opened);
+        setU(tunnel.material, 'uBreath', 1 - opened * 0.55 + taken * 0.25);
 
-        setU(far.material, 'uIntensity', 1.4 + progress * 0.8);
-        far.mesh.scale.setScalar(1 + progress * 0.5);
+        // The wound's colour gets into the walls if it was taken.
+        accent.copy(baseAccent).lerp(emberAccent, taken * 0.7);
+        setU(tunnel.material, 'uAccent', accent);
 
-        grade.vignette = 0.52 - progress * 0.22;
-        grade.exposure = 1 + progress * 0.08;
-        grade.drain = grammar.drain * (1 - progress);
+        // The ember rides ahead and to the side until it is answered: taken, it
+        // closes to the middle of the frame; let go, it falls behind and out.
+        emberTarget.set(2.1 - taken * 2.1 + dropped * 1.4, 0.55 - taken * 0.3, -5.5 + taken * 2 + dropped * 13);
+        emberAt.copy(context.rig.position).add(emberTarget);
+        ember.mesh.position.copy(emberAt);
+        ember.update(elapsed, context.camera);
+        setU(
+          ember.material,
+          'uIntensity',
+          Math.max(0, 1.2 + taken * 1.6 - dropped * 1.15 + Math.sin(elapsed * 1.6) * 0.1),
+        );
+        ember.mesh.scale.setScalar(1 + taken * 0.8 - dropped * 0.4);
+
+        setU(far.material, 'uIntensity', 1.4 + opened * 0.8);
+        far.mesh.scale.setScalar(1 + opened * 0.5);
+
+        grade.vignette = 0.52 - opened * 0.22;
+        grade.exposure = 1 + opened * 0.08;
+        grade.drain = grammar.drain * (1 - opened) + taken * 0.12;
         // Held well back: the mouth of the tunnel should be the brightest thing
         // in frame, not the whole frame.
-        grade.washAmount = Math.max(0, progress - 0.8) * 0.18;
-        context.post.setBloom(grammar.bloom + progress * 0.2, 0.72, Math.max(0.68, 0.78 - progress * 0.1));
+        grade.washAmount = Math.max(0, opened - 0.8) * 0.18;
+        context.post.setBloom(grammar.bloom + opened * 0.2, 0.72, Math.max(0.68, 0.78 - opened * 0.1));
 
-        context.audio.drone(0.26 + progress * 0.1, 42 + progress * 22, 6 + progress * 10);
-        context.audio.ring(0.05 - progress * 0.04, 1400);
-        if (progress > 0.45) {
-          context.audio.shimmer((progress - 0.45) * 0.5);
+        context.audio.drone(0.26 + opened * 0.1 + taken * 0.08, 42 + opened * 22 - taken * 12, 6 + opened * 10);
+        context.audio.ring(0.05 - opened * 0.04 + taken * 0.06, 1400);
+        if (opened > 0.45) {
+          context.audio.shimmer((opened - 0.45) * 0.5);
         }
       },
       beat() {
@@ -273,21 +386,39 @@ export const tunnelScene: SceneDefinition = {
 // --- the ones who come to meet you ---------------------------------------------
 
 const KIN_BEATS: readonly Beat[] = [
-  { id: 'glow', seconds: 14 },
-  { id: 'resolving', seconds: 22 },
-  { id: 'recognition', seconds: 20, caption: 'You know them. You cannot say how.' },
+  { id: 'glow', seconds: 6 },
+  { id: 'resolving', seconds: 8 },
+  { id: 'recognition', seconds: 8, caption: 'You know them. You cannot say how.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
 export const lovedOnesScene: SceneDefinition = {
   id: 'threshold.loved-ones',
   title: 'The ones who came',
-  exits: [{ id: 'onward', label: 'Onward', to: 'threshold.being-of-light' }],
+  exits: [
+    { id: 'as-real', label: 'Take them as they come', to: 'threshold.being-of-light' },
+    { id: 'as-mind', label: 'Recognise them as your own mind', to: 'threshold.being-of-light' },
+  ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.kin;
     const air = airShell(context.resources, { radius: 110, ground: grammar.ground, glow: 0x2a2048, density: 1 });
     context.scene.add(air.mesh);
+
+    /**
+     * How the four read the player before the player has read themselves.
+     *
+     * `L-FRAN-03`: the spirit body is the soul's own record and its state is
+     * visible to others — and the lore bible's design note is explicit that in
+     * the source other spirits see the narrator's state before he can. So the
+     * ones who came are brighter and closer to a soul that arrived light, and
+     * stand further off from one that arrived gripping. Everything the player
+     * chose in the corridor so far is in this number.
+     */
+    const read = Math.max(
+      -1,
+      Math.min(1, context.soul.harmony * 0.25 + context.soul.karma * 0.15 - context.soul.attachment),
+    );
 
     // Figures resolve out of glow, so the glow comes first and the silhouettes
     // tighten out of it. Positions are seeded, so a run is reproducible.
@@ -300,7 +431,9 @@ export const lovedOnesScene: SceneDefinition = {
         accent: grammar.accent,
         seed: rng.range(0, 40),
       });
-      figure.group.position.set(x, 0, -4.4 - rng.range(0, 1.4) + index * 0.12);
+      // A soul that arrived heavy is met further off.
+      const depth = -4.4 - rng.range(0, 1.4) + index * 0.12 - Math.max(0, -read) * 2.2;
+      figure.group.position.set(x, 0, depth);
       context.scene.add(figure.group);
 
       const halo = volumetricGlow(context.resources, {
@@ -312,7 +445,7 @@ export const lovedOnesScene: SceneDefinition = {
       halo.mesh.position.copy(figure.group.position).add(new Vector3(0, height * 0.55, 0));
       context.scene.add(halo.mesh);
 
-      return { figure, halo, phase: rng.range(0, Math.PI * 2) };
+      return { figure, halo, phase: rng.range(0, Math.PI * 2), home: depth };
     });
 
     const motes = moteField(context.resources, context.rng.stream('kin-motes'), {
@@ -355,19 +488,95 @@ export const lovedOnesScene: SceneDefinition = {
     context.audio.room(0.04, 600);
     context.audio.heartbeat(false);
 
+    /**
+     * The question the Bardo Thödol puts at exactly this point.
+     *
+     * `L-THRESH-05`: deceased relatives and other presences meet the traveller.
+     * `L-BARDO-03`: the peaceful visions come first and the wrathful later, and
+     * both are taught to be projections of the traveller's own mind rather than
+     * external beings. The text does not resolve that for the traveller — it
+     * tells them to recognise it. So the player decides, and the scene answers
+     * either way: taken as real, the four come close and resolve; recognised,
+     * they thin back into the light they came out of, and the light stays.
+     *
+     * Neither answer is the correct one. Being met is connection, which the
+     * brief measures with HARMONY, and it is a tie, which is weight. Recognising
+     * them is the faculty Path B runs on, so it pays WILL and sets weight down.
+     */
+    let picked: 'as-real' | 'as-mind' | undefined;
+    let pickedAt: number | undefined;
+    let prompt: ThresholdPrompt | undefined = new ThresholdPrompt();
+
+    const choose = (choice: 'as-real' | 'as-mind'): void => {
+      if (picked !== undefined) {
+        return;
+      }
+      picked = choice;
+      if (choice === 'as-real') {
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment + 0.15);
+        prompt?.settle(
+          'You let them be who they are. They come the rest of the way, and you are held by four people '
+          + 'you have no way to name.',
+          'harmony +1 · you are carrying more',
+          { id: 'as-real', label: 'Toward the one behind them', onPick: () => { void context.takeExit('as-real'); } },
+        );
+      } else {
+        context.soul.will = clamp01(context.soul.will + 0.25);
+        context.soul.attachment = clamp01(context.soul.attachment - 0.2);
+        prompt?.settle(
+          'You look straight at them, and they are your own mind, and they go back into the light '
+          + 'without taking offence. The light does not go anywhere.',
+          'will +0.25 · you are carrying less',
+          { id: 'as-mind', label: 'Toward the one behind them', onPick: () => { void context.takeExit('as-mind'); } },
+        );
+      }
+    };
+
+    prompt.ask('Four of them, and you know every one. Who are they?', [
+      {
+        id: 'as-real',
+        label: 'They are who they are',
+        detail: 'Be met. Connection, and a tie that comes with you.',
+        onPick: () => { choose('as-real'); },
+      },
+      {
+        id: 'as-mind',
+        label: 'They are your own mind',
+        detail: 'Recognise the projection. You lose them, and you keep yourself.',
+        onPick: () => { choose('as-mind'); },
+      },
+    ]);
+
+    context.resources.onDispose(() => {
+      prompt?.dispose();
+      prompt = undefined;
+    });
+
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);
         motes.drift(delta, elapsed);
+
+        if (picked !== undefined && pickedAt === undefined) {
+          pickedAt = elapsed;
+        }
+        const answered = pickedAt === undefined ? 0 : ease.out(Math.min(1, (elapsed - pickedAt) / 4));
+        const asReal = picked === 'as-real' ? answered : 0;
+        const asMind = picked === 'as-mind' ? answered : 0;
 
         const resolve = beat.id === 'glow'
           ? ease.out(t) * 0.16
           : beat.id === 'resolving'
             ? 0.16 + ease.inOut(t) * 0.6
             : 0.82 + (beat.id === 'recognition' ? t * 0.18 : 0.18);
+
+        // Taken as real they finish resolving and close the distance; recognised
+        // they dissolve back toward the glow they came out of.
+        const presence = Math.max(0, Math.min(1.15, resolve + asReal * 0.35 - asMind * 0.8));
 
         for (const entry of figures) {
           setU(entry.figure.material, 'uTime', elapsed);
@@ -376,20 +585,31 @@ export const lovedOnesScene: SceneDefinition = {
           setU(
             entry.figure.material,
             'uResolve',
-            Math.min(1, Math.max(0, resolve * (0.85 + Math.sin(entry.phase) * 0.15))),
+            Math.min(1, Math.max(0, presence * (0.85 + Math.sin(entry.phase) * 0.15))),
           );
           entry.halo.update(elapsed, context.camera);
-          setU(entry.halo.material, 'uIntensity', 0.5 + Math.sin(elapsed * 0.4 + entry.phase) * 0.08);
-          // A slow drift, so nobody is standing perfectly still.
+          setU(
+            entry.halo.material,
+            'uIntensity',
+            Math.max(
+              0,
+              (0.5 + read * 0.18 + asReal * 0.5 - asMind * 0.42) + Math.sin(elapsed * 0.4 + entry.phase) * 0.08,
+            ),
+          );
+          // A slow drift, so nobody is standing perfectly still — and a move in
+          // or out once the question has been answered.
+          entry.figure.group.position.z = entry.home + asReal * 2.4 - asMind * 1.2;
+          entry.halo.mesh.position.z = entry.figure.group.position.z;
           entry.figure.group.position.y = Math.sin(elapsed * 0.3 + entry.phase) * 0.04;
         }
 
-        context.rig.target.set(0, 1.5, 0.6 - resolve * 1.1);
+        context.rig.target.set(0, 1.5, 0.6 - resolve * 1.1 - asMind * 0.9);
         grade.exposure = 1.04 + resolve * 0.1;
-        grade.washAmount = 0.02 + resolve * 0.04;
-        context.post.setBloom(grammar.bloom + resolve * 0.3, 0.7, 0.63);
-        context.audio.shimmer(0.16 + resolve * 0.2);
-        context.audio.drone(0.22, 58, 8 + resolve * 6);
+        grade.washAmount = 0.02 + resolve * 0.04 + asMind * 0.02;
+        grade.vignette = 0.34 - asMind * 0.1;
+        context.post.setBloom(grammar.bloom + resolve * 0.3 + asMind * 0.35, 0.7, 0.63);
+        context.audio.shimmer(0.16 + resolve * 0.2 + asMind * 0.2);
+        context.audio.drone(0.22 + asReal * 0.08, 58 + asMind * 6, 8 + resolve * 6);
       },
       beat() {
         const state = director.state;
@@ -405,16 +625,19 @@ export const lovedOnesScene: SceneDefinition = {
 // --- the Being of Light ---------------------------------------------------------
 
 const BEING_BEATS: readonly Beat[] = [
-  { id: 'approach', seconds: 16 },
-  { id: 'inside-it', seconds: 24 },
-  { id: 'held', seconds: 22, caption: 'It does not ask anything. It is only glad.' },
+  { id: 'approach', seconds: 6 },
+  { id: 'inside-it', seconds: 8 },
+  { id: 'held', seconds: 8, caption: 'It does not ask anything. It is only glad.' },
   { id: 'wait', seconds: 1, hold: true },
 ];
 
 export const beingOfLightScene: SceneDefinition = {
   id: 'threshold.being-of-light',
   title: 'The Light',
-  exits: [{ id: 'onward', label: 'Onward', to: 'threshold.border' }],
+  exits: [
+    { id: 'recognise', label: 'Recognise it as your own nature', to: 'threshold.border' },
+    { id: 'be-held', label: 'Let it hold you', to: 'threshold.border' },
+  ],
   discarnate: true,
   create(context: SceneContext): SceneInstance {
     const grammar = GRAMMAR.light;
@@ -484,9 +707,77 @@ export const beingOfLightScene: SceneDefinition = {
     context.audio.ring(0, 1200);
     context.audio.heartbeat(false);
 
+    /**
+     * The one decision the sources make unambiguous, and the reason this scene
+     * cannot be a cutscene.
+     *
+     * `L-BARDO-02`: at death a clear, primordial light dawns; recognising it is
+     * liberation, and failing to recognise it moves the traveller on. The lore
+     * bible's note on that claim is the design brief for this: failing to enter
+     * is not punished in the source, it is a longer road. So being held is a
+     * real answer that gives real harmony — it is simply smaller than the one on
+     * offer, and the frame says so. `L-THRESH-06` is the other half: the being
+     * of light is felt as wholly loving and without judgement, so nothing here
+     * scolds the player for being held.
+     */
+    const SHARD = 'bardo.the-clear-light-recognised';
+    let picked: 'recognise' | 'be-held' | undefined;
+    let pickedAt: number | undefined;
+    let prompt: ThresholdPrompt | undefined = new ThresholdPrompt();
+
+    const choose = (choice: 'recognise' | 'be-held'): void => {
+      if (picked !== undefined) {
+        return;
+      }
+      picked = choice;
+      if (choice === 'recognise') {
+        context.soul.harmony += 2;
+        context.soul.will = clamp01(context.soul.will + 0.3);
+        context.soul.attachment = clamp01(context.soul.attachment - 0.25);
+        if (!context.soul.shards.includes(SHARD)) {
+          context.soul.shards.push(SHARD);
+        }
+        prompt?.settle(
+          'It is not meeting you. There is no edge where it stops and you start, and the filaments '
+          + 'run through where you were standing.',
+          'harmony +2 · will +0.3 · you are carrying much less · a shard kept',
+          { id: 'recognise', label: 'On to the limit', onPick: () => { void context.takeExit('recognise'); } },
+        );
+      } else {
+        context.soul.harmony += 1;
+        context.soul.attachment = clamp01(context.soul.attachment + 0.1);
+        prompt?.settle(
+          'You stay where you are and let it hold you, and it does, without one word about it. '
+          + 'It stays in front of you, and it is very bright.',
+          'harmony +1 · you are carrying a little more',
+          { id: 'be-held', label: 'On to the limit', onPick: () => { void context.takeExit('be-held'); } },
+        );
+      }
+    };
+
+    prompt.ask('It is in front of you and it is glad. What is it?', [
+      {
+        id: 'recognise',
+        label: 'It is what you are made of',
+        detail: 'Recognise it. Nothing is held back from you, and nothing of you is held back.',
+        onPick: () => { choose('recognise'); },
+      },
+      {
+        id: 'be-held',
+        label: 'It is someone else, and it loves you',
+        detail: 'Be held by it. Gentler, smaller, and the road goes on.',
+        onPick: () => { choose('be-held'); },
+      },
+    ]);
+
+    context.resources.onDispose(() => {
+      prompt?.dispose();
+      prompt = undefined;
+    });
+
     return {
       update(delta, elapsed) {
-        director.update(delta);
+        director.updateTo(elapsed);
         const { beat, t } = director.state;
 
         setU(air.material, 'uTime', elapsed);
@@ -494,13 +785,23 @@ export const beingOfLightScene: SceneDefinition = {
         radiance.update(elapsed);
         inner.update(elapsed, context.camera);
 
+        if (picked !== undefined && pickedAt === undefined) {
+          pickedAt = elapsed;
+        }
+        const answered = pickedAt === undefined ? 0 : ease.out(Math.min(1, (elapsed - pickedAt) / 4.5));
+        const recognised = picked === 'recognise' ? answered : 0;
+        const held = picked === 'be-held' ? answered : 0;
+
         const closeness = beat.id === 'approach'
           ? ease.inOut(t) * 0.5
           : beat.id === 'inside-it'
             ? 0.5 + ease.inOut(t) * 0.42
             : 0.92 + (beat.id === 'held' ? t * 0.08 : 0.08);
 
-        context.rig.target.set(0, 1.4, 6 - closeness * 20);
+        // Recognition closes the last of the distance; being held keeps it a
+        // little way off, which is the difference the frame has to carry.
+        const near = Math.min(1, closeness + recognised * 0.3 - held * 0.12);
+        context.rig.target.set(0, 1.4, 6 - near * 20);
 
         // Overwhelming has to be earned over time, not asserted in frame one, so
         // the wash and exposure climb the whole way through and only pass the top
@@ -508,20 +809,33 @@ export const beingOfLightScene: SceneDefinition = {
         // Overwhelming is carried by structure and contrast, not by pushing every
         // channel to 1.0. The wash stays small, exposure barely moves, and the
         // bloom threshold stays high enough that only the core blooms.
-        grade.washAmount = 0.015 + Math.pow(closeness, 2.2) * 0.03;
-        grade.exposure = 1.0 + closeness * 0.02;
-        grade.vignette = 0.2 - closeness * 0.12;
-        grade.aberration = 0.0028 + closeness * 0.003;
-        context.post.setBloom(0.85 + closeness * 0.4, 0.8, Math.max(0.72, 0.84 - closeness * 0.12));
+        grade.washAmount = 0.015 + Math.pow(near, 2.2) * 0.03 + recognised * 0.012;
+        grade.exposure = 1.0 + near * 0.02 + recognised * 0.02;
+        grade.vignette = 0.2 - near * 0.12 - recognised * 0.05;
+        grade.aberration = 0.0028 + near * 0.003;
+        context.post.setBloom(
+          0.85 + near * 0.4 + recognised * 0.3,
+          0.8,
+          Math.max(0.72, 0.84 - near * 0.12),
+        );
 
-        setU(inner.material, 'uIntensity', 1.3 + closeness * 0.5);
+        setU(inner.material, 'uIntensity', 1.3 + near * 0.5 - recognised * 0.5 + held * 0.35);
         // The radiance rises with closeness, and the focus stays on the heart of
         // the light, so the filaments always converge somewhere the eye can find.
-        radiance.setIntensity(0.26 + closeness * 0.16);
-        radiance.setFocus(0, 1.2 - context.rig.position.y, -16 - context.rig.position.z);
+        //
+        // Recognition moves that focus: the filaments stop converging on an
+        // object ahead and start converging on where the player is standing,
+        // which is the whole claim of `L-BARDO-02` stated in geometry rather
+        // than in a caption.
+        radiance.setIntensity(0.26 + near * 0.16 + recognised * 0.1);
+        radiance.setFocus(
+          0,
+          (1.2 - context.rig.position.y) * (1 - recognised),
+          (-16 - context.rig.position.z) * (1 - recognised) - recognised * 0.6,
+        );
 
-        context.audio.shimmer(0.4 + closeness * 0.4);
-        context.audio.drone(0.24 + closeness * 0.08, 65, 14 + closeness * 12);
+        context.audio.shimmer(0.4 + near * 0.4 + recognised * 0.18);
+        context.audio.drone(0.24 + near * 0.08, 65 + recognised * 10, 14 + near * 12);
       },
       beat() {
         const state = director.state;

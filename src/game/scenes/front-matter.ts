@@ -102,12 +102,17 @@ export const contentNotesScene: SceneDefinition = {
       title: 'Seed of Samsara',
       body:
         'This is a game about dying and what might come after. It is quiet, slow, and '
-        + 'meant to be played with sound on. This slice contains one life and one death.',
+        + 'meant to be played with sound on. This slice contains two deaths — and one of '
+        + 'them you survive.',
       list: [
         'A death from a heart attack, shown from inside the body.',
         'Death is conveyed through perception — time slowing, sound dropping away, colour draining. There is no gore.',
+        'A psychedelic experience, shown from inside it, in which you may be sent back. '
+          + 'The experience only: nothing is obtained, prepared or taken on screen or in text, and no '
+          + 'substance, quantity or method is named.',
         'A life review in which you feel a moment of your life as another person felt it.',
-        'Low, slow light. Some bloom and a brief vertical smear at the moment of death.',
+        'Low, slow light. Bloom, a brief vertical smear at the moment of death, and in one vignette '
+          + 'fast-moving geometric pattern and strong colour.',
       ],
       actions: [
         {
@@ -141,7 +146,12 @@ export const contentNotesScene: SceneDefinition = {
 export const vignetteSelectScene: SceneDefinition = {
   id: 'vignette-select',
   title: 'Choose a death',
-  exits: [{ id: 'heart-attack', label: 'The heart attack', to: 'death.heart-attack' }],
+  exits: [
+    { id: 'heart-attack', label: 'The heart attack', to: 'death.heart-attack' },
+    // Vignette 7, the edge case: the one death the player can survive
+    // (GAME_BRIEF.md § Act 1).
+    { id: 'dmt', label: 'Smoke DMT', to: 'death.dmt' },
+  ],
   create(context: SceneContext): SceneInstance {
     const field = quietField(context, 'living');
     let overlay: Overlay | undefined;
@@ -150,10 +160,11 @@ export const vignetteSelectScene: SceneDefinition = {
     context.audio.drone(0.1, 48);
 
     overlay = new Overlay({
-      title: 'Seven deaths. One is built.',
+      title: 'Seven deaths. Two are built.',
       body:
-        'The finished game lets you choose your death or take a random one. This slice '
-        + 'builds one of the seven, end to end: an ordinary evening, and a heart that stops.',
+        'The finished game lets you choose your death or take a random one. Two of the seven '
+        + 'are built end to end: an ordinary evening and a heart that stops, and the edge case '
+        + '— the only one of the seven you can come back from.',
       actions: [
         {
           id: 'heart-attack',
@@ -163,8 +174,16 @@ export const vignetteSelectScene: SceneDefinition = {
             void context.takeExit('heart-attack');
           },
         },
+        {
+          id: 'dmt',
+          label: 'Smoke DMT',
+          onPick: () => {
+            context.audio.start();
+            void context.takeExit('dmt');
+          },
+        },
       ],
-      hint: 'The other six vignettes, both afterlife paths and the Life Market are planned, not built.',
+      hint: 'The other five vignettes, refusing the Light, and the past-life thread are planned, not built.',
     });
     overlay.focusFirst();
 

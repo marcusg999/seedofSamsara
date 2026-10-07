@@ -3,7 +3,6 @@ import {
   BackSide,
   BufferAttribute,
   BufferGeometry,
-  CapsuleGeometry,
   Color,
   Mesh,
   PlaneGeometry,
@@ -12,7 +11,6 @@ import {
   SphereGeometry,
   Vector3,
   type Camera,
-  type Object3D,
 } from 'three';
 import type { Rng } from '../rng';
 import type { ResourceTracker } from '../disposal';
@@ -22,10 +20,11 @@ import { NOISE, setU } from './glsl';
  * Reusable forms. Original abstract shapes — a glow that has volume, a figure
  * that resolves out of light, drifting motes, and a shell for a room's air.
  *
- * Figures are deliberately abstract: a soft capsule silhouette with an emissive
- * core, so a presence reads as a presence without ever becoming a character
- * model. GAME_BRIEF.md asks for figures that resolve out of glow, which is a
- * lighting problem, not a modelling one.
+ * Figures are deliberately abstract: a lathe-revolved vessel of light with no
+ * face and no limbs, so a presence reads as a presence without ever becoming a
+ * character model. GAME_BRIEF.md asks for figures that resolve out of glow,
+ * which is a lighting problem first — but it is not only one. A form with no
+ * silhouette events has nothing for the light to describe.
  */
 
 /**
@@ -121,73 +120,18 @@ export function volumetricGlow(
 }
 
 /**
- * A presence. An abstract soft silhouette with an emissive interior — never a
- * character, only a shape the eye reads as someone standing there.
+ * The presences of this game — the beings of the Light, the loved ones at the
+ * Threshold, the two still living in the room where you died — are built in
+ * `./presence`, because a presence turned out to be a geometry problem before it
+ * was a shading one and the construction is long enough to deserve its own file.
+ *
+ * Re-exported here so the scenes keep one import for the forms they build from.
+ * `figureOfLight(resources, { height, color, accent, seed, light? })` still
+ * returns `{ group, material }` with the group's origin at the figure's feet and
+ * `uTime` / `uResolve` on the material, exactly as before.
  */
-export function figureOfLight(
-  tracker: ResourceTracker,
-  options: { height: number; color: number; accent: number; seed: number },
-): { group: Object3D; material: ShaderMaterial } {
-  const radius = options.height * 0.17;
-  const geometry = tracker.track(new CapsuleGeometry(radius, Math.max(0.1, options.height - radius * 2), 16, 24));
-  const material = tracker.track(
-    new ShaderMaterial({
-      transparent: true,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: new Color(options.color) },
-        uAccent: { value: new Color(options.accent) },
-        uSeed: { value: options.seed },
-        /** 0 = not yet resolved out of the glow, 1 = fully present. */
-        uResolve: { value: 0 },
-      },
-      vertexShader: /* glsl */ `
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
-        void main() {
-          vNormalView = normalize(normalMatrix * normal);
-          vLocal = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: /* glsl */ `
-        precision highp float;
-        uniform float uTime;
-        uniform vec3 uColor;
-        uniform vec3 uAccent;
-        uniform float uSeed;
-        uniform float uResolve;
-        varying vec3 vNormalView;
-        varying vec3 vLocal;
-
-        ${NOISE}
-
-        void main() {
-          // Rim-dominant: brightest where the form turns away, which is what
-          // makes a shape read as lit from within.
-          float facing = clamp(dot(normalize(vNormalView), vec3(0.0, 0.0, 1.0)), 0.0, 1.0);
-          float rim = pow(1.0 - facing, 2.0);
-
-          // Before it resolves, the figure is dissolved into noise; as uResolve
-          // rises the noise tightens until a silhouette is standing there.
-          float grain = fbm(vLocal * 3.2 + vec3(uSeed, uTime * 0.2, uSeed * 0.5), 4);
-          float coherence = mix(grain, 1.0, uResolve);
-
-          float body = (rim * 0.85 + 0.15) * coherence;
-          body *= smoothstep(0.0, 0.35, uResolve);
-
-          vec3 tint = mix(uAccent, uColor, rim);
-          gl_FragColor = vec4(tint * body, body * 0.9);
-        }
-      `,
-    }),
-  );
-  const mesh = new Mesh(geometry, material);
-  mesh.position.y = options.height * 0.5;
-  return { group: mesh, material };
-}
+export { figureOfLight, bearingFromSeed } from './presence';
+export type { Figure, FigureOptions, PresenceBearing } from './presence';
 
 /** Drifting motes. Dust in a sunbeam, or souls at a distance. */
 export function moteField(

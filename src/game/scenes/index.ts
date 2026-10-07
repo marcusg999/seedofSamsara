@@ -1,6 +1,7 @@
 import { SceneGraph } from '../state-machine';
 import { contentNotesScene, vignetteSelectScene } from './front-matter';
 import { deathHeartAttackScene } from './death-heart-attack';
+import { deathDmtScene, dmtHyperspaceScene, dmtSentBackScene } from './dmt';
 import { pronouncedDeadScene, buzzingScene, outOfBodyScene } from './threshold-early';
 import { tunnelScene, lovedOnesScene, beingOfLightScene } from './threshold-light';
 import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
@@ -16,13 +17,17 @@ import { riverOfForgettingScene, rebirthScene } from './rebirth';
  * puts it under the gate. The two must agree — the gate fails either mismatch.
  *
  * This is the vertical slice: one complete path from an ordinary evening to the
- * life review. The harness scene it replaced is gone.
+ * life review, plus the DMT thread, which forks off it — the one death the
+ * player can survive (GAME_BRIEF.md § Act 1, vignette 7).
  */
 export function createSceneGraph(): SceneGraph {
   return new SceneGraph().register(
     contentNotesScene,
     vignetteSelectScene,
     deathHeartAttackScene,
+    deathDmtScene,
+    dmtHyperspaceScene,
+    dmtSentBackScene,
     pronouncedDeadScene,
     buzzingScene,
     outOfBodyScene,
