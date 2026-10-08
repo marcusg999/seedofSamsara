@@ -89,4 +89,30 @@ If a test is wrong, fix the test and say why in the commit message.
   accumulated frame deltas: the loop clamps deltas for animation, and a clamped
   delta makes story time run slow in exact proportion to how bad the frame rate
   is. Pacing must be a property of the game, not of the machine.
+- A bright event has to last longer than a frame. A blast peaked for 0.4s and
+  read as nothing, because this container renders these scenes at ~3fps and the
+  peak fell between frames: ten captures found ten dark ditches. Hold the peak
+  on a plateau no frame rate you support can step over (0.18s at full worked),
+  and sample every rendered frame when measuring rather than polling on a timer,
+  or you photograph the wrong moment and conclude the effect is broken.
+- A frame that keeps its shading keeps its sense of where its light is from, so
+  it reads as "brightly lit", not as a blast. Whiting out needs the sky dome and
+  every material's own emission, not one or two terms — and a flat wash added
+  equally to every pixel flattens the image rather than blowing it out.
+- Bloom runs BEFORE the grade, so at a bright peak its output is washed, exposed
+  and tonemapped on top of a frame already at the top of the curve. Dropping its
+  threshold there blooms the whole image: measured 43.5% clipped with std 9.8,
+  over the gate's bound with the structure gone. Held to a halo on what is
+  actually brightest, the same peak measured 12.2% with std 20.
+- Never key a per-beat ramp by beat index (`index <= 2`). Inserting a beat at the
+  front silently retargets it at the wrong beats and nothing fails. Key it by
+  beat id, the way the choice cues are.
+- Declaring an exit is not offering one. The gate's softlock rule checks that a
+  scene declares a reachable exit, and four scenes passed it while holding the
+  player forever: the corridor waiting on an answer nobody gave, an overlay
+  whose buttons fell outside a short viewport, and light.life-review and
+  light.council declaring exits no code ever took. When a scene is reported as
+  stuck, audit every scene for the same shape immediately — `takeExit` missing
+  from a scene that declares exits is one grep — rather than fixing the one that
+  was reported.
 - Add to this section every time a mistake is made or narrowly avoided.

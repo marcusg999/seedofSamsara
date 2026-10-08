@@ -165,14 +165,35 @@ import type { OverlayContent } from '../systems/overlay';
  *
  * ## Shape
  *
- * 100 seconds of authored beats, plus a closing hold that lets go by itself
- * after GRACE_SECONDS — 110s for a player who only watches, against the heart
- * attack's 123s. Unchanged by the restaging: the blast occupies exactly the
- * seven seconds the shot used to, because what changed is the grammar inside
- * the beat and not the clock around it. Five questions, cued at 9s, 22s, 36s,
- * 55s and 76s. The first one is live before the tenth second, because the
- * choice is the characterisation: you learn who this man is by deciding what
- * the orchard smells of to him, not by watching him sit in a ditch.
+ * 107 seconds of authored beats, plus a closing hold that lets go by itself
+ * after GRACE_SECONDS — 117s for a player who only watches, against the heart
+ * attack's 123s. The blast still occupies exactly the seven seconds the shot
+ * used to, because what changed there is the grammar inside the beat and not
+ * the clock around it.
+ *
+ * Five questions, cued at 22s, 36s, 52s, 71s and 89s, so the gaps between
+ * them are 14s, 16s, 19s and 18s and nothing is ever more than about twenty
+ * seconds from a decision.
+ *
+ * **The first one is at 22s, and it used to be at 9s.** That is the owner's
+ * call, arriving mid-pass: give the player room at the front to be in the
+ * ditch and look at it before anything is wanted from them. So `cold` and
+ * `the-ditch` are twenty-two seconds with nothing to answer, and the early
+ * gaps are a couple of seconds wider than they were.
+ *
+ * It costs the vignette seven seconds against the version before it, and not
+ * more, because the room was bought mostly out of the back: `sitting-down`,
+ * `quiet`, `lifting` and `above` are nine seconds shorter between them than
+ * they were. That is the right place to take it from — those four beats are
+ * the ones the player is watching rather than deciding in, and the last of
+ * them has the fifth question live over it the whole time.
+ *
+ * It is also only worth having because of the lighting pass in the same
+ * change. Twenty-two seconds to look at the ditch is a gift if the ditch is
+ * legible and a punishment if it is black, and measured before that pass it
+ * was black: mean luma 7 of 255, with the letter and the kit — the objects
+ * the first two questions are *about* — indistinguishable from the floor.
+ * Rendered now, the same beats measure 30.
  */
 
 const LIVING = GRAMMAR.living;
@@ -191,9 +212,26 @@ const OUTSIDE = GRAMMAR.outside;
 const DAWN = new Vector3(0.34, 0.17, -0.92).normalize();
 
 const BEATS: readonly Beat[] = [
-  { id: 'cold', seconds: 9, caption: 'The fourth morning in this ditch. The sky is already going.' },
-  { id: 'the-orchard', seconds: 13 },
-  { id: 'waiting', seconds: 14 },
+  { id: 'cold', seconds: 11, caption: 'The fourth morning in this ditch. The sky is already going.' },
+  /**
+   * Nothing is asked here, and that is the beat.
+   *
+   * The owner's note, mid-pass: give the player more room at the front, so
+   * they can be in the ditch and look at it before anything is wanted from
+   * them. This is where that room went — eleven seconds with a caption that
+   * points at the three things the morning is made of and then gets out of
+   * the way. It is also, not coincidentally, the fix that made the room worth
+   * having: the ditch was measured at mean luma 7 of 255 with the kit
+   * invisible, and time to look at a black slot is not a gift.
+   */
+  {
+    id: 'the-ditch',
+    seconds: 11,
+    caption: 'Nothing is going to happen for a while. The kit on the floor, the letter against the pack, '
+      + 'the other man asleep four feet away.',
+  },
+  { id: 'the-orchard', seconds: 14 },
+  { id: 'waiting', seconds: 16 },
   { id: 'first-light', seconds: 12 },
   // The blast. Held open rather than cut through: time slowing is the treatment
   // rule's first move, and seven seconds is how this vignette slows it. The
@@ -204,18 +242,18 @@ const BEATS: readonly Beat[] = [
   { id: 'the-blast', seconds: 7 },
   {
     id: 'sitting-down',
-    seconds: 10,
+    seconds: 9,
     caption: 'The groundsheet is lying flat, four feet away. There is nothing under it.',
   },
   {
     id: 'quiet',
-    seconds: 11,
+    seconds: 9,
     caption: 'The sound does not come back. Nobody says anything, and nobody is going to.',
   },
-  { id: 'lifting', seconds: 10 },
+  { id: 'lifting', seconds: 8 },
   {
     id: 'above',
-    seconds: 14,
+    seconds: 10,
     caption: 'The rows go on much further than he knew. One stretch of them has no tops left.',
   },
   // Holds, so the last image is never snatched away — but not forever.
@@ -557,18 +595,24 @@ const CARRY: readonly Pick[] = [
 /**
  * Where each question is cued, as the id of the beat it goes up on.
  *
- * Beat starts, in authored seconds: cold 0, the-orchard 9, waiting 22,
- * first-light 36, the-blast 48, sitting-down 55, quiet 65, lifting 76,
- * above 86, after 100. So the five are cued at 9s, 22s, 36s, 55s and 76s, and
- * the first is live before the tenth second.
+ * Beat starts, in authored seconds: cold 0, the-ditch 11, the-orchard 22,
+ * waiting 36, first-light 52, the-blast 64, sitting-down 71, quiet 80,
+ * lifting 89, above 97, after 107. So the five are cued at 22s, 36s, 52s, 71s
+ * and 89s.
  *
- * The longest stretch with nothing to decide is the 21 seconds from the fourth
- * question to the fifth, and it is deliberate: it is the blast, the body going
- * down, and the ditch going silent — the one stretch this vignette has to show
- * rather than ask about, and the stretch in which the other man stops being in
- * the ditch. A dialog over it would take the player's eyes off the only thing
- * those beats contain. Everything before it is 9, 13, 14 and 19 seconds apart,
- * and the last question is live from the lift onward.
+ * The first twenty-two seconds ask nothing at all. That is the owner's note
+ * and it is deliberate: the player is in a ditch before first light with a
+ * man asleep beside them, and they should get to look at it before the game
+ * wants something. See the Shape section for what it cost and where it came
+ * from.
+ *
+ * The longest stretch with nothing to decide is the 19 seconds from the third
+ * question to the fourth, and it is deliberate too: it is the last of the
+ * light coming up, the blast, and the body going down — the one stretch this
+ * vignette has to show rather than ask about, and the stretch in which the
+ * other man stops being in the ditch. A dialog over it would take the
+ * player's eyes off the only thing those beats contain. The rest are 14, 16
+ * and 18 seconds apart, and the last question is live from the lift onward.
  *
  * A cue is a beat id and nothing more, so re-timing a beat cannot silently move
  * a question out of the window it was written for.
@@ -1675,12 +1719,29 @@ export const deathSoldierScene: SceneDefinition = {
     });
 
     /**
+     * How far up the light is across each beat: from, to.
+     *
+     * Keyed by beat id, so inserting or re-timing a beat cannot quietly hand
+     * one beat's light to another. Beats not in the table are after the blast
+     * and sit at 1 — the morning finishes coming up whatever happens in the
+     * ditch, which is the point of it.
+     */
+    const DAWN_RAMP: Record<string, readonly [number, number]> = {
+      cold: [0.34, 0.34],
+      'the-ditch': [0.34, 0.37],
+      'the-orchard': [0.37, 0.43],
+      waiting: [0.43, 0.5],
+      'first-light': [0.5, 1],
+    };
+
+    /**
      * Per-beat heart rate. Data rather than a switch in `update`, so the arc of
-     * the vignette is readable in one place: four beats of a man who has been
+     * the vignette is readable in one place: five beats of a man who has been
      * awake all night, then the rate the body answers with, then nothing.
      */
     const BPM: Record<string, number> = {
       cold: 58,
+      'the-ditch': 58,
       'the-orchard': 57,
       waiting: 56,
       'first-light': 55,
@@ -2015,14 +2076,17 @@ export const deathSoldierScene: SceneDefinition = {
 
         // --- the light coming up ------------------------------------------
         //
-        // One monotonic rise through the first four beats, and then it stops
-        // mattering, because what fails after that is his perception of it and
-        // not the morning. The dawn never stops; he does.
-        const dawn = index <= 2
-          ? 0.34 + (index === 2 ? t * 0.1 : 0)
-          : index === 3
-            ? 0.44 + ease.inOut(t) * 0.56
-            : 1;
+        // One monotonic rise through the beats before the blast, and then it
+        // stops mattering, because what fails after that is his perception of
+        // it and not the morning. The dawn never stops; he does.
+        //
+        // Read off DAWN_RAMP by beat id rather than by index. It was written
+        // against `index <= 2`, which silently became the wrong three beats
+        // the moment a beat was inserted at the front — exactly the failure
+        // that `CUE_AT` keys questions by id to avoid, so the light is keyed
+        // the same way.
+        const ramp = DAWN_RAMP[beat.id];
+        const dawn = ramp === undefined ? 1 : ramp[0] + (ramp[1] - ramp[0]) * ease.inOut(t);
         // The sky dome goes with it. The largest surface in frame is lit by
         // nothing but its own shader, so if it is not told, the blast is a lamp
         // in a hole under a night sky.
