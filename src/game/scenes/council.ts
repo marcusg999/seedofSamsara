@@ -526,16 +526,16 @@ export const councilScene: SceneDefinition = {
               id: 'market',
               label: 'To the Life Market',
               detail: 'Go and choose it. What they wrote into the cart is already in there.',
-              onPick: () => { void context.takeExit('market'); },
+              exit: 'market',
             },
             {
               id: 'again',
               label: 'Begin again',
               detail: 'Put this one down and take another death instead.',
-              onPick: () => { void context.takeExit('again'); },
+              exit: 'again',
             },
           ]);
-          onward.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('market'); });
+          onward.releaseAfter(RELEASE_SECONDS, 'market');
         }
       },
       beat() {

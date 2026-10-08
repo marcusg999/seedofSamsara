@@ -62,9 +62,9 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'light.rebirth', act: 'pathA', status: 'implemented', note: 'Cart contents become the next run’s opening conditions.' },
 
   // Path B — refusing the Light.
-  { id: 'refuse.earthbound', act: 'pathB', status: 'planned', note: 'Haunting the living.' },
-  { id: 'refuse.mist', act: 'pathB', status: 'planned', note: 'Lower sphere: desaturated fog, heavy grain.' },
-  { id: 'refuse.void', act: 'pathB', status: 'planned', note: 'Distressing-NDE void (Greyson & Bush).' },
+  { id: 'refuse.earthbound', act: 'pathB', status: 'implemented', note: 'Haunting the living.' },
+  { id: 'refuse.mist', act: 'pathB', status: 'implemented', note: 'Lower sphere: desaturated fog, heavy grain.' },
+  { id: 'refuse.void', act: 'pathB', status: 'implemented', note: 'Distressing-NDE void (Greyson & Bush).' },
   { id: 'refuse.lower-sphere', act: 'pathB', status: 'planned', note: 'Geometry decays around the player’s attachments.' },
   { id: 'refuse.rescue', act: 'pathB', status: 'planned', note: 'Rising by freeing bound souls, not combat.' },
   { id: 'refuse.higher-sphere', act: 'pathB', status: 'planned', note: 'Hues beyond the normal spectrum, refraction.' },

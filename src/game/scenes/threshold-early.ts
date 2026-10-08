@@ -14,6 +14,7 @@ import { setU } from '../systems/glsl';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
 import { GRAMMAR } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
+import { exitOffers, type ExitOffer } from '../systems/exit-offers';
 import { airShell, figureOfLight, moteField, volumetricGlow } from '../systems/forms';
 
 /**
@@ -53,7 +54,18 @@ export interface PromptOption {
   readonly label: string;
   /** One short line, so the trade is legible before committing to it. */
   readonly detail: string;
-  readonly onPick: () => void;
+  /**
+   * The scene exit this answer takes, if it takes one. Declaring it is the only
+   * way an answer moves the player: the prompt takes the exit itself, through
+   * the exit-offer registry, so what the registry reports as offered and what
+   * the button does are the same fact (`systems/exit-offers.ts`).
+   *
+   * Most of the corridor's answers take no exit — they move the ledger and then
+   * `settle`, and it is `settle`'s one button that carries the way on.
+   */
+  readonly exit?: string;
+  /** What the answer does: the ledger, the shard, the scene's own `settle`. */
+  readonly onPick?: () => void;
 }
 
 /**
@@ -68,6 +80,11 @@ export const RELEASE_SECONDS = 45;
 export class ThresholdPrompt {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
+  private readonly offers = exitOffers.source('ThresholdPrompt');
+  /** The buttons currently on the panel that take an exit. */
+  private controlOffers: readonly ExitOffer[] = [];
+  /** The scheduled release, while one is pending. */
+  private releaseOffer: ExitOffer | undefined;
   private disposed = false;
   private answered = false;
   private releaseTimer: ReturnType<typeof setTimeout> | undefined;
@@ -144,7 +161,13 @@ export class ThresholdPrompt {
     style.alignItems = 'flex-start';
     style.gap = '0.9rem';
 
+    const offered: ExitOffer[] = [];
     for (const option of options) {
+      if (option.exit === undefined && option.onPick === undefined) {
+        // A button that neither moves the ledger nor moves the player is a dead
+        // answer, and a dead answer is how a question holds somebody forever.
+        throw new Error(`Threshold answer "${option.id}" does nothing: it declares neither an exit nor an onPick`);
+      }
       const column = document.createElement('div');
       column.style.display = 'flex';
       column.style.flexDirection = 'column';
@@ -158,10 +181,18 @@ export class ThresholdPrompt {
       button.textContent = option.label;
       // So a test can drive a choice by what it is, not by button order.
       button.dataset['choice'] = option.id;
+      const exit = option.exit;
+      if (exit !== undefined) {
+        button.dataset['exit'] = exit;
+        offered.push({ kind: 'control', exitId: exit, label: option.label, control: button });
+      }
       button.addEventListener('click', () => {
         this.answered = true;
         this.clearRelease();
-        option.onPick();
+        option.onPick?.();
+        if (exit !== undefined) {
+          this.offers.take(exit);
+        }
       });
 
       column.append(button, line(option.detail, 'detail'));
@@ -169,6 +200,10 @@ export class ThresholdPrompt {
     }
 
     this.panel.appendChild(row);
+    // After the buttons are in the document, and without disturbing a release
+    // already scheduled: the scenes call `releaseAfter` before `ask`.
+    this.controlOffers = offered;
+    this.publish();
   }
 
   /**
@@ -176,7 +211,7 @@ export class ThresholdPrompt {
    * onward button is live immediately, so a player who wants to move faster can
    * always move: nothing here waits out a timer.
    */
-  settle(outcome: string, ledger: string, onward: { id: string; label: string; onPick: () => void }): void {
+  settle(outcome: string, ledger: string, onward: { label: string; exit: string }): void {
     this.answered = true;
     this.clearRelease();
     this.panel.replaceChildren();
@@ -187,11 +222,16 @@ export class ThresholdPrompt {
     button.type = 'button';
     button.className = 'overlay__button';
     button.textContent = onward.label;
-    button.dataset['choice'] = onward.id;
+    // The exit is the identity of this button: there is only ever one of them,
+    // and what it is is where it goes.
+    button.dataset['choice'] = onward.exit;
+    button.dataset['exit'] = onward.exit;
     button.addEventListener('click', () => {
-      onward.onPick();
+      this.offers.take(onward.exit);
     });
     this.panel.appendChild(button);
+    this.controlOffers = [{ kind: 'control', exitId: onward.exit, label: onward.label, control: button }];
+    this.publish();
   }
 
   /**
@@ -204,8 +244,16 @@ export class ThresholdPrompt {
    * reaching the Council. Answering is still the only way to move the ledger,
    * and the window is long enough to read the question twice.
    */
-  releaseAfter(seconds: number, onRelease: () => void): void {
+  releaseAfter(seconds: number, exitId: string): void {
     this.clearRelease();
+    // Registered the moment it is scheduled, not when it fires: the scene has a
+    // way out from here on, and that is what the gate has to be able to read.
+    this.releaseOffer = {
+      kind: 'timed-release',
+      exitId,
+      label: `unanswered, the scene lets go after ${String(seconds)}s`,
+    };
+    this.publish();
     this.releaseTimer = setTimeout(() => {
       this.releaseTimer = undefined;
       if (this.answered || this.disposed) {
@@ -215,29 +263,42 @@ export class ThresholdPrompt {
       this.settle(
         'The moment passes, and you let it. Nothing is decided here.',
         'nothing moved · the question was yours and you kept it',
-        { id: 'unanswered', label: 'Go on', onPick: onRelease },
+        { label: 'Go on', exit: exitId },
       );
       // A player who answers nothing is also not going to click "Go on", so the
       // scene lets go by itself a beat later (GAME_BRIEF.md § Act 1 pacing).
+      // `settle` has just registered the button, so this takes an exit the
+      // registry is already offering.
       this.releaseTimer = setTimeout(() => {
         this.releaseTimer = undefined;
         if (!this.disposed) {
-          onRelease();
+          this.offers.take(exitId);
         }
       }, 6000);
     }, seconds * 1000);
   }
 
   private clearRelease(): void {
+    this.releaseOffer = undefined;
     if (this.releaseTimer !== undefined) {
       clearTimeout(this.releaseTimer);
       this.releaseTimer = undefined;
     }
   }
 
+  /** One picture of what this panel offers: its buttons, and its release. */
+  private publish(): void {
+    const offers = [...this.controlOffers];
+    if (this.releaseOffer) {
+      offers.push(this.releaseOffer);
+    }
+    this.offers.set(offers);
+  }
+
   dispose(): void {
     this.disposed = true;
     this.clearRelease();
+    this.offers.clear();
     this.root.remove();
   }
 }
@@ -524,7 +585,7 @@ export const pronouncedDeadScene: SceneDefinition = {
         prompt?.settle(
           'You stop arguing with the hour. The space goes on without you, and the sound of it thins.',
           'harmony +1 · you are carrying less',
-          { id: 'accept', label: 'Listen to what is left', onPick: () => { void context.takeExit('accept'); } },
+          { label: 'Listen to what is left', exit: 'accept' },
         );
       } else {
         context.soul.will = clamp01(context.soul.will + 0.18);
@@ -532,12 +593,12 @@ export const pronouncedDeadScene: SceneDefinition = {
         prompt?.settle(
           'You hold the space where it is. It brightens, it gets loud, and not one of them hears you.',
           'will +0.18 · you are carrying more',
-          { id: 'refuse', label: 'Listen to what is left', onPick: () => { void context.takeExit('refuse'); } },
+          { label: 'Listen to what is left', exit: 'refuse' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('They have said the hour. Is it yours?', [
       {
         id: 'accept',
@@ -689,7 +750,7 @@ export const buzzingScene: SceneDefinition = {
         prompt?.settle(
           'You stop bracing. The sound blows the last of the space outward and resolves into one low note.',
           'harmony +1 · you are carrying less',
-          { id: 'go-with-it', label: 'Leave the space', onPick: () => { void context.takeExit('go-with-it'); } },
+          { label: 'Leave the space', exit: 'go-with-it' },
         );
       } else {
         context.soul.will = clamp01(context.soul.will + 0.2);
@@ -697,12 +758,12 @@ export const buzzingScene: SceneDefinition = {
         prompt?.settle(
           'You hold. The field closes in around you, shrill and tight, and you are still a shape it did not take.',
           'will +0.2 · you are carrying more',
-          { id: 'hold-together', label: 'Leave the space', onPick: () => { void context.takeExit('hold-together'); } },
+          { label: 'Leave the space', exit: 'hold-together' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('The sound is taking the space apart. And you.', [
       {
         id: 'go-with-it',
@@ -876,7 +937,7 @@ export const outOfBodyScene: SceneDefinition = {
         prompt?.settle(
           'You stay with it. The warmth on the floor holds, the rising slows, and the space will not quite let you go.',
           'will +0.15 · you are carrying more',
-          { id: 'the-body', label: 'Let it fall away', onPick: () => { void context.takeExit('the-body'); } },
+          { label: 'Let it fall away', exit: 'the-body' },
         );
       } else {
         context.soul.karma -= 1;
@@ -887,12 +948,12 @@ export const outOfBodyScene: SceneDefinition = {
         prompt?.settle(
           'You stay with them instead. They resolve, and what this is costing them arrives all at once.',
           'karma −1 · harmony +1 · look down: your own light has changed',
-          { id: 'the-living', label: 'Let it fall away', onPick: () => { void context.takeExit('the-living'); } },
+          { label: 'Let it fall away', exit: 'the-living' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('You are above it now. What do you watch?', [
       {
         id: 'the-body',

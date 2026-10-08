@@ -817,17 +817,6 @@ export const deathDmtScene: SceneDefinition = {
     let askedHeld = false;
     let askedFold = false;
     let askedOnward = false;
-    let leaving = false;
-
-    /** The one way out, taken once, by the player. */
-    function leave(exitId: string): void {
-      if (leaving) {
-        return;
-      }
-      leaving = true;
-      choices.answered();
-      void context.takeExit(exitId);
-    }
 
     /** The first choice. What he fixes on as the room starts to go. */
     function take(id: HeldId): void {
@@ -920,7 +909,7 @@ export const deathDmtScene: SceneDefinition = {
           'The room is still around him and it is no longer the thing he is in. Whatever he '
           + 'kept hold of is what he is carrying out of it.',
         actions: [
-          { id: 'onward', label: 'Let it open', onPick: () => { leave('onward'); } },
+          { id: 'onward', label: 'Let it open', exit: 'onward' },
         ],
       }));
     }
@@ -1167,19 +1156,8 @@ export const dmtHyperspaceScene: SceneDefinition = {
     let askedShow = false;
     let askedFork = false;
     let handedOver = false;
-    let leaving = false;
     let lastElapsed = 0;
     const scratch = new Vector3();
-
-    /** Either side of the fork, taken once, by the player. */
-    function leave(exitId: string): void {
-      if (leaving) {
-        return;
-      }
-      leaving = true;
-      choices.answered();
-      void context.takeExit(exitId);
-    }
 
     /**
      * The third choice. Meeting it is attention paid to something that is
@@ -1294,8 +1272,8 @@ export const dmtHyperspaceScene: SceneDefinition = {
               'This is the one death you can survive. Being sent back is the classic case. Going '
               + 'on leads into the Threshold — the same one the other six deaths lead into.',
             actions: [
-              { id: 'sent-back', label: 'Be sent back', onPick: () => { leave('sent-back'); } },
-              { id: 'cross-over', label: 'Go on', onPick: () => { leave('cross-over'); } },
+              { id: 'sent-back', label: 'Be sent back', exit: 'sent-back' },
+              { id: 'cross-over', label: 'Go on', exit: 'cross-over' },
             ],
             hint: 'Neither way opens by itself. This one is yours.',
           }));
@@ -1578,17 +1556,6 @@ export const dmtSentBackScene: SceneDefinition = {
     let carried: Carry | undefined;
     let askedCarry = false;
     let askedOnward = false;
-    let leaving = false;
-
-    /** Back into the life, taken once, by the player. */
-    function leave(exitId: string): void {
-      if (leaving) {
-        return;
-      }
-      leaving = true;
-      choices.answered();
-      void context.takeExit(exitId);
-    }
 
     /**
      * The scene's choice, and the durable one.
@@ -1715,7 +1682,7 @@ export const dmtSentBackScene: SceneDefinition = {
                 'The rest of it is in front of him, and so is the death he was just shown. What '
                 + 'he decided tonight goes with him into it.',
               actions: [
-                { id: 'live-on', label: 'Back into the life', onPick: () => { leave('live-on'); } },
+                { id: 'live-on', label: 'Back into the life', exit: 'live-on' },
               ],
             }));
           }

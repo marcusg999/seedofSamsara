@@ -9,8 +9,27 @@ import type { SceneGraph } from './state-machine';
 import { AudioEngine } from './systems/audio';
 import { CameraRig } from './systems/camera-rig';
 import { Captions } from './systems/captions';
+import { exitOffers, type LiveExitOffer } from './systems/exit-offers';
 import { createPostPipeline, type PostPipeline } from './systems/postfx';
 import { createSpiritBody, type SpiritBody } from './systems/spirit-body';
+
+/**
+ * An exit the scene has actually put in front of the player, crossed with what
+ * the scene's definition declares about it (`systems/exit-offers.ts`).
+ *
+ * Both halves matter. `declared` false or `targetRegistered` false is a control
+ * the player can click that leads nowhere — `graph.get` throws `Unknown scene`
+ * and the run dies — and the declared-exit check cannot see it, because the
+ * declaration it reads is the half that is fine.
+ */
+export interface OfferedExit extends LiveExitOffer {
+  /** True when the current scene's definition declares this exit id. */
+  readonly declared: boolean;
+  /** Where the declared exit leads; null ends the run, undefined is undeclared. */
+  readonly to: string | null | undefined;
+  /** False when `to` names a scene the graph has not registered. */
+  readonly targetRegistered: boolean;
+}
 
 export interface SceneSnapshot {
   readonly id: string;
@@ -24,6 +43,12 @@ export interface SceneSnapshot {
   readonly liveResources: DisposalCounts;
   /** The authored beat the scene is on, if it has a timeline. */
   readonly beat: { id: string; index: number; t: number; finished: boolean } | undefined;
+  /**
+   * The exits the scene is offering right now — a mounted control, or a timed
+   * release it has scheduled. Separate from `exits`, which is only what the
+   * definition declares: declaring an exit is not offering one.
+   */
+  readonly offered: readonly OfferedExit[];
 }
 
 export interface GameOptions {
@@ -201,7 +226,28 @@ export class Game {
       framesRendered: this.framesRendered,
       liveResources: this.tracker?.live ?? { geometries: 0, materials: 0, textures: 0, renderTargets: 0, other: 0 },
       beat: this.instance?.beat?.(),
+      offered: this.offeredExits(),
     };
+  }
+
+  /**
+   * What the current scene is actually offering, with each offer measured
+   * against the definition's declaration and the graph's registry.
+   */
+  offeredExits(): readonly OfferedExit[] {
+    const definition = this.definition;
+    return exitOffers.offers.map((offer) => {
+      const declared = definition?.exits.find((exit) => exit.id === offer.exitId);
+      return {
+        ...offer,
+        declared: declared !== undefined,
+        to: declared?.to,
+        // A null target ends the run and needs nothing registered; anything else
+        // has to be a scene the graph can build.
+        targetRegistered:
+          declared !== undefined && (declared.to === null || this.graph.has(declared.to)),
+      };
+    });
   }
 
   /** Jump to any scene. The test API exposes this; gameplay uses `takeExit`. */
@@ -270,6 +316,11 @@ export class Game {
 
     const tracker = new ResourceTracker();
     this.bundle.setCurrentSceneId(sceneId);
+    // Opened before the scene is created, so the widgets it mounts can register
+    // what they offer, and nothing an earlier scene offered is still standing.
+    exitOffers.openScene((exitId) => {
+      void this.takeExit(exitId);
+    });
 
     const instance = await definition.create({
       scene: this.bundle.scene,
@@ -306,6 +357,8 @@ export class Game {
   }
 
   private unloadCurrent(): void {
+    // Nothing is offered while a scene is coming down.
+    exitOffers.closeScene();
     this.instance?.dispose?.();
     // Every scene leaves the audio bed and the caption line clean, so a voice
     // from the last scene can never bleed into the next one.

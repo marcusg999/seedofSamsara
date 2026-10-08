@@ -271,7 +271,7 @@ export const tunnelScene: SceneDefinition = {
           'It is a body that was not this one, and a wound in a place you have always had a mark. '
           + 'The passage takes its colour from it and slows.',
           'will +0.2 · you are carrying more · a shard kept',
-          { id: 'take-it', label: 'Go on toward the end of it', onPick: () => { void context.takeExit('take-it'); } },
+          { label: 'Go on toward the end of it', exit: 'take-it' },
         );
       } else {
         context.soul.harmony += 1;
@@ -279,12 +279,12 @@ export const tunnelScene: SceneDefinition = {
         prompt?.settle(
           'You let it go by. It falls behind, the walls open out, and the end of the passage comes up fast.',
           'harmony +1 · you are carrying less',
-          { id: 'let-it-pass', label: 'Go on toward the end of it', onPick: () => { void context.takeExit('let-it-pass'); } },
+          { label: 'Go on toward the end of it', exit: 'let-it-pass' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('Something is keeping pace with you, and it is not from this life.', [
       {
         id: 'take-it',
@@ -522,7 +522,7 @@ export const lovedOnesScene: SceneDefinition = {
           'You let them be who they are. They come the rest of the way, and you are held by four people '
           + 'you have no way to name.',
           'harmony +1 · you are carrying more',
-          { id: 'as-real', label: 'Toward the one behind them', onPick: () => { void context.takeExit('as-real'); } },
+          { label: 'Toward the one behind them', exit: 'as-real' },
         );
       } else {
         context.soul.will = clamp01(context.soul.will + 0.25);
@@ -531,12 +531,12 @@ export const lovedOnesScene: SceneDefinition = {
           'You look straight at them, and they are your own mind, and they go back into the light '
           + 'without taking offence. The light does not go anywhere.',
           'will +0.25 · you are carrying less',
-          { id: 'as-mind', label: 'Toward the one behind them', onPick: () => { void context.takeExit('as-mind'); } },
+          { label: 'Toward the one behind them', exit: 'as-mind' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('Four of them, and you know every one. Who are they?', [
       {
         id: 'as-real',
@@ -746,7 +746,7 @@ export const beingOfLightScene: SceneDefinition = {
           'It is not meeting you. There is no edge where it stops and you start, and the filaments '
           + 'run through where you were standing.',
           'harmony +2 · will +0.3 · you are carrying much less · a shard kept',
-          { id: 'recognise', label: 'On to the limit', onPick: () => { void context.takeExit('recognise'); } },
+          { label: 'On to the limit', exit: 'recognise' },
         );
       } else {
         context.soul.harmony += 1;
@@ -755,12 +755,12 @@ export const beingOfLightScene: SceneDefinition = {
           'You stay where you are and let it hold you, and it does, without one word about it. '
           + 'It stays in front of you, and it is very bright.',
           'harmony +1 · you are carrying a little more',
-          { id: 'be-held', label: 'On to the limit', onPick: () => { void context.takeExit('be-held'); } },
+          { label: 'On to the limit', exit: 'be-held' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('It is in front of you and it is glad. What is it?', [
       {
         id: 'recognise',

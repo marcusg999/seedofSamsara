@@ -18,6 +18,7 @@ import { Director, ease, type Beat } from '../systems/director';
 import { moteField, volumetricGlow } from '../systems/forms';
 import { setU } from '../systems/glsl';
 import { Overlay, type OverlayContent } from '../systems/overlay';
+import { exitOffers } from '../systems/exit-offers';
 
 /**
  * Vignette 5 — the heart attack. Lore bible § 5 (`L-ARREST-01`…`L-ARREST-05`).
@@ -480,6 +481,14 @@ function question(
   picks: readonly Pick[],
   hint: string,
   take: (pick: Pick) => void,
+  /**
+   * The scene exit every answer takes, for the one question whose answers end
+   * the room. Declaring it is what puts the way out in front of the exit
+   * registry, and the overlay takes it once `take` has run
+   * (`systems/exit-offers.ts`). Every other question is an answer, not a door,
+   * and leaves this undefined.
+   */
+  exit?: string,
 ): OverlayContent {
   return {
     title,
@@ -488,6 +497,7 @@ function question(
     actions: picks.map((pick) => ({
       id: pick.id,
       label: pick.label,
+      ...(exit === undefined ? {} : { exit }),
       onPick: () => {
         take(pick);
       },
@@ -858,7 +868,13 @@ export const deathHeartAttackScene: SceneDefinition = {
     // Wall-clock, not accumulated delta: the grace had the same frame-rate bug
     // the beat timeline did, and took 27s instead of 10 on a slow renderer.
     let holdBeganAt: number | undefined;
-    let leaving = false;
+    /**
+     * The grace, as the exit registry sees it. The room's last image has no
+     * button on it — the way out is this clock — so the clock is registered,
+     * and a check that reads what is actually offered can see that nobody is
+     * held here (`systems/exit-offers.ts`).
+     */
+    const grace = exitOffers.source('death.heart-attack grace');
 
     // --- the questions -----------------------------------------------------
     const choices = choiceQueue(context);
@@ -903,15 +919,6 @@ export const deathHeartAttackScene: SceneDefinition = {
       context.soul.will = clamp01(1 - context.soul.attachment * 0.5 + will);
     }
 
-    /** Take the scene's one exit. Once, and only ever from a player's click or the grace. */
-    function leave(): void {
-      if (leaving) {
-        return;
-      }
-      leaving = true;
-      void context.takeExit('onward');
-    }
-
     /** Record a pick: the ledger, the run's record, the light, the line. */
     function take(group: string, pick: Pick): void {
       if (answeredAlready.has(group)) {
@@ -953,8 +960,8 @@ export const deathHeartAttackScene: SceneDefinition = {
 
     function takeLettingGo(pick: Pick): void {
       take('letting-go', pick);
-      // Both answers leave, and the copy says so. What they change is what goes.
-      leave();
+      // Both answers leave, and the copy says so. What they change is what
+      // goes. The leaving itself is the exit declared on the question below.
     }
 
     return {
@@ -1026,6 +1033,7 @@ export const deathHeartAttackScene: SceneDefinition = {
               'Neither of these happens by itself. Either one is the end of the room, and the '
                 + 'difference is only what he is carrying when he leaves it.',
               takeLettingGo,
+              'onward',
             ),
           );
         }
@@ -1149,9 +1157,20 @@ export const deathHeartAttackScene: SceneDefinition = {
         // timer is only the floor under a player who has stopped answering.
         if (beat.id === 'after' && t >= 1) {
           context.captions.show('Let go.', 8);
-          holdBeganAt ??= elapsed;
+          if (holdBeganAt === undefined) {
+            holdBeganAt = elapsed;
+            grace.set([
+              {
+                kind: 'timed-release',
+                exitId: 'onward',
+                label: `the room lets go ${String(GRACE_SECONDS)}s after the last image`,
+              },
+            ]);
+          }
           if (elapsed - holdBeganAt >= GRACE_SECONDS) {
-            leave();
+            // A no-op after the first time, and after a click: the registry
+            // leaves a scene once.
+            grace.take('onward');
           }
         }
       },

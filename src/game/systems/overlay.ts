@@ -5,12 +5,28 @@
  * Kept in the DOM rather than drawn in the scene because these are the moments
  * the player must be able to read and click reliably, including with a screen
  * reader and a keyboard.
+ *
+ * An action that leads out of the scene names its exit, and the overlay takes
+ * that exit itself through the exit-offer registry. That is what makes the
+ * registry's picture of the way out the same object as the way out
+ * (`systems/exit-offers.ts`): an action cannot both move the player and be
+ * invisible to the gate.
  */
+import { exitOffers, type ExitOffer } from './exit-offers';
 
 export interface OverlayAction {
   readonly id: string;
   readonly label: string;
-  readonly onPick: () => void;
+  /**
+   * The scene exit this action takes, if it takes one. Declaring it here is the
+   * only way an action can move the player; `onPick` is for what the answer
+   * does on the way out (the ledger, the audio context, a queued question).
+   *
+   * An action with no exit is an answer, not a door. The Threshold's "Refuse
+   * it" is one on purpose: Path B is not built, so nothing is offered.
+   */
+  readonly exit?: string;
+  readonly onPick?: () => void;
 }
 
 export interface OverlayContent {
@@ -23,6 +39,7 @@ export interface OverlayContent {
 
 export class Overlay {
   private readonly root: HTMLDivElement;
+  private readonly offers = exitOffers.source('Overlay');
   private disposed = false;
 
   constructor(content: OverlayContent, parent: HTMLElement = document.body) {
@@ -60,14 +77,24 @@ export class Overlay {
 
     const actions = document.createElement('div');
     actions.className = 'overlay__actions';
+    const offered: ExitOffer[] = [];
     for (const action of content.actions) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'overlay__button';
       button.textContent = action.label;
       button.dataset['action'] = action.id;
+      const exit = action.exit;
+      if (exit !== undefined) {
+        // So a reader of the DOM, and the gate, can tell a door from an answer.
+        button.dataset['exit'] = exit;
+        offered.push({ kind: 'control', exitId: exit, label: action.label, control: button });
+      }
       button.addEventListener('click', () => {
-        action.onPick();
+        action.onPick?.();
+        if (exit !== undefined) {
+          this.offers.take(exit);
+        }
       });
       actions.appendChild(button);
     }
@@ -82,6 +109,11 @@ export class Overlay {
 
     this.root.appendChild(panel);
     parent.appendChild(this.root);
+    // Registered after the buttons are in the document, so the registry reads a
+    // box rather than a detached element.
+    if (offered.length > 0) {
+      this.offers.set(offered);
+    }
 
     // Fade in on the next frame so the transition actually runs.
     requestAnimationFrame(() => {
@@ -98,6 +130,9 @@ export class Overlay {
 
   dispose(): void {
     this.disposed = true;
+    // The way out goes when the overlay does: a queue replaces one question with
+    // the next, and an offer must never outlive the button that carried it.
+    this.offers.clear();
     this.root.remove();
   }
 }

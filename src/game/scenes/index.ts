@@ -9,6 +9,7 @@ import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
 import { councilScene } from './council';
 import { marketAisleScenes, marketCheckoutScene } from './market';
 import { riverOfForgettingScene, rebirthScene } from './rebirth';
+import { earthboundScene, mistScene, voidScene } from './refuse-lower';
 
 /**
  * Every scene the game has actually built. The manifest in `../manifest.ts`
@@ -20,6 +21,15 @@ import { riverOfForgettingScene, rebirthScene } from './rebirth';
  * This is the vertical slice: one complete path from an ordinary evening to the
  * life review, plus the DMT thread, which forks off it — the one death the
  * player can survive (GAME_BRIEF.md § Act 1, vignette 7).
+ *
+ * Path B's first three rooms — `refuse.earthbound`, `refuse.mist` and
+ * `refuse.void` — are registered here too, which is what makes the "Refuse it"
+ * button on `threshold.choice` lead somewhere instead of at an unbuilt id. They
+ * are deliberately NOT on SLICE_PATH: the slice is one path through the game,
+ * and Path B forks off it at the choice. The gate's `Path B: refusing the Light`
+ * journey in `tests/gate/journeys.spec.ts` starts enforcing them the moment
+ * this registration lands, and so does the per-scene walk in
+ * `playthrough.spec.ts`, which drives every exit each of them declares.
  *
  * `death.soldier` is vignette 6 and the second of the six deaths to be built.
  * It is not on SLICE_PATH, which is deliberately one path and not a tour: it is
@@ -51,6 +61,9 @@ export function createSceneGraph(): SceneGraph {
     marketCheckoutScene,
     riverOfForgettingScene,
     rebirthScene,
+    earthboundScene,
+    mistScene,
+    voidScene,
   );
 }
 

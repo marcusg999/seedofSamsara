@@ -258,7 +258,7 @@ export const borderScene: SceneDefinition = {
           'You put it down on this side. The limit takes the colour of the far side, and the weight '
           + 'of the thing is simply gone.',
           'karma +1 · harmony +1 · look down: your own light has changed',
-          { id: 'set-it-down', label: 'Stand at the limit', onPick: () => { void context.takeExit('set-it-down'); } },
+          { label: 'Stand at the limit', exit: 'set-it-down' },
         );
       } else {
         context.soul.will = clamp01(context.soul.will + 0.25);
@@ -267,12 +267,12 @@ export const borderScene: SceneDefinition = {
           'You keep it. The limit dims and closes up, and whatever you do next, you will be doing it '
           + 'with both hands full.',
           'will +0.25 · you are carrying more',
-          { id: 'carry-it', label: 'Stand at the limit', onPick: () => { void context.takeExit('carry-it'); } },
+          { label: 'Stand at the limit', exit: 'carry-it' },
         );
       }
     };
 
-    prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
+    prompt.releaseAfter(RELEASE_SECONDS, 'unanswered');
     prompt.ask('This is the last place you can put anything down. Do you?', [
       {
         id: 'set-it-down',
@@ -404,10 +404,10 @@ export const choiceScene: SceneDefinition = {
   title: 'Enter the Light, or refuse it',
   exits: [
     { id: 'enter', label: 'Enter the Light', to: 'light.life-review' },
-    // Declared because the state machine's exits must describe the real graph,
-    // even where the far side is not built yet. The graph check reports this as
-    // an unbuilt target rather than a softlock, and the button below says so
-    // plainly instead of leading the player nowhere.
+    // Both sides of the fork are built and registered now, so this exit leads
+    // somewhere and the button below takes it. It spent the whole slice
+    // declared-but-not-offered, which is the shape of softlock this codebase
+    // has shipped four times: declaring an exit is not offering one.
     { id: 'refuse', label: 'Refuse it', to: 'refuse.earthbound' },
   ],
   discarnate: true,
@@ -458,9 +458,9 @@ export const choiceScene: SceneDefinition = {
     let overlay: Overlay | undefined = new Overlay({
       title: 'Enter the Light, or refuse it.',
       body:
-        'Both are real paths in the finished game. Entering leads to the life review, '
-        + 'the Council and the Life Market. Refusing leads to the lower spheres, and rising '
-        + 'from them by freeing other souls.',
+        'Both are real paths. Entering leads to the life review, the Council and the Life '
+        + 'Market. Refusing keeps you near the world you would not leave, and then takes you '
+        + 'down through the lower spheres — the twilight land, and the void under it.',
       // What the corridor added up to, said out loud before the fork — because
       // every element of the Threshold asked the player something, and a fork
       // this size should be taken with the answers in view. `L-FRAN-03`: the
@@ -471,21 +471,15 @@ export const choiceScene: SceneDefinition = {
         {
           id: 'enter',
           label: 'Enter the Light',
-          onPick: () => {
-            void context.takeExit('enter');
-          },
+          exit: 'enter',
         },
         {
           id: 'refuse',
           label: 'Refuse it',
-          onPick: () => {
-            // Honest rather than silent: Path B is declared in the graph and
-            // planned in the manifest, and it is not built in this slice.
-            context.captions.show('Refusing the Light is not built in this slice. Path B is next.', 7);
-          },
+          exit: 'refuse',
         },
       ],
-      hint: 'This slice builds entering the Light. Refusing is planned. Will is what Path B spends.',
+      hint: 'Path B is only three rooms deep so far, and it loops rather than ending. Will is what it spends.',
     });
     overlay.focusFirst();
 
@@ -1236,18 +1230,18 @@ export const lifeReviewScene: SceneDefinition = {
               id: 'council',
               label: 'To the Council',
               detail: 'They have been here the whole time, and they already know.',
-              onPick: () => { void context.takeExit('council'); },
+              exit: 'council',
             },
             {
               id: 'again',
               label: 'Begin again',
               detail: 'Put this one down and take another.',
-              onPick: () => { void context.takeExit('again'); },
+              exit: 'again',
             },
           ]);
           // And it lets go by itself, recording nothing, so nobody is held here
           // again.
-          onwardPrompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('council'); });
+          onwardPrompt.releaseAfter(RELEASE_SECONDS, 'council');
           context.soul.shards.push(rang ? 'review.the-call-he-made' : 'review.the-phone-call');
         }
       },

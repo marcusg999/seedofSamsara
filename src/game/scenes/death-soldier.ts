@@ -29,6 +29,7 @@ import { Director, ease, type Beat } from '../systems/director';
 import { moteField, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
 import { choiceQueue } from '../systems/choice-queue';
+import { exitOffers } from '../systems/exit-offers';
 import { groundHeave, overpressure } from '../systems/overpressure';
 import type { OverlayContent } from '../systems/overlay';
 
@@ -681,6 +682,14 @@ function question(
   picks: readonly Pick[],
   hint: string,
   take: (pick: Pick) => void,
+  /**
+   * The scene exit every answer takes, for the one question whose answers end
+   * the morning. Declaring it is what puts the way out in front of the exit
+   * registry, and the overlay takes it once `take` has run
+   * (`systems/exit-offers.ts`). Every other question is an answer, not a door,
+   * and leaves this undefined.
+   */
+  exit?: string,
 ): OverlayContent {
   return {
     title,
@@ -689,6 +698,7 @@ function question(
     actions: picks.map((pick) => ({
       id: pick.id,
       label: pick.label,
+      ...(exit === undefined ? {} : { exit }),
       onPick: () => {
         take(pick);
       },
@@ -1765,8 +1775,14 @@ export const deathSoldierScene: SceneDefinition = {
      */
     let blastAt: number | undefined;
     let holdBeganAt: number | undefined;
-    let leaving = false;
     let now = 0;
+    /**
+     * The grace, as the exit registry sees it. The morning's last image has no
+     * button on it — the way out is this clock — so the clock is registered,
+     * and a check that reads what is actually offered can see that nobody is
+     * held here (`systems/exit-offers.ts`).
+     */
+    const grace = exitOffers.source('death.soldier grace');
     let regardSince: number | undefined;
     /** What attention is on, so it can be taken off a thing that is gone. */
     let regardAt: RegardId | undefined;
@@ -1875,15 +1891,6 @@ export const deathSoldierScene: SceneDefinition = {
       trees.stripNear({ fromZ: 14, toZ: -58, halfWidth: 12, feather: 11 });
     }
 
-    /** Take the scene's one exit. Once, and only from a player's click or the grace. */
-    function leave(): void {
-      if (leaving) {
-        return;
-      }
-      leaving = true;
-      void context.takeExit('onward');
-    }
-
     /** Record a pick: the ledger, the run's record, the light, the line. */
     function take(group: string, pick: Pick): void {
       if (answeredAlready.has(group)) {
@@ -1929,8 +1936,8 @@ export const deathSoldierScene: SceneDefinition = {
 
     function takeCarry(pick: Pick): void {
       take('carry', pick);
-      // Every answer leaves, and the copy says so. What they change is what goes.
-      leave();
+      // Every answer leaves, and the copy says so. What they change is what
+      // goes. The leaving itself is the exit declared on the question below.
     }
 
     return {
@@ -2007,6 +2014,7 @@ export const deathSoldierScene: SceneDefinition = {
               CARRY,
               'All three end the morning. The difference is only what he is holding.',
               takeCarry,
+              'onward',
             ),
           );
         }
@@ -2376,9 +2384,20 @@ export const deathSoldierScene: SceneDefinition = {
         // is only the floor under a player who has stopped answering.
         if (beat.id === 'after' && t >= 1) {
           context.captions.show('Go on.', 8);
-          holdBeganAt ??= elapsed;
+          if (holdBeganAt === undefined) {
+            holdBeganAt = elapsed;
+            grace.set([
+              {
+                kind: 'timed-release',
+                exitId: 'onward',
+                label: `the morning lets go ${String(GRACE_SECONDS)}s after the last image`,
+              },
+            ]);
+          }
           if (elapsed - holdBeganAt >= GRACE_SECONDS) {
-            leave();
+            // A no-op after the first time, and after a click: the registry
+            // leaves a scene once.
+            grace.take('onward');
           }
         }
       },

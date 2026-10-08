@@ -1,5 +1,6 @@
 import { CylinderGeometry, Mesh, MeshBasicMaterial, AdditiveBlending, Group } from 'three';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
+import { exitOffers, type ExitOffer } from '../systems/exit-offers';
 import { airShell, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { setU } from '../systems/glsl';
 import {
@@ -97,6 +98,13 @@ class MarketPanel {
   private readonly preview: HTMLParagraphElement;
   private selected: MarketItem | undefined;
 
+  /**
+   * The aisle's way on. This panel is the only thing that offers it, so it is
+   * registered here rather than taken on trust from the definition
+   * (`systems/exit-offers.ts`).
+   */
+  private readonly offers = exitOffers.source('market aisle panel');
+
   constructor(
     private readonly config: AisleConfig,
     private readonly context: SceneContext,
@@ -131,24 +139,32 @@ class MarketPanel {
     const onward = document.createElement('button');
     onward.type = 'button';
     onward.className = 'overlay__button';
-    onward.textContent = config.next === 'market.checkout' ? 'To checkout' : 'Next aisle';
+    const onwardLabel = config.next === 'market.checkout' ? 'To checkout' : 'Next aisle';
+    onward.textContent = onwardLabel;
+    onward.dataset['exit'] = 'onward';
     onward.addEventListener('click', () => {
-      void context.takeExit('onward');
+      this.offers.take('onward');
     });
     const toCheckout = document.createElement('button');
     toCheckout.type = 'button';
     toCheckout.className = 'overlay__button overlay__button--quiet';
     toCheckout.textContent = 'Skip to checkout';
+    toCheckout.dataset['exit'] = 'checkout';
     toCheckout.addEventListener('click', () => {
-      void context.takeExit('checkout');
+      this.offers.take('checkout');
     });
     nav.append(onward);
+    const offered: ExitOffer[] = [{ kind: 'control', exitId: 'onward', label: onwardLabel, control: onward }];
     if (config.next !== 'market.checkout') {
       nav.append(toCheckout);
+      offered.push({ kind: 'control', exitId: 'checkout', label: 'Skip to checkout', control: toCheckout });
     }
 
     this.root.append(head, this.list, this.preview, this.status, nav);
     document.body.appendChild(this.root);
+    // Registered once the nav is in the document: an offer is a button the
+    // player can click, not an intention to add one.
+    this.offers.set(offered);
     this.render();
   }
 
@@ -239,6 +255,7 @@ class MarketPanel {
   }
 
   dispose(): void {
+    this.offers.clear();
     this.root.remove();
   }
 }
@@ -467,25 +484,35 @@ export const marketCheckoutScene: SceneDefinition = {
 
     const nav = document.createElement('div');
     nav.className = 'market__nav';
+    // The checkout's two ways on, registered as offers rather than left to the
+    // definition's declaration (`systems/exit-offers.ts`).
+    const offers = exitOffers.source('market.checkout panel');
     const river = document.createElement('button');
     river.type = 'button';
     river.className = 'overlay__button';
     river.textContent = 'To the River of Forgetting';
+    river.dataset['exit'] = 'river';
     river.addEventListener('click', () => {
-      void context.takeExit('river');
+      offers.take('river');
     });
     const again = document.createElement('button');
     again.type = 'button';
     again.className = 'overlay__button overlay__button--quiet';
     again.textContent = 'Begin again';
+    again.dataset['exit'] = 'again';
     again.addEventListener('click', () => {
-      void context.takeExit('again');
+      offers.take('again');
     });
     nav.append(river, again);
 
     panel.append(title, summary, spoken, manifestList, nav);
     document.body.appendChild(panel);
+    offers.set([
+      { kind: 'control', exitId: 'river', label: 'To the River of Forgetting', control: river },
+      { kind: 'control', exitId: 'again', label: 'Begin again', control: again },
+    ]);
     resources.onDispose(() => {
+      offers.clear();
       panel.remove();
     });
 
