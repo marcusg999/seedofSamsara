@@ -270,6 +270,26 @@ class MarketPanel {
 }
 
 /**
+ * How far to tilt the camera down, given the shape of the window.
+ *
+ * On a phone the shelf panel is a bottom sheet, so the scene is only seen
+ * through the top third or so of a tall screen — and a level camera puts the
+ * ceiling in exactly that band. The aisle the player came to shop ends up
+ * entirely behind the UI: the owner looked at his phone and saw a ceiling and
+ * a wall of text. Tilting down lifts the shelves into the visible strip and
+ * leaves the ceiling as its top edge, framing the shot rather than being it.
+ *
+ * A wide window shows the whole room already, so it is left alone, and the two
+ * ramp into each other rather than stepping, for tablets and split windows.
+ */
+function aislePitch(viewport: { readonly width: number; readonly height: number }): number {
+  const LEVEL = -0.02;
+  const aspect = viewport.width / Math.max(viewport.height, 1);
+  const t = Math.min(1, Math.max(0, (1.1 - aspect) / 0.45));
+  return LEVEL - t * 0.26;
+}
+
+/**
  * Shared staging: an actual grocery aisle.
  *
  * The architecture is in `systems/grocery.ts` — shelving, ceiling runs,
@@ -315,7 +335,7 @@ function buildAisle(context: SceneContext, config: AisleConfig): {
   context.rig.setMode('embodied');
   // Standing on the centre line at human height, looking down the run.
   context.rig.position.set(0, 1.5, 0);
-  context.rig.orient(0, -0.02);
+  context.rig.orient(0, aislePitch(context.viewport));
   context.rig.setSway(0.2);
   context.rig.setRoll(0);
   context.rig.setPulse(0);
@@ -434,7 +454,7 @@ export const marketCheckoutScene: SceneDefinition = {
 
     context.rig.setMode('embodied');
     context.rig.position.set(0, 1.5, 0);
-    context.rig.orient(0, -0.02);
+    context.rig.orient(0, aislePitch(context.viewport));
     context.rig.setSway(0.24);
     context.rig.setRoll(0);
     context.rig.setPulse(0);

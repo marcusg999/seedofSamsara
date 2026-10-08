@@ -192,6 +192,21 @@ export class Game {
     return this.bundle.frameStats();
   }
 
+  /**
+   * What the last frame actually cost the renderer. The frame budget is kept
+   * by draw call count as much as by milliseconds — on the software rasteriser
+   * the gate runs on, a draw call is the expensive unit — so the number has to
+   * be readable from a test rather than counted by hand.
+   */
+  get renderInfo(): { calls: number; triangles: number; programs: number } {
+    const info = this.bundle.renderer.info;
+    return {
+      calls: info.render.calls,
+      triangles: info.render.triangles,
+      programs: info.programs?.length ?? 0,
+    };
+  }
+
   get rendererDescription(): string {
     return this.bundle.rendererDescription();
   }

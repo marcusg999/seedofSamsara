@@ -195,6 +195,27 @@ body {
   background: radial-gradient(ellipse at 50% 45%, rgba(10, 8, 18, 0.74), rgba(6, 5, 12, 0.92));
 }
 
+/* A visible scrollbar, because the longest aisle overflows and the rows simply
+   vanish under the nav bar otherwise. On the seven-item Trauma aisle that made
+   two of the seven choices look like they did not exist. */
+.market {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 180, 255, 0.5) transparent;
+}
+
+.market::-webkit-scrollbar {
+  width: 6px;
+}
+
+.market::-webkit-scrollbar-thumb {
+  background: rgba(201, 180, 255, 0.5);
+  border-radius: 3px;
+}
+
+.market::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .market__title {
   margin: 0;
   font-size: clamp(1.15rem, 2.4vw, 1.5rem);

@@ -4,6 +4,7 @@ import { SCENE_MANIFEST } from './manifest';
 import { exitOffers, type ExitDeparture } from './systems/exit-offers';
 import { SLICE_PATH } from './scenes/index';
 import { clearIncarnation, loadIncarnation } from './systems/incarnation';
+import { remainingKarma } from './systems/market';
 import type { GraphIssue } from './state-machine';
 
 /**
@@ -54,6 +55,8 @@ export interface TestApi {
   shards(): string[];
   /** Frame-time budget measurement. */
   perf(): { samples: number; meanMs: number; p95Ms: number; worstMs: number };
+  /** What the last frame cost: draw calls, triangles, compiled programs. */
+  renderInfo(): { calls: number; triangles: number; programs: number };
   renderer(): { description: string; software: boolean };
   /** Shader compile failures recorded by the renderer's own hook. */
   shaderFailures(): readonly { sceneId: string; programName: string; log: string }[];
@@ -148,13 +151,21 @@ export function installTestApi(game: Game, errors: readonly GateError[]): void {
     registeredScenes: () => game.graph.ids,
     manifest: () => SCENE_MANIFEST,
     graphIssues: () => game.graph.validate(),
-    karma: () => game.soul.karma,
+    /**
+     * Karma as the player would read it, cart included. Reporting the stored
+     * figure instead left this at 0 through a whole shopping run while the
+     * checkout correctly weighed the same cart at -12, so a test written
+     * against it would have sailed past any pricing regression. Outside the
+     * market the cart is empty and this is the stored figure.
+     */
+    karma: () => remainingKarma(game.soul),
     harmony: () => game.soul.harmony,
     will: () => game.soul.will,
     attachment: () => game.soul.attachment,
     cart: () => game.soul.cart.map((item) => ({ ...item })),
     shards: () => [...game.soul.shards],
     perf: () => game.frameStats,
+    renderInfo: () => game.renderInfo,
     renderer: () => ({ description: game.rendererDescription, software: game.isSoftwareRenderer }),
     shaderFailures: () => game.shaderFailures,
     contextEvents: () => game.contextEvents,

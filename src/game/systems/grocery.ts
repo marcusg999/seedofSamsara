@@ -230,11 +230,11 @@ function cartGeometry(): BufferGeometry {
   // Basket floor: a grid of bars, which is what you actually see looking in.
   for (let i = 0; i < 5; i += 1) {
     const x = (i / 4 - 0.5) * width;
-    pieces.push(part([0.016, 0.014, length], [x, floorY, 0], 1.1));
+    pieces.push(part([0.022, 0.018, length], [x, floorY, 0], 1.1));
   }
   for (let i = 0; i < 3; i += 1) {
     const z = (i / 2 - 0.5) * length;
-    pieces.push(part([width, 0.014, 0.016], [0, floorY + 0.012, z], 1.1));
+    pieces.push(part([width, 0.018, 0.022], [0, floorY + 0.012, z], 1.1));
   }
   // Four walls of horizontal rails, stepping outward with height so the
   // basket flares the way a real one does.
@@ -245,19 +245,37 @@ function cartGeometry(): BufferGeometry {
     const w = width * flare;
     const l = length * flare;
     const weight = rail === 3 ? 1.3 : 1.05;
-    pieces.push(part([0.018, 0.018, l], [-w / 2, y, 0], weight));
-    pieces.push(part([0.018, 0.018, l], [w / 2, y, 0], weight));
-    pieces.push(part([w, 0.018, 0.018], [0, y, -l / 2], weight));
-    pieces.push(part([w, 0.018, 0.018], [0, y, l / 2], weight));
+    pieces.push(part([0.026, 0.026, l], [-w / 2, y, 0], weight));
+    pieces.push(part([0.026, 0.026, l], [w / 2, y, 0], weight));
+    pieces.push(part([w, 0.026, 0.026], [0, y, -l / 2], weight));
+    pieces.push(part([w, 0.026, 0.026], [0, y, l / 2], weight));
   }
-  // A few verticals, so the walls are not four floating hoops.
-  for (const x of [-0.5, 0, 0.5]) {
-    for (const z of [-0.5, 0.5]) {
-      pieces.push(part([0.014, topY - floorY, 0.014], [x * width, (floorY + topY) / 2, z * length], 1));
+  // Wire mesh on all four walls. This is what makes a cart read as a cart:
+  // with only corner posts the basket is an open frame, and the critic's word
+  // for it was "scaffolding". The wires are the densest thing on the model, so
+  // they stay thin — they read by repetition, not by weight.
+  const midY = (floorY + topY) / 2;
+  const wallH = topY - floorY;
+  for (let i = 0; i < 9; i += 1) {
+    const z = (i / 8 - 0.5) * length * 1.1;
+    for (const x of [-1, 1]) {
+      pieces.push(part([0.013, wallH, 0.013], [x * width * 0.56, midY, z], 0.95));
+    }
+  }
+  for (let i = 0; i < 6; i += 1) {
+    const x = (i / 5 - 0.5) * width * 1.1;
+    for (const z of [-1, 1]) {
+      pieces.push(part([0.013, wallH, 0.013], [x, midY, z * length * 0.57], 0.95));
+    }
+  }
+  // Corner posts, heavier, holding the hoops.
+  for (const x of [-1, 1]) {
+    for (const z of [-1, 1]) {
+      pieces.push(part([0.02, wallH, 0.02], [x * width * 0.56, midY, z * length * 0.57], 1.1));
     }
   }
   // Handle, legs, wheels.
-  pieces.push(part([width * 1.18, 0.026, 0.026], [0, topY + 0.07, length * 0.56], 1.35));
+  pieces.push(part([width * 1.18, 0.034, 0.034], [0, topY + 0.07, length * 0.56], 1.35));
   for (const x of [-1, 1]) {
     for (const z of [-1, 1]) {
       pieces.push(part([0.022, floorY, 0.022], [x * width * 0.46, floorY / 2, z * length * 0.44], 0.9));
