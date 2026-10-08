@@ -77,9 +77,10 @@
  * game tolerates can step over it — and then a two-stage fall: a fast knee as
  * the light collapses, and a long, dim glare that is the dust the pressure put
  * in the air still carrying light. That is the real shape of the thing as well
- * as the legible one. It is still over fast: full for 0.3s, better than half
- * for 0.6s, the world resolving back through the glare by about a second, and
- * nothing at all by 3.4s — inside a beat that is seven seconds long.
+ * as the legible one. It is still over fast: at full from 0.12s to 0.3s,
+ * better than half to about 0.6s, the world resolving back through the glare
+ * by a little over a second, and nothing at all by 3.4s — inside a beat that
+ * is seven seconds long.
  */
 const PHASE = {
   press: { peak: 0.06, end: 0.52, fall: 2.0 },

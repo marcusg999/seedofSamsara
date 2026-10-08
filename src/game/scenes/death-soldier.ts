@@ -57,11 +57,22 @@ import type { OverlayContent } from '../systems/overlay';
  * - **There is no second light direction, at any point.** `DAWN` is the only
  *   directional source in this scene; it is fixed on the first frame and it is
  *   never touched by the blast. Every bit of the blast's light is spent on
- *   terms that have no direction in them at all: the full-frame wash in the
- *   grade, the hemisphere bounce, bloom, and the mist in the rows going bright.
- *   A light with a direction is a light with a source, and a source is a
- *   perpetrator. `systems/overpressure.ts` says the same thing from the other
- *   end, so the next person to touch either file meets the rule twice.
+ *   terms that have no direction in them at all: every material in the scene
+ *   emitting its own colour at once, the whole sky dome going white, the
+ *   hemisphere bounce, the mist in the rows going bright, bloom, and a
+ *   full-frame wash in the grade. A light with a direction is a light with a
+ *   source, and a source is a perpetrator. `systems/overpressure.ts` says the
+ *   same thing from the other end, so the next person to touch either file
+ *   meets the rule twice.
+ *
+ *   It is spent on *all* of those rather than on one strong one, and that is
+ *   a legibility decision as much as a safety one. The first staging of this
+ *   blast put the light almost entirely in the grade's wash and the
+ *   hemisphere, and across ten captures of the beat it never read as anything
+ *   — a dark ditch with one bright point in it, which is a spark. What reads
+ *   as a blast is the frame losing its relationship to its own light: no
+ *   shadows anywhere, the floor of the ditch brighter than the dawn, and the
+ *   sky no longer the brightest thing in frame.
  * - **No weapon is modelled anywhere in this scene.** He is a soldier, and that
  *   reads from the kit of waiting rather than the kit of fighting: a helmet off
  *   and upside down on the floor, a canteen, a tin cup, a rolled pack, a coil of
@@ -90,12 +101,19 @@ import type { OverlayContent } from '../systems/overlay';
  * 1. **pressure, before sound.** The frame is squeezed: pincushion, the
  *    vignette closing in, exposure dipping, a hard push on the rig. The mix has
  *    not moved yet. A third of a second.
- * 2. **light, arriving first and from everywhere.** Wash, hemisphere, bloom,
- *    and the mist going hot. No direction, no new lamp, no sprite.
- * 3. **the ground itself moving.** A low heave, 2 to 10Hz, carried on the rig's
- *    position and roll, with the loose kit in the ditch going over with it: the
- *    cup, the canteen, the helmet, the shovel, and three of the filled bags off
- *    the lip and into the slot.
+ * 2. **light, arriving first and from everywhere.** Every surface in the
+ *    scene emitting at once, the sky dome white, the hemisphere, the mist in
+ *    the rows going hot, bloom, and a wash. At full for under two tenths of a
+ *    second, and the world resolving back through the glare inside of two.
+ *    No direction, no new lamp, no sprite.
+ * 3. **the ground itself moving.** One shove along a single axis while the
+ *    front is passing, a low heave under it at 2 to 10Hz, both carried on the
+ *    rig's position and roll — and the world moving with it, which is the half
+ *    that makes it pressure rather than a camera fault: the loose kit in the
+ *    ditch goes over in under half a second (the cup, the canteen, the helmet,
+ *    the shovel, and three of the filled bags off the lip and into the slot),
+ *    the mist is pushed bodily out of the rows, and the dust in the air is
+ *    thrown outward.
  * 4. **hearing that does not come back.** The room tone loses its level *and*
  *    its top, and the ring comes up under it and stays up for the rest of the
  *    scene. `deaf` is the one value in the envelope with no fall in it. The
@@ -1328,17 +1346,28 @@ export const deathSoldierScene: SceneDefinition = {
     const FLOOR = -DITCH_DEPTH;
 
     // His pack, rolled, propped against the wall in front of him.
+    //
+    // Everything in this block sits about three quarters of a metre further
+    // down the ditch than it first did. Rendered at the gate's own viewport,
+    // the original arrangement put the pack, the letter and the helmet in the
+    // last eighty pixels of the frame, where the caption band covers them —
+    // so the two questions those objects are *for* were asked about things
+    // the player could not see. It is the same ditch and the same arm's
+    // reach; it is just not under his chin.
     const packGeometry = resources.track(new CapsuleGeometry(0.21, 0.42, 4, 10));
     const pack = new Mesh(packGeometry, clothMaterial);
-    pack.position.set(0.42, FLOOR + 0.22, 0.2);
+    pack.position.set(0.42, FLOOR + 0.22, -0.55);
     pack.rotation.set(Math.PI / 2, 0, 0.18);
     place.add(pack);
 
     // The letter, leaning against it. The pale thing in a dark slot.
-    const letterGeometry = resources.track(new PlaneGeometry(0.1, 0.145));
+    const letterGeometry = resources.track(new PlaneGeometry(0.13, 0.185));
     const letter = new Mesh(letterGeometry, paperMaterial);
-    letter.position.set(0.37, FLOOR + 0.3, 0.33);
-    letter.rotation.set(-0.42, -0.3, 0.07);
+    letter.position.set(0.3, FLOOR + 0.3, -0.3);
+    // Turned the other way round. It was facing along the ditch, which from
+    // where he is sitting is edge-on: a hundred pixels of nothing, for the
+    // object the second question is entirely about.
+    letter.rotation.set(-0.36, 0.34, 0.07);
     place.add(letter);
 
     // The helmet, off, upside down on the floor. A dome and a rim, nothing else.
@@ -1346,42 +1375,42 @@ export const deathSoldierScene: SceneDefinition = {
       new SphereGeometry(0.135, 16, 9, 0, Math.PI * 2, 0, Math.PI * 0.56),
     );
     const helmet = new Mesh(helmetGeometry, paintedMaterial);
-    helmet.position.set(-0.46, FLOOR + 0.01, 0.1);
+    helmet.position.set(-0.46, FLOOR + 0.01, -0.65);
     helmet.rotation.set(Math.PI, 0, 0.3);
     place.add(helmet);
     const rimGeometry = resources.track(new TorusGeometry(0.133, 0.015, 6, 18));
     const rim = new Mesh(rimGeometry, paintedMaterial);
-    rim.position.set(-0.46, FLOOR + 0.015, 0.1);
+    rim.position.set(-0.46, FLOOR + 0.015, -0.65);
     rim.rotation.x = Math.PI / 2;
     place.add(rim);
 
     // A canteen on its side, and the tin cup he has been holding.
     const canteenGeometry = resources.track(new CylinderGeometry(0.072, 0.072, 0.17, 12));
     const canteen = new Mesh(canteenGeometry, paintedMaterial);
-    canteen.position.set(-0.2, FLOOR + 0.072, 0.52);
+    canteen.position.set(-0.2, FLOOR + 0.072, -0.23);
     canteen.rotation.set(Math.PI / 2, 0, 0.5);
     place.add(canteen);
 
     const cupGeometry = resources.track(new CylinderGeometry(0.05, 0.043, 0.072, 14, 1, true));
     const cup = new Mesh(cupGeometry, metalMaterial);
-    cup.position.set(0.1, FLOOR + 0.036, 0.62);
+    cup.position.set(0.1, FLOOR + 0.036, -0.13);
     place.add(cup);
 
     // A coil of field wire, and the shovel this ditch was dug with.
     const coilGeometry = resources.track(new TorusGeometry(0.15, 0.028, 7, 16));
     const coil = new Mesh(coilGeometry, metalMaterial);
-    coil.position.set(0.62, FLOOR + 0.028, -0.42);
+    coil.position.set(0.62, FLOOR + 0.028, -1.17);
     coil.rotation.x = Math.PI / 2;
     place.add(coil);
 
     const shaftGeometry = resources.track(new CylinderGeometry(0.022, 0.022, 0.95, 8));
     const shaft = new Mesh(shaftGeometry, clothMaterial);
-    shaft.position.set(-0.78, FLOOR + 0.46, -0.6);
+    shaft.position.set(-0.78, FLOOR + 0.46, -1.35);
     shaft.rotation.set(0.3, 0, 0.22);
     place.add(shaft);
     const bladeGeometry = resources.track(new BoxGeometry(0.16, 0.2, 0.02));
     const blade = new Mesh(bladeGeometry, metalMaterial);
-    blade.position.set(-0.86, FLOOR + 0.07, -0.74);
+    blade.position.set(-0.86, FLOOR + 0.07, -1.49);
     blade.rotation.set(1.3, 0, 0.22);
     place.add(blade);
 
@@ -1608,7 +1637,7 @@ export const deathSoldierScene: SceneDefinition = {
      * including the authority to look down at the ditch from fifteen metres up
      * if they want to, which the scene itself never does.
      */
-    context.rig.orient(0, -0.18);
+    context.rig.orient(0, -0.21);
     context.rig.setSway(1);
     context.rig.setRoll(0);
     context.rig.setPulse(0);
@@ -1766,20 +1795,23 @@ export const deathSoldierScene: SceneDefinition = {
       boot.visible = false;
 
       if (letterPick?.id === 'hand-it-over') {
-        letter.position.set(-0.24, FLOOR + 0.004, -2.18);
+        letter.position.set(-0.24, FLOOR + 0.004, -2.1);
         letter.rotation.set(-Math.PI / 2, 0, 0.7);
       }
 
       // The gap in the canopy runs along the ditch and feathers out through the
       // rows. Deliberately a *stretch* and not a point: a point would be the
       // place the thing landed, and this scene does not have one of those.
-      // Tuned against the closing aerial, not against the ground view: from
-      // fifteen metres up the frame's lower edge is already twenty metres down
-      // the rows, so a gap that stopped at the ditch would be behind the camera
-      // by the time anybody could see it. It follows the seam instead — a bare
-      // corridor two or three rows wide either side of the ditch, feathering
-      // out into orchard at both ends and both sides.
-      trees.stripNear({ fromZ: 18, toZ: -36, halfWidth: 13, feather: 9 });
+      // Tuned against the closing aerial, not against the ground view, and
+      // tuned by looking at it: from fifteen metres up the frame's lower edge
+      // is already twenty metres down the rows, and the first version of this
+      // stretch ran out at z=-36, which put the whole gap in the bottom
+      // quarter of the aerial where it read as nothing much. It now runs most
+      // of the way to the far end of what the aerial can see, so the bare
+      // corridor is the thing in the middle of the last image — three rows
+      // wide either side of the seam, feathering back into orchard at both
+      // ends and both sides, and still only an absence of canopy.
+      trees.stripNear({ fromZ: 14, toZ: -58, halfWidth: 12, feather: 11 });
     }
 
     /** Take the scene's one exit. Once, and only from a player's click or the grace. */
@@ -2219,7 +2251,7 @@ export const deathSoldierScene: SceneDefinition = {
           setU(
             regardGlow.material,
             'uIntensity',
-            ease.out(held) * 0.42 * (1 - distress * 0.5) * (1 - apart * 0.7) * (1 - blast.light),
+            ease.out(held) * 0.42 * (1 - distress * 0.5) * (1 - apart) * (1 - blast.light),
           );
         }
         // Nothing is left glowing over the place where he was.
