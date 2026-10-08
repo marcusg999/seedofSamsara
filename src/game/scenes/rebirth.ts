@@ -3,6 +3,7 @@ import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
 import { Director, ease, type Beat } from '../systems/director';
 import { airShell, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
+import { RELEASE_SECONDS, ThresholdPrompt } from './threshold-early';
 import {
   applyOpening,
   crossRiver,
@@ -144,6 +145,19 @@ export const riverOfForgettingScene: SceneDefinition = {
     });
     scene.add(motes.points);
 
+    /**
+     * The way across. The river declared one exit and never offered it, so the
+     * scene held at the far bank — the second of the two scenes an audit found
+     * doing this, alongside light.council.
+     */
+    let onward: ThresholdPrompt | undefined;
+    let onwardAt: number | undefined;
+    let leaving = false;
+    context.resources.onDispose(() => {
+      onward?.dispose();
+      onward = undefined;
+    });
+
     const director = new Director(RIVER_BEATS);
     director.onBeat((beat) => {
       if (beat.caption !== undefined) {
@@ -207,6 +221,25 @@ export const riverOfForgettingScene: SceneDefinition = {
 
         grade.washAmount = 0.02 + crossing * 0.05;
         radiance.setIntensity(0.22 + crossing * 0.16);
+
+        if (beat.id === 'wait' && onward === undefined) {
+          // One exit, so `settle` rather than a question: there is nothing to
+          // decide at the far bank, only somewhere to go.
+          onward = new ThresholdPrompt();
+          onward.settle(
+            'The water took the particulars. What is left is the shape you will be born in.',
+            'nothing decided here · the river keeps what it keeps',
+            { id: 'onward', label: 'The far bank', onPick: () => { void context.takeExit('onward'); } },
+          );
+          onwardAt = elapsed;
+        }
+        // `settle` marks the prompt answered, so the widget's own release will
+        // not fire after it — the clock is kept here instead. Wall-clock, never
+        // an accumulated delta (CLAUDE.md § Gotchas).
+        if (onwardAt !== undefined && !leaving && elapsed - onwardAt >= RELEASE_SECONDS) {
+          leaving = true;
+          void context.takeExit('onward');
+        }
       },
       beat() {
         const state = director.state;
