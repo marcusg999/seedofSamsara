@@ -522,7 +522,7 @@ export const pronouncedDeadScene: SceneDefinition = {
         context.soul.harmony += 1;
         context.soul.attachment = clamp01(context.soul.attachment - 0.12);
         prompt?.settle(
-          'You stop arguing with the hour. The room goes on without you, and the sound of it thins.',
+          'You stop arguing with the hour. The space goes on without you, and the sound of it thins.',
           'harmony +1 · you are carrying less',
           { id: 'accept', label: 'Listen to what is left', onPick: () => { void context.takeExit('accept'); } },
         );
@@ -530,7 +530,7 @@ export const pronouncedDeadScene: SceneDefinition = {
         context.soul.will = clamp01(context.soul.will + 0.18);
         context.soul.attachment = clamp01(context.soul.attachment + 0.18);
         prompt?.settle(
-          'You hold the room where it is. It brightens, it gets loud, and not one of them hears you.',
+          'You hold the space where it is. It brightens, it gets loud, and not one of them hears you.',
           'will +0.18 · you are carrying more',
           { id: 'refuse', label: 'Listen to what is left', onPick: () => { void context.takeExit('refuse'); } },
         );
@@ -542,7 +542,7 @@ export const pronouncedDeadScene: SceneDefinition = {
       {
         id: 'accept',
         label: 'Take the hour as true',
-        detail: 'Let go of the room. You arrive lighter.',
+        detail: 'Let go of the space. You arrive lighter.',
         onPick: () => { choose('accept'); },
       },
       {
@@ -687,9 +687,9 @@ export const buzzingScene: SceneDefinition = {
         context.soul.harmony += 1;
         context.soul.attachment = clamp01(context.soul.attachment - 0.15);
         prompt?.settle(
-          'You stop bracing. The sound blows the last of the room outward and resolves into one low note.',
+          'You stop bracing. The sound blows the last of the space outward and resolves into one low note.',
           'harmony +1 · you are carrying less',
-          { id: 'go-with-it', label: 'Leave the room', onPick: () => { void context.takeExit('go-with-it'); } },
+          { id: 'go-with-it', label: 'Leave the space', onPick: () => { void context.takeExit('go-with-it'); } },
         );
       } else {
         context.soul.will = clamp01(context.soul.will + 0.2);
@@ -697,17 +697,17 @@ export const buzzingScene: SceneDefinition = {
         prompt?.settle(
           'You hold. The field closes in around you, shrill and tight, and you are still a shape it did not take.',
           'will +0.2 · you are carrying more',
-          { id: 'hold-together', label: 'Leave the room', onPick: () => { void context.takeExit('hold-together'); } },
+          { id: 'hold-together', label: 'Leave the space', onPick: () => { void context.takeExit('hold-together'); } },
         );
       }
     };
 
     prompt.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('unanswered'); });
-    prompt.ask('The sound is taking the room apart. And you.', [
+    prompt.ask('The sound is taking the space apart. And you.', [
       {
         id: 'go-with-it',
         label: 'Go with the sound',
-        detail: 'Let it have the room. It resolves into something you can travel in.',
+        detail: 'Let it have the space. It resolves into something you can travel in.',
         onPick: () => { choose('go-with-it'); },
       },
       {
@@ -771,7 +771,7 @@ export const buzzingScene: SceneDefinition = {
 
 const LIFT_BEATS: readonly Beat[] = [
   { id: 'above', seconds: 6 },
-  { id: 'looking-down', seconds: 8, caption: 'That is the room. He is still in it.' },
+  { id: 'looking-down', seconds: 8, caption: 'That is the space he died in. He is still in it.' },
   { id: 'rising', seconds: 8 },
   { id: 'away', seconds: 7 },
   { id: 'wait', seconds: 1, hold: true },
@@ -874,7 +874,7 @@ export const outOfBodyScene: SceneDefinition = {
         context.soul.attachment = clamp01(context.soul.attachment + 0.2);
         context.soul.will = clamp01(context.soul.will + 0.15);
         prompt?.settle(
-          'You stay with it. The warmth on the floor holds, the rising slows, and the room will not quite let you go.',
+          'You stay with it. The warmth on the floor holds, the rising slows, and the space will not quite let you go.',
           'will +0.15 · you are carrying more',
           { id: 'the-body', label: 'Let it fall away', onPick: () => { void context.takeExit('the-body'); } },
         );

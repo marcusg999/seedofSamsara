@@ -979,15 +979,48 @@ export const lifeReviewScene: SceneDefinition = {
      * did not ring at all. She waited up for both.
      */
     const rang = context.soul.shards.includes('heart-attack.rang-her');
-    const SPOKEN: Readonly<Record<string, string>> = rang
-      ? {
-        'his-side': 'He rang. Four rings, and then her machine, and he did not know what to say to it.',
-        'her-side': 'She waited up. She saw the missed call in the morning, and by then she knew.',
+
+    /**
+     * Which life is being reviewed.
+     *
+     * Every death leads here, and this scene used to review only one of them:
+     * it spoke about a phone call, a machine picking up, and a woman waiting
+     * up, whoever you had just been. Arrive from the orchard or from the flat
+     * and "she waited up" names nobody — there is no her, and no call was
+     * missed. Each vignette writes shards under its own name, so the review
+     * asks who it is reviewing and shows that person's unfinished thing.
+     */
+    const died = ((): 'soldier' | 'dmt' | 'heart-attack' => {
+      const shards = context.soul.shards;
+      if (shards.some((shard) => shard.startsWith('soldier.'))) {
+        return 'soldier';
       }
-      : {
-        'his-side': 'He thought there would be time to call her back.',
-        'her-side': 'She waited up. She told herself he was just tired.',
-      };
+      if (shards.some((shard) => shard.startsWith('dmt.'))) {
+        return 'dmt';
+      }
+      return 'heart-attack';
+    })();
+
+    const SPOKEN: Readonly<Record<string, string>> = died === 'soldier'
+      ? {
+        // The letter he did or did not finish, and the man it was meant for.
+        'his-side': 'He thought he would have more time to say it properly.',
+        'her-side': 'It was going to be read by somebody who loved him. That part still happens.',
+      }
+      : died === 'dmt'
+        ? {
+          'his-side': 'He thought he would have more time with her. He was right, and he did not know it yet.',
+          'her-side': 'She was going to come on Tuesday. She still is.',
+        }
+        : rang
+          ? {
+            'his-side': 'He rang. Four rings, and then her machine, and he did not know what to say to it.',
+            'her-side': 'His daughter waited up. She saw the missed call in the morning, and by then she knew.',
+          }
+          : {
+            'his-side': 'He thought he would have more time with her.',
+            'her-side': 'His daughter waited up. She told herself he was just tired.',
+          };
 
     /**
      * The way out of the review.
