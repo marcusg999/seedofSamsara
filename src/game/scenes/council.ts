@@ -12,6 +12,7 @@ import {
   weighingBalance,
 } from '../systems/weighing-hall';
 import { setU } from '../systems/glsl';
+import { RELEASE_SECONDS, ThresholdPrompt } from './threshold-early';
 import type { CartItem } from '../soul';
 
 /**
@@ -255,6 +256,21 @@ export const councilScene: SceneDefinition = {
     scene.add(motes.points);
 
     // --- state -------------------------------------------------------------
+    /**
+     * The way on to the Life Market.
+     *
+     * This scene declared "To the Life Market" and "Begin again" and offered
+     * neither — it reached its last beat and held, which is where the owner's
+     * playthrough stopped for the fourth time. An audit of every scene found
+     * one more doing the same thing (light.river-of-forgetting), and both are
+     * fixed together rather than one report at a time.
+     */
+    let onward: ThresholdPrompt | undefined;
+    context.resources.onDispose(() => {
+      onward?.dispose();
+      onward = undefined;
+    });
+
     const director = new Director(BEATS);
     director.onBeat((beat) => {
       if (beat.caption !== undefined) {
@@ -502,6 +518,24 @@ export const councilScene: SceneDefinition = {
             );
             ember.rotation.set(elapsed * 0.3 + index, elapsed * 0.22, 0);
           });
+        }
+        if (beat.id === 'wait' && onward === undefined) {
+          onward = new ThresholdPrompt();
+          onward.ask('The weighing is done. Nothing here is owed to anyone but the next life.', [
+            {
+              id: 'market',
+              label: 'To the Life Market',
+              detail: 'Go and choose it. What they wrote into the cart is already in there.',
+              onPick: () => { void context.takeExit('market'); },
+            },
+            {
+              id: 'again',
+              label: 'Begin again',
+              detail: 'Put this one down and take another death instead.',
+              onPick: () => { void context.takeExit('again'); },
+            },
+          ]);
+          onward.releaseAfter(RELEASE_SECONDS, () => { void context.takeExit('market'); });
         }
       },
       beat() {
