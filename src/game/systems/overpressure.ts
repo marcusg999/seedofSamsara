@@ -16,9 +16,16 @@
  * 2. **Light, arriving first and from everywhere.** Not from a direction —
  *    which is also why it is the one thing in this grammar that is *safe*,
  *    because a light with a direction is a light with a source, and a source is
- *    a perpetrator. This is `light`, and it is meant to be spent on
- *    omnidirectional terms only: a whole-frame wash, a hemisphere, air that
- *    goes bright. Never a new lamp, never a sprite with a position.
+ *    a perpetrator. This is `light`, with `whiteout` as its core, and both are
+ *    meant to be spent on omnidirectional terms only: a whole-frame wash, a
+ *    hemisphere, the sky dome going white, every surface in the scene emitting
+ *    at once, air that goes bright. Never a new lamp, never a sprite with a
+ *    position.
+ *
+ *    Spend it on *all* of those, not one. One additive term, however strong,
+ *    is a spark at a spot; what reads as a blast is the whole frame losing its
+ *    relationship to its own light — no shadows, the floor of the ditch
+ *    brighter than the dawn, and the sky no longer the brightest thing in it.
  * 3. **The ground itself moving.** Not a camera rattle: a heave. The
  *    frequencies here are deliberately low — a few hertz, not twenty — because
  *    high-frequency jitter reads as a broken camera and because anything above
@@ -36,9 +43,11 @@
  *
  * ## Shape
  *
- * Everything is a smoothstep rise into a peak and a power-curve fall out of it,
- * with no randomness anywhere: two runs on the same clock produce the same
- * numbers, which is what CLAUDE.md § Testability asks of anything a playthrough
+ * Everything is a smoothstep rise into a peak and a power-curve fall out of it
+ * — except the arrival, which holds at full for three tenths of a second
+ * before it falls, because a peak with no width is a peak a slow frame steps
+ * over (see PHASE). There is no randomness anywhere: two runs on the same
+ * clock produce the same numbers, which is what CLAUDE.md § Testability asks of anything a playthrough
  * has to reproduce. Nothing here allocates, so it is safe to call every frame,
  * and nothing here holds a GPU resource, so there is nothing to dispose.
  *
@@ -52,20 +61,55 @@
  * here rather than in one scene's closure.
  */
 
-/** Where each phase starts, peaks and ends, in seconds since the blast. */
+/**
+ * Where each phase starts, peaks and ends, in seconds since the blast.
+ *
+ * These numbers were set by looking at frames, not by reading them off a
+ * curve. The first version of this envelope put the whole arrival inside four
+ * tenths of a second, which is defensible on paper and invisible in practice:
+ * at the frame rate this game actually renders at here (~3fps with the post
+ * stack on a software rasteriser), a 0.4s peak falls between two frames more
+ * often than not, and a burst of ten captures across the beat photographed the
+ * same dark ditch ten times. An event nobody's eye can land on has not
+ * happened.
+ *
+ * So the arrival now has a *plateau* — long enough that no frame rate this
+ * game tolerates can step over it — and then a two-stage fall: a fast knee as
+ * the light collapses, and a long, dim glare that is the dust the pressure put
+ * in the air still carrying light. That is the real shape of the thing as well
+ * as the legible one. It is still over fast: full for 0.3s, better than half
+ * for 0.6s, the world resolving back through the glare by about a second, and
+ * nothing at all by 3.4s — inside a beat that is seven seconds long.
+ */
 const PHASE = {
-  press: { peak: 0.09, end: 0.34, fall: 1.6 },
-  // A steep fall rather than a long glare: the light has to be over the moment
-  // the ditch changes and gone again soon after, or the beat spends a second and
-  // a half as a white rectangle and the reveal lands too late to be a reveal.
-  light: { start: 0.17, peak: 0.4, end: 1.9, fall: 3.2 },
-  ground: { start: 0.28, peak: 0.5, end: 3.4, fall: 2.4 },
-  deaf: { start: 0.44, full: 1.05 },
+  press: { peak: 0.06, end: 0.52, fall: 2.0 },
+  light: {
+    start: 0.015,
+    /** Full by here. Faster than the press peaks, because light is faster. */
+    peak: 0.12,
+    /**
+     * Held at full to here. The one number the frame rate cannot step over.
+     *
+     * Two tenths of a second, not four. Measured at four: the compositor
+     * recorded five consecutive frames of featureless white, which is a cut
+     * to white and not a blast — the eye needs the frame to come *back*, and
+     * it has to start coming back while it is still clearly the same ditch.
+     */
+    hold: 0.3,
+    /** The fast collapse ends here, at `kneeLevel`. */
+    knee: 0.72,
+    kneeLevel: 0.4,
+    /** The glare in the dust, gone by here. */
+    end: 3.4,
+    tail: 1.8,
+  },
+  ground: { start: 0.08, peak: 0.34, end: 3.6, fall: 2.2 },
+  deaf: { start: 0.3, full: 0.95 },
   // Wider than the rest on purpose: the engine's drone voice ramps its gain
   // over two seconds (`systems/audio.ts`), so a sub shaped like the press
   // would never arrive. A blast's low tail is long anyway — the low end is what
   // rolls through a body after the top of hearing has gone.
-  sub: { start: 0.36, peak: 1.2, end: 4.0, fall: 1.7 },
+  sub: { start: 0.2, peak: 1.0, end: 4.2, fall: 1.7 },
 } as const;
 
 export interface Overpressure {
@@ -76,10 +120,28 @@ export interface Overpressure {
    */
   readonly press: number;
   /**
-   * Light with no direction in it. Spend it on a whole-frame wash, on a
-   * hemisphere, on air going bright, on bloom. Never on a new light.
+   * Light with no direction in it, from the arrival through the glare that
+   * follows it. Spend it on a whole-frame wash, on a hemisphere, on every
+   * surface in the scene going emissive at once, on the sky dome going white,
+   * on air going bright, on bloom. Never on a new light.
+   *
+   * It is deliberately spent on *many* omnidirectional terms rather than one.
+   * A single additive term, however strong, reads as a spark somewhere; what
+   * reads as a blast is the frame losing its relationship to its own light —
+   * the shadows gone, the ditch floor brighter than the dawn, the sky no
+   * longer the brightest thing in frame.
    */
   readonly light: number;
+  /**
+   * The core of the arrival: 1 across the plateau, 0 once the collapse is
+   * done. Nothing in the frame can be resolved while this is up, which is why
+   * it is also the moment the ditch is allowed to change.
+   *
+   * Separate from `light` so the terms that must not linger — the vertical
+   * smear, the last of the wash, the moment the other man stops being a shape
+   * — sit on the white-out alone and not on the glare after it.
+   */
+  readonly whiteout: number;
   /** The ground still moving. Feed `groundHeave`. */
   readonly ground: number;
   /** Hearing gone. Rises once to 1 and never falls. */
@@ -114,6 +176,44 @@ function swell(
 }
 
 /**
+ * The arrival: rise, plateau, fast knee, long glare.
+ *
+ * Not `swell`, because `swell` has no plateau and a peak with no width is a
+ * peak a slow frame steps over. See PHASE.
+ */
+function arrival(seconds: number): number {
+  const p = PHASE.light;
+  if (seconds <= p.start || seconds >= p.end) {
+    return 0;
+  }
+  if (seconds < p.peak) {
+    return smoothstep(p.start, p.peak, seconds);
+  }
+  if (seconds < p.hold) {
+    return 1;
+  }
+  if (seconds < p.knee) {
+    return 1 - (1 - p.kneeLevel) * smoothstep(p.hold, p.knee, seconds);
+  }
+  return p.kneeLevel * Math.pow(1 - (seconds - p.knee) / (p.end - p.knee), p.tail);
+}
+
+/** The plateau alone: 1 while nothing in the frame can be resolved. */
+function whiteout(seconds: number): number {
+  const p = PHASE.light;
+  if (seconds <= p.start || seconds >= p.knee) {
+    return 0;
+  }
+  if (seconds < p.peak) {
+    return smoothstep(p.start, p.peak, seconds);
+  }
+  if (seconds < p.hold) {
+    return 1;
+  }
+  return 1 - smoothstep(p.hold, p.knee, seconds);
+}
+
+/**
  * The whole envelope at one instant.
  *
  * Returns all zeroes for a negative time, so a scene can call it before the
@@ -121,11 +221,12 @@ function swell(
  */
 export function overpressure(seconds: number): Overpressure {
   if (!(seconds > 0)) {
-    return { press: 0, light: 0, ground: 0, deaf: 0, sub: 0 };
+    return { press: 0, light: 0, whiteout: 0, ground: 0, deaf: 0, sub: 0 };
   }
   return {
     press: swell(seconds, 0, PHASE.press.peak, PHASE.press.end, PHASE.press.fall),
-    light: swell(seconds, PHASE.light.start, PHASE.light.peak, PHASE.light.end, PHASE.light.fall),
+    light: arrival(seconds),
+    whiteout: whiteout(seconds),
     ground: swell(seconds, PHASE.ground.start, PHASE.ground.peak, PHASE.ground.end, PHASE.ground.fall),
     // The one value with no fall in it. Hearing does not come back.
     deaf: smoothstep(PHASE.deaf.start, PHASE.deaf.full, seconds),

@@ -654,7 +654,11 @@ function question(
 function preDawnSky(
   tracker: ResourceTracker,
   options: { radius: number; horizon: number; zenith: number; dawn: number },
-): { mesh: Mesh; material: ShaderMaterial; update(elapsed: number, dawn: number): void } {
+): {
+  mesh: Mesh;
+  material: ShaderMaterial;
+  update(elapsed: number, dawn: number, flash: number): void;
+} {
   const geometry = tracker.track(new SphereGeometry(options.radius, 32, 24));
   const material = tracker.track(
     new ShaderMaterial({
@@ -668,6 +672,22 @@ function preDawnSky(
         uZenith: { value: colorOf(options.zenith) },
         uDawnColor: { value: colorOf(options.dawn) },
         uDawnDir: { value: DAWN.clone() },
+        /**
+         * The blast, in the sky.
+         *
+         * The sky dome is the largest surface in frame and it is lit by
+         * nothing — it is its own shader — so it is the one thing a
+         * hemisphere light cannot reach, and the one thing that has to be
+         * told separately that the morning has gone white. Without this the
+         * frame keeps a dark sky over a lit ditch, which reads as a lamp
+         * switched on in a field rather than as light arriving.
+         *
+         * Deliberately has no direction in it: it is added to the whole dome
+         * at once, including the half the dawn is not in. It is modulated by
+         * the dome's own haze so the sky going white is still an image and
+         * not a flat rectangle.
+         */
+        uFlash: { value: 0 },
       },
       vertexShader: /* glsl */ `
         varying vec3 vDir;
@@ -684,6 +704,7 @@ function preDawnSky(
         uniform vec3 uZenith;
         uniform vec3 uDawnColor;
         uniform vec3 uDawnDir;
+        uniform float uFlash;
         varying vec3 vDir;
 
         ${NOISE}
@@ -717,6 +738,12 @@ function preDawnSky(
           float churn = fbm(dir * 2.1 + vec3(0.0, uTime * 0.012, 0.0), 3);
           color *= 0.84 + churn * 0.36;
 
+          // The whole dome goes, at once, in every direction. Carried on the
+          // haze so it keeps its structure instead of becoming a flat field,
+          // and very slightly stronger low down, which is where air is.
+          float low = 1.12 - 0.3 * clamp(h, 0.0, 1.0);
+          color += vec3(1.0, 0.96, 0.9) * uFlash * low * (0.7 + churn * 0.62);
+
           gl_FragColor = vec4(color, 1.0);
         }
       `,
@@ -728,9 +755,10 @@ function preDawnSky(
   return {
     mesh,
     material,
-    update(elapsed, dawn) {
+    update(elapsed, dawn, flash) {
       setU(material, 'uTime', elapsed);
       setU(material, 'uDawn', dawn);
+      setU(material, 'uFlash', flash);
     },
   };
 }
@@ -751,7 +779,22 @@ function preDawnSky(
 function mistBodies(
   tracker: ResourceTracker,
   options: { size: number; color: number; places: readonly Vector3[] },
-): { meshes: Mesh[]; update(elapsed: number, camera: Camera, level: number): void } {
+): {
+  meshes: Mesh[];
+  update(elapsed: number, camera: Camera, level: number): void;
+  /**
+   * Push the air out of the rows, as a fraction of the full shove.
+   *
+   * Pressure has to be something the *world* does, not only something the
+   * grade does, or the whole blast is a camera effect. These are the largest
+   * movable bodies in the scene, so when they all leave the rows at once —
+   * outward from the ditch, upward, and away down the field — the frame has
+   * visibly been pushed. Measured from each body's home, so it is a
+   * displacement and not a drift: at 0 everything is exactly where it was
+   * authored.
+   */
+  shove(amount: number): void;
+} {
   const geometry = tracker.track(new PlaneGeometry(options.size, options.size * 0.42));
   const material = tracker.track(
     new ShaderMaterial({
@@ -803,6 +846,8 @@ function mistBodies(
     mesh.position.copy(place);
     return mesh;
   });
+  const homes = options.places.map((place) => place.clone());
+  let shoved = -1;
   return {
     meshes,
     update(elapsed, camera, level) {
@@ -810,6 +855,26 @@ function mistBodies(
       setU(material, 'uLevel', level);
       for (const mesh of meshes) {
         mesh.quaternion.copy(camera.quaternion);
+      }
+    },
+    shove(amount) {
+      // Nothing to do on the hundreds of frames either side of the blast.
+      if (amount === shoved) {
+        return;
+      }
+      shoved = amount;
+      for (let index = 0; index < meshes.length; index += 1) {
+        const mesh = meshes[index];
+        const home = homes[index];
+        if (!mesh || !home) {
+          continue;
+        }
+        const out = home.x >= 0 ? 1 : -1;
+        mesh.position.set(
+          home.x + out * amount * 7.5,
+          home.y + amount * 3.4,
+          home.z - amount * 5.5,
+        );
       }
     },
   };
@@ -855,6 +920,13 @@ function orchard(
   trunks: InstancedMesh;
   canopies: InstancedMesh;
   count: number;
+  /**
+   * The two materials the orchard is drawn with, so the scene can make them
+   * emit along with everything else under the blast's light. The rows fill
+   * the middle of the frame; a blast that lit the ditch and left the orchard
+   * in silhouette would be a lamp in a hole, not light arriving.
+   */
+  materials: readonly MeshStandardMaterial[];
   /** Take the tops off the trees along `fromZ`..`toZ`, feathered in x. */
   stripNear(options: {
     readonly fromZ: number;
@@ -875,11 +947,24 @@ function orchard(
   // Base at the origin, so an instance's y scale is its height.
   trunkGeometry.translate(0, 0.5, 0);
   const trunkMaterial = tracker.track(
-    new MeshStandardMaterial({ color: 0x55442f, roughness: 0.93, metalness: 0 }),
+    new MeshStandardMaterial({
+      color: 0x6b5839,
+      roughness: 0.93,
+      metalness: 0,
+      emissive: 0x6b5839,
+      emissiveIntensity: 0,
+    }),
   );
   const canopyGeometry = tracker.track(new IcosahedronGeometry(1, 1));
   const canopyMaterial = tracker.track(
-    new MeshStandardMaterial({ color: 0x4a573c, roughness: 0.95, metalness: 0, flatShading: true }),
+    new MeshStandardMaterial({
+      color: 0x5a6a48,
+      roughness: 0.95,
+      metalness: 0,
+      flatShading: true,
+      emissive: 0x5a6a48,
+      emissiveIntensity: 0,
+    }),
   );
 
   const trunks = new InstancedMesh(trunkGeometry, trunkMaterial, count);
@@ -954,6 +1039,7 @@ function orchard(
     trunks,
     canopies,
     count,
+    materials: [trunkMaterial, canopyMaterial],
     stripNear(options) {
       for (let index = 0; index < count; index += 1) {
         const at = index * CANOPY_STRIDE;
@@ -1026,20 +1112,75 @@ export const deathSoldierScene: SceneDefinition = {
     context.soul.shards = context.soul.shards.filter((shard) => !DECISION_SHARDS.includes(shard));
 
     // --- materials ---------------------------------------------------------
+    //
+    // Two things are asked of every one of these and they pull in opposite
+    // directions, so they are set together rather than one at a time.
+    //
+    // **It has to be visible before anything happens.** An earlier pass
+    // repitched this ditch as pre-dawn after finding it unlit, and the pitch
+    // is right — but the ditch is a slot a metre deep and nothing in the sky
+    // reaches the bottom of it at a grazing angle. Rendered and measured, the
+    // opening beats came back at mean luma 7 of 255, with the letter, the cup
+    // and the helmet — the three objects the first two questions are *about* —
+    // indistinguishable from the floor they are lying on. So every albedo in
+    // the ditch is lifted to roughly what cut earth and dusty kit actually
+    // return, and the hemisphere that stands in for the sky is lifted with it.
+    // Brighter paint, not a brighter grade: the sky, the dawn band and the
+    // silhouette of the rows against them are the composition and are untouched.
+    //
+    // **It has to go hot, from no direction, at the blast.** Each one carries
+    // its own colour as its emissive and sits at zero intensity until then.
+    // Emission is the only light in three.js with no position and no vector in
+    // it at all, which makes it the safest thing in this scene to spend the
+    // blast on (CLAUDE.md § Content rules: a light with a direction is a light
+    // with a source, and a source is a perpetrator). Because each surface
+    // emits *its own colour*, the ditch keeps its structure while it goes
+    // white instead of flattening into one rectangle — which is also what
+    // keeps the frame inside the gate's clipping bound at the peak.
     const earthMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x6e5c48, roughness: 0.97, metalness: 0 }),
+      new MeshStandardMaterial({
+        color: 0x9a846a,
+        roughness: 0.97,
+        metalness: 0,
+        emissive: 0x9a846a,
+        emissiveIntensity: 0,
+      }),
     );
     const cutEarthMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x5b4a38, roughness: 0.98, metalness: 0 }),
+      new MeshStandardMaterial({
+        color: 0x8d7757,
+        roughness: 0.98,
+        metalness: 0,
+        emissive: 0x8d7757,
+        emissiveIntensity: 0,
+      }),
     );
     const bagMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x7a6c52, roughness: 0.96, metalness: 0 }),
+      new MeshStandardMaterial({
+        color: 0xa2926f,
+        roughness: 0.96,
+        metalness: 0,
+        emissive: 0xa2926f,
+        emissiveIntensity: 0,
+      }),
     );
     const clothMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x655f4b, roughness: 0.95, metalness: 0 }),
+      new MeshStandardMaterial({
+        color: 0x8b8468,
+        roughness: 0.95,
+        metalness: 0,
+        emissive: 0x8b8468,
+        emissiveIntensity: 0,
+      }),
     );
     const metalMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0xa6adb3, roughness: 0.52, metalness: 0.4 }),
+      new MeshStandardMaterial({
+        color: 0xb9c0c6,
+        roughness: 0.52,
+        metalness: 0.4,
+        emissive: 0xb9c0c6,
+        emissiveIntensity: 0,
+      }),
     );
     /**
      * The groundsheet, on its own material rather than sharing `clothMaterial`.
@@ -1052,22 +1193,59 @@ export const deathSoldierScene: SceneDefinition = {
      * rough, so the raking dawn finds it.
      */
     const sheetMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x9aa08c, roughness: 0.68, metalness: 0.04 }),
+      new MeshStandardMaterial({
+        color: 0xaab09b,
+        roughness: 0.68,
+        metalness: 0.04,
+        emissive: 0xaab09b,
+        emissiveIntensity: 0,
+      }),
     );
     const paintedMaterial = resources.track(
-      new MeshStandardMaterial({ color: 0x626a57, roughness: 0.82, metalness: 0.12 }),
+      new MeshStandardMaterial({
+        color: 0x7b8369,
+        roughness: 0.82,
+        metalness: 0.12,
+        emissive: 0x7b8369,
+        emissiveIntensity: 0,
+      }),
     );
     const paperMaterial = resources.track(
       new MeshStandardMaterial({
-        color: 0xbcb09a,
+        color: 0xd4c9b2,
         roughness: 0.99,
         metalness: 0,
         // A touch of self-lit warmth. The letter is the heaviest object in the
         // ditch and it must not disappear into the shadow at the bottom of it.
-        emissive: 0x7d663f,
+        // Its intensity is driven, like every other material here, but from a
+        // base of 1 rather than 0: it is lit before the blast and it does not
+        // stop being lit by it.
+        emissive: 0xa98a56,
         emissiveIntensity: 1,
       }),
     );
+
+    /**
+     * Everything the blast's light is allowed to touch directly.
+     *
+     * One flat list, driven by one number, so "from everywhere" is literally
+     * what the code does rather than a claim in a comment: every surface in
+     * the frame is in here, and nothing in here has a position that the light
+     * could be said to come from.
+     *
+     * The letter is not in it. It is the one material with a standing
+     * emissive and it is driven from its own base a few lines below, so that
+     * this list can stay a plain "set them all to the same number".
+     */
+    const flashable: MeshStandardMaterial[] = [
+      earthMaterial,
+      cutEarthMaterial,
+      bagMaterial,
+      clothMaterial,
+      metalMaterial,
+      sheetMaterial,
+      paintedMaterial,
+    ];
 
     // --- sky ---------------------------------------------------------------
     const sky = preDawnSky(resources, {
@@ -1140,6 +1318,7 @@ export const deathSoldierScene: SceneDefinition = {
     });
     place.add(trees.trunks);
     place.add(trees.canopies);
+    flashable.push(...trees.materials);
 
     // --- the life in the ditch ---------------------------------------------
     //
@@ -1370,7 +1549,13 @@ export const deathSoldierScene: SceneDefinition = {
     // grazed by the band at the horizon. Pitched as a night scene first, which
     // put the whole lower half of the frame — the ditch, and therefore every
     // object the questions are about — at zero.
-    const bounce = new HemisphereLight(0x7d99bd, 0x4a3c2d, 2.0);
+    //
+    // Lifted from 2.0 to 3.6, and the earth half of it warmed and lifted with
+    // it, after the opening beats were measured at mean luma 7 of 255 with
+    // the kit invisible. The hemisphere is the only source in this scene that
+    // reaches the floor of a metre-deep slot at all, because the one
+    // directional light is a grazing dawn that the ditch's own lip cuts off.
+    const bounce = new HemisphereLight(0x8fa8c8, 0x6a5742, 3.6);
     place.add(bounce);
     resources.onDispose(() => {
       bounce.dispose();
@@ -1493,6 +1678,8 @@ export const deathSoldierScene: SceneDefinition = {
     let leaving = false;
     let now = 0;
     let regardSince: number | undefined;
+    /** What attention is on, so it can be taken off a thing that is gone. */
+    let regardAt: RegardId | undefined;
     /** How far the kit has finished going over. 0..1, from the clock. */
     let heaveSettled = 0;
     /** The last drone the mix was actually asked for. See the audio block. */
@@ -1620,6 +1807,7 @@ export const deathSoldierScene: SceneDefinition = {
       if (pick.regard !== undefined) {
         regardGlow.mesh.position.copy(REGARD[pick.regard]);
         regardGlow.mesh.visible = true;
+        regardAt = pick.regard;
         regardSince = now;
       }
       context.captions.show(pick.caption, 9);
@@ -1746,23 +1934,41 @@ export const deathSoldierScene: SceneDefinition = {
         const since = blastAt === undefined ? 0 : elapsed - blastAt;
         const blast = overpressure(since);
 
-        // Under the peak of the light, which is the only moment in the scene
-        // where the frame is too bright to resolve what is in it.
-        if (blastAt !== undefined && !consumed && since >= 0.4) {
+        // Inside the plateau of the light — `whiteout` is at 1 from 0.12s to
+        // 0.42s — which is the only stretch of this scene where the frame is
+        // too bright to resolve what is in it. He is a shape before it and he
+        // is not there after it, and no frame exists in which he is becoming
+        // anything.
+        if (blastAt !== undefined && !consumed && since >= 0.22) {
           consume();
         }
 
-        // The kit going over with the ground. Stops touching anything once it
-        // has settled, so the rest of the vignette costs nothing for it.
+        // The kit going over with the ground.
+        //
+        // Fast: 0.42 seconds end to end, not the second and a quarter it took
+        // before. Nothing is pushed over gently by a blast, and at the frame
+        // rate this renders at a slow settle spends its whole budget looking
+        // like a physics step — by the time the light has cleared, everything
+        // loose has already finished moving, which is what the eye expects.
+        // The curve is a hard start that decelerates, with a short hop on the
+        // way so the lighter things leave the floor rather than sliding.
+        // Stops touching anything once it has settled, so the rest of the
+        // vignette costs nothing for it.
         if (blastAt !== undefined && heaveSettled < 1) {
-          heaveSettled = ease.out(Math.min(1, since / 1.25));
+          const u = Math.min(1, since / 0.42);
+          heaveSettled = 1 - Math.pow(1 - u, 3);
+          const hop = Math.sin(Math.PI * u) * 0.16;
           for (const item of heaved) {
             item.mesh.position.lerpVectors(item.from, item.to, heaveSettled);
+            item.mesh.position.y += hop;
             item.mesh.rotation.set(
               item.fromRotation.x + (item.toRotation.x - item.fromRotation.x) * heaveSettled,
               item.fromRotation.y + (item.toRotation.y - item.fromRotation.y) * heaveSettled,
               item.fromRotation.z + (item.toRotation.z - item.fromRotation.z) * heaveSettled,
             );
+          }
+          if (u >= 1) {
+            heaveSettled = 1;
           }
         }
 
@@ -1785,16 +1991,30 @@ export const deathSoldierScene: SceneDefinition = {
           : index === 3
             ? 0.44 + ease.inOut(t) * 0.56
             : 1;
-        sky.update(elapsed, dawn);
+        // The sky dome goes with it. The largest surface in frame is lit by
+        // nothing but its own shader, so if it is not told, the blast is a lamp
+        // in a hole under a night sky.
+        sky.update(elapsed, dawn, blast.light * 0.8);
         // The dawn's two directional terms are untouched by the blast, which is
         // the content rule in the lighting: no second direction, ever.
         setU(dawnGlow.material, 'uIntensity', (0.4 + dawn * 0.75) * (1 - apart * 0.5));
         dawnLight.intensity = 0.5 + dawn * 1.15;
-        // The hemisphere is where the blast's light goes, because a hemisphere
-        // has no direction in it at all: it lights the ditch walls, the bags,
-        // the trunks and the groundsheet from every side at once, which is
-        // exactly what "from everywhere" has to mean to be safe.
-        bounce.intensity = 2.0 + dawn * 0.5 + blast.light * 16;
+        // The hemisphere is one of the places the blast's light goes, because a
+        // hemisphere has no direction in it at all: it lights the ditch walls,
+        // the bags, the trunks and the groundsheet from every side at once,
+        // which is part of what "from everywhere" has to mean to be safe.
+        bounce.intensity = 3.6 + dawn * 0.6 + blast.light * 7.5;
+        // And every surface in the scene emits its own colour at once, which
+        // is the rest of it. This is the term that actually kills the shadows:
+        // a hemisphere still shades by normal, and a frame that keeps its
+        // shading keeps its sense of where its light is coming from. Driven as
+        // one number over one flat list — see `flashable`.
+        const emitting = blast.light * 1.12;
+        for (const material of flashable) {
+          material.emissiveIntensity = emitting;
+        }
+        // The letter is lit before the blast and is not un-lit by it.
+        paperMaterial.emissiveIntensity = 1 + emitting;
 
         // --- out of the body ----------------------------------------------
         // `L-THRESH-03`: the point of view separates and observes from above.
@@ -1820,11 +2040,18 @@ export const deathSoldierScene: SceneDefinition = {
         // this transform every frame, the rig's own look stays entirely the
         // player's (it is never re-aimed), and `groundHeave` is continuous, so
         // it cannot pop between frames at any frame rate.
-        const heaveNow = groundHeave(since, blast.ground, 0.085);
+        const heaveNow = groundHeave(since, blast.ground, 0.17);
+        // The pressure, as one shove rather than as a shake. The oscillation
+        // above is the ground still going; this is the front arriving, and it
+        // is a single direction for a fifth of a second — down into the slot
+        // and back against the wall behind him. It reads at any frame rate,
+        // which an 8Hz wobble does not: at three frames a second an
+        // oscillation is three unrelated tilts, and a lurch is still a lurch.
+        const slam = blast.press;
         context.rig.position.set(
           bodyDown * 0.08 + heaveNow.x,
-          bodyEye + (EYE_ABOVE - bodyEye) * apart + drift * 1.9 + heaveNow.y,
-          2.0 + apart * 1.6 + drift * 1.3 + heaveNow.z,
+          bodyEye + (EYE_ABOVE - bodyEye) * apart + drift * 1.9 + heaveNow.y - slam * 0.3,
+          2.0 + apart * 1.6 + drift * 1.3 + heaveNow.z + slam * 0.44,
         );
         context.rig.setRoll(bodyDown * 0.5 * (1 - apart) + heaveNow.roll);
         context.rig.setSway(1 - bodyDown * 0.8 + apart * 0.5);
@@ -1855,33 +2082,57 @@ export const deathSoldierScene: SceneDefinition = {
         // toward `outside` as the view leaves him: cold and clinical rather than
         // monochrome, because what is looking is no longer failing.
         const drained = LIVING.drain + (DYING.drain - LIVING.drain) * distress;
-        grade.drain = clamp01(drained + (OUTSIDE.drain - drained) * apart + blast.light * 0.2);
+        // Colour is the first thing the light takes. Not a stylistic drain —
+        // a frame this far over has no colour left to report.
+        grade.drain = clamp01(drained + (OUTSIDE.drain - drained) * apart + blast.light * 0.42);
         // The press closes the frame in and squeezes it; the light opens it out
         // again, because light from everywhere has no corner to fall off into.
-        grade.vignette = clamp01(0.22 + distress * 0.36 - apart * 0.2 + blast.press * 0.5 - blast.light * 0.16);
+        grade.vignette = clamp01(
+          0.22 + distress * 0.36 - apart * 0.2 + blast.press * 0.6 - blast.light * 0.24,
+        );
         grade.aberration = 0.0012 + distress * 0.004 - apart * 0.0034
           + Math.max(blast.press, blast.light) * 0.0055;
         // Pincushion first — the world pulled inward, which is what pressure
         // does to a frame — and then a bulge under the light.
-        grade.distortion = 0.02 + distress * 0.05 - apart * 0.052 - blast.press * 0.1 + blast.light * 0.045;
+        grade.distortion = 0.02 + distress * 0.05 - apart * 0.052 - blast.press * 0.14 + blast.light * 0.05;
         grade.grain = LIVING.grain + distress * 0.09 - apart * 0.04 + blast.deaf * 0.025;
-        grade.exposure = (1.4 - distress * 0.18 + apart * 0.02) * (1 - blast.press * 0.3)
-          + blast.light * 0.3;
+        grade.exposure = (1.4 - distress * 0.18 + apart * 0.02) * (1 - blast.press * 0.34)
+          + blast.light * 0.13;
         // The light itself: a full-frame wash and bloom, and nothing with a
-        // position. Held back from white on purpose — the gate's clipping bound
-        // is 34% and a blast is exactly the thing that spends it, so the peak is
-        // tuned to keep the orchard's silhouettes inside the light rather than
-        // replacing the image with a rectangle.
-        grade.washAmount = blast.light * 0.78;
+        // position.
+        //
+        // Deliberately the *smallest* of the four omnidirectional terms rather
+        // than the largest, even though it is the bluntest. A wash is added
+        // equally to every pixel, so a blast carried mostly on the wash is a
+        // blast that flattens the image: structure goes, and with it both the
+        // gate's std bound and the thing that makes a white frame read as the
+        // world being overwhelmed rather than as a cut to white. The frame
+        // goes white here mostly because the ditch, the rows and the sky are
+        // each independently too bright to resolve, which keeps their edges.
+        //
+        // Measured at the peak rather than guessed: the gate's bound is 34%
+        // clipped and this stack lands an order of magnitude under it, because
+        // the filmic curve needs a linear value near 4.5 to reach white and
+        // nothing here is allowed that far.
+        grade.washAmount = blast.light * 0.14 + blast.whiteout * 0.25;
+        // Bloom is the one term here that had to be pulled *back* rather than
+        // pushed. It runs before the grade (`systems/postfx.ts` adds it between
+        // the render and the combined pass), so at the peak its output is
+        // washed, exposed and tonemapped on top of a frame that is already at
+        // the top of the curve — and with the threshold dropped it blooms the
+        // whole image, not its highlights. Measured: strength +1.6 with the
+        // threshold at 0.2 put 43.5% of the frame past white, past the gate's
+        // 34% bound, with the structure gone with it (std 9.8). Held to a halo
+        // on what is actually brightest, the same peak measures in the teens.
         context.post.setBloom(
-          LIVING.bloom + distress * 0.34 + apart * 0.2 + blast.light * 1.1,
+          LIVING.bloom + distress * 0.34 + apart * 0.2 + blast.light * 0.55,
           0.55,
-          Math.max(0.14, 0.82 - distress * 0.26 - apart * 0.04 - blast.light * 0.5),
+          Math.max(0.38, 0.82 - distress * 0.26 - apart * 0.04 - blast.light * 0.3),
         );
-        // The one overtly unreal effect, and it now sits exactly on the light
-        // rather than spreading over two seconds: the frame stretches while it
-        // cannot be resolved, and stops when it can.
-        grade.smear = blast.light * 0.055;
+        // The one overtly unreal effect, and it sits on the white-out alone
+        // rather than on the glare after it: the frame stretches while it
+        // cannot be resolved, and stops the moment it can.
+        grade.smear = blast.whiteout * 0.07;
 
         // Pressure before sound, and then hearing that does not come back.
         //
@@ -1928,8 +2179,19 @@ export const deathSoldierScene: SceneDefinition = {
         mist.update(
           elapsed,
           context.camera,
-          (0.3 + dawn * 0.22 - apart * 0.08) * (1 - cleared * 0.56) + blast.light * 1.2,
+          (0.3 + dawn * 0.22 - apart * 0.08) * (1 - cleared * 0.56) + blast.light * 2.4,
         );
+        // And the air is physically pushed out of the rows while it happens.
+        // These are the largest movable bodies in the scene, so them all
+        // leaving at once — outward, upward, away down the field — is the one
+        // place pressure is a thing the world does rather than a thing the
+        // grade does. They are back where they were authored by the time the
+        // glare is gone; what does not come back is how much of it there is.
+        mist.shove(Math.max(blast.press, blast.ground) * 0.9);
+        // The dust in the air, thrown outward from everywhere at once. One
+        // scale on a field that was already drifting: no new object, nothing
+        // with a position, nothing that could be read as coming from a place.
+        motes.points.scale.setScalar(1 + blast.ground * 0.55 + blast.press * 0.3);
         dawnGlow.update(elapsed, context.camera);
         regardGlow.update(elapsed, context.camera);
         motes.drift(delta * (1 - distress * 0.75), elapsed);
@@ -1957,8 +2219,21 @@ export const deathSoldierScene: SceneDefinition = {
           setU(
             regardGlow.material,
             'uIntensity',
-            ease.out(held) * 0.42 * (1 - distress * 0.5) * (1 - apart * 0.7),
+            ease.out(held) * 0.42 * (1 - distress * 0.5) * (1 - apart * 0.7) * (1 - blast.light),
           );
+        }
+        // Nothing is left glowing over the place where he was.
+        //
+        // Attention is a sprite, and a sprite sitting over an empty
+        // groundsheet after the light has gone is a mark on the spot — which
+        // is the one thing CLAUDE.md § Content rules will not have, whatever
+        // it was put there for. It also reads, on a single frame, as a small
+        // fire at a point, which would be a source, which would be a
+        // perpetrator. So it goes out with him and does not come back; the
+        // `(1 - blast.light)` above takes it down before the light does, so
+        // there is no frame in which it is the brightest thing left.
+        if (consumed && regardAt === 'sleeper') {
+          regardGlow.mesh.visible = false;
         }
 
         // The letter, once it has gone into the other man's pack. Said with a
