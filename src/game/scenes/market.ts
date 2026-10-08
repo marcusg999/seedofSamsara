@@ -1,8 +1,9 @@
-import { CylinderGeometry, Mesh, MeshBasicMaterial, AdditiveBlending, Group } from 'three';
+import { Group } from 'three';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
 import { exitOffers, type ExitOffer } from '../systems/exit-offers';
 import { airShell, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { setU } from '../systems/glsl';
+import { groceryAisle, type AisleLight } from '../systems/grocery';
 import {
   canTake,
   isInCart,
@@ -39,9 +40,11 @@ interface AisleConfig {
   readonly heading: string;
   readonly blurb: string;
   readonly next: string;
-  readonly ground: number;
-  readonly glow: number;
-  readonly accent: number;
+  /**
+   * The room's light. Seven aisles share one builder, so this and the copy are
+   * the whole of what makes an aisle its own place (`systems/grocery.ts`).
+   */
+  readonly light: AisleLight;
 }
 
 const AISLES: readonly AisleConfig[] = [
@@ -49,44 +52,50 @@ const AISLES: readonly AisleConfig[] = [
     id: 'parents', sceneId: 'market.parents', title: 'Parents', next: 'market.body',
     heading: 'Parents',
     blurb: 'Each pair is shelved as a living diorama. Hold one to glimpse a moment of the childhood they would give you.',
-    ground: 0x1a1428, glow: 0xffd2a0, accent: 0xb48cff,
+    // Lamplight. Someone left a hall light on in a supermarket.
+    light: { tube: 0xffe2c0, haze: 0xfff0e2, shell: 0xd9d4e0, accent: 0xb48cff, brightness: 1.0 },
   },
   {
     id: 'body', sceneId: 'market.body', title: 'Body and avatar', next: 'market.gifts',
     heading: 'Body',
     blurb: 'Form, health, appearance — and any mark carried over from how the last one ended.',
-    ground: 0x14182a, glow: 0xc8e4ff, accent: 0x8fb0ff,
+    // Clinical, and a little cold: the aisle where you pick a body.
+    light: { tube: 0xdcefff, haze: 0xe6f1ff, shell: 0xd3dae6, accent: 0x8fb0ff, brightness: 1.0 },
   },
   {
     id: 'gifts', sceneId: 'market.gifts', title: 'Gifts', next: 'market.trauma',
     heading: 'Gifts',
     blurb: 'Talent, beauty, quickness, charm. These cost karma. They are worth what they cost.',
-    ground: 0x241c14, glow: 0xffd98a, accent: 0xffb45e,
+    // Gold, because this is the aisle that is trying to sell you something.
+    light: { tube: 0xffe6a4, haze: 0xfff2d4, shell: 0xe1d9c9, accent: 0xffb45e, brightness: 1.06 },
   },
   {
     id: 'trauma', sceneId: 'market.trauma', title: 'Trauma and challenges', next: 'market.economics',
     heading: 'What you will be asked to carry',
     blurb: 'These repay karma debt and are the reason most souls come back. Choosing one is not a punishment. It is choosing which mountain to climb.',
-    // Deliberately the warmest room in the market.
-    ground: 0x241a1c, glow: 0xffc9a8, accent: 0xff9f7a,
+    // Deliberately the warmest room in the market: sacred, not grim.
+    light: { tube: 0xffd6b4, haze: 0xffeade, shell: 0xe5d9d1, accent: 0xff9f7a, brightness: 1.1 },
   },
   {
     id: 'economics', sceneId: 'market.economics', title: 'Economic circumstance', next: 'market.place',
     heading: 'Circumstance',
     blurb: 'From struggle to abundance. Each teaches something the other cannot.',
-    ground: 0x16201c, glow: 0xa8e4c0, accent: 0x6fd8a0,
+    // Green, and evenly lit. Nothing here is being recommended.
+    light: { tube: 0xd6f2e0, haze: 0xe4f5ea, shell: 0xd3dbd6, accent: 0x6fd8a0, brightness: 1.0 },
   },
   {
     id: 'place', sceneId: 'market.place', title: 'Place', next: 'market.contracts',
     heading: 'Where, and when',
     blurb: 'Planet, culture, era. None of these costs anything. All of them change everything.',
-    ground: 0x141c26, glow: 0xa8d4ff, accent: 0x7fb8e8,
+    // Daylight from somewhere there is no window for.
+    light: { tube: 0xdeeeff, haze: 0xeaf3ff, shell: 0xd5dde6, accent: 0x7fb8e8, brightness: 1.0 },
   },
   {
     id: 'contracts', sceneId: 'market.contracts', title: 'Soul contracts', next: 'market.checkout',
     heading: 'Who will meet you there',
     blurb: 'People from your soul group who agree to find you again — as a friend, a rival, a teacher, a love.',
-    ground: 0x1e1830, glow: 0xffc8e8, accent: 0xc89cff,
+    // Rose, and the softest in the market.
+    light: { tube: 0xffdef0, haze: 0xfce9f5, shell: 0xded8e4, accent: 0xc89cff, brightness: 1.02 },
   },
 ];
 
@@ -260,79 +269,73 @@ class MarketPanel {
   }
 }
 
-/** Shared staging: shelves of light, one plinth per item. */
+/**
+ * Shared staging: an actual grocery aisle.
+ *
+ * The architecture is in `systems/grocery.ts` — shelving, ceiling runs,
+ * polished floor and the cross-aisle at the far end. What is added here is the
+ * part that is not a supermarket: dust in the light, and one glowing vessel per
+ * life on the shelf, which flares while the player is holding it.
+ */
 function buildAisle(context: SceneContext, config: AisleConfig): {
   update: (delta: number, elapsed: number, held: MarketItem | undefined) => void;
 } {
   const { resources, scene } = context;
 
-  const air = airShell(resources, { radius: 110, ground: config.ground, glow: config.accent, density: 0.75 });
-  scene.add(air.mesh);
-
-  const radiance = radianceShell(resources, { radius: 100, color: config.glow, accent: config.accent });
-  radiance.setFocus(0, 0.2, -1);
-  radiance.setIntensity(0.22);
-  scene.add(radiance.mesh);
-
-  const shelf = new Group();
-  scene.add(shelf);
-
-  const plinthGeometry = resources.track(new CylinderGeometry(0.34, 0.42, 1.0, 18));
-  const plinthMaterial = resources.track(
-    new MeshBasicMaterial({
-      color: config.accent,
-      transparent: true,
-      opacity: 0.4,
-      blending: AdditiveBlending,
-      depthWrite: false,
-    }),
-  );
-
   const items = itemsIn(config.id);
+  const room = groceryAisle(resources, scene, context.rng.stream(`market-${config.id}`), config.light, items.length);
+
+  // The lives themselves: a glow sat on the shelf behind each vessel, at the
+  // anchors the aisle reserved for them.
+  const lives = new Group();
+  scene.add(lives);
   const wares = items.map((item, index) => {
-    const spread = (index - (items.length - 1) / 2) * 1.75;
-    const plinth = new Mesh(plinthGeometry, plinthMaterial);
-    plinth.position.set(spread, -0.5, -5.2 - Math.abs(spread) * 0.22);
-    shelf.add(plinth);
-
+    const anchor = room.heroAnchor(index);
     const glow = volumetricGlow(resources, {
-      radius: 0.52,
-      color: config.glow,
-      intensity: 0.9,
-      softness: 2.2,
+      radius: 0.3,
+      color: config.light.tube,
+      intensity: 0.6,
+      softness: 2.4,
     });
-    glow.mesh.position.set(spread, 0.42, -5.2 - Math.abs(spread) * 0.22);
-    shelf.add(glow.mesh);
-
-    return { item, glow, base: 0.9, phase: index * 1.17 };
+    glow.mesh.position.set(anchor.x - 0.12, anchor.y + 0.16, anchor.z);
+    lives.add(glow.mesh);
+    return { item, glow, base: 0.6, rest: anchor.y + 0.16, phase: index * 1.17 };
   });
 
-  const motes = moteField(resources, context.rng.stream(`market-${config.id}`), {
-    count: 1000,
-    radius: 13,
-    color: config.glow,
-    size: 0.15,
+  // Dust in the light. A supermarket has this; a supermarket does not have
+  // this much of it.
+  const motes = moteField(resources, context.rng.stream(`market-air-${config.id}`), {
+    count: 320,
+    radius: 9,
+    color: config.light.tube,
+    size: 0.09,
   });
   scene.add(motes.points);
 
   context.rig.setMode('embodied');
+  // Standing on the centre line at human height, looking down the run.
   context.rig.position.set(0, 1.5, 0);
-  context.rig.orient(0, -0.03);
-  context.rig.setSway(0.26);
+  context.rig.orient(0, -0.02);
+  context.rig.setSway(0.2);
   context.rig.setRoll(0);
   context.rig.setPulse(0);
 
   const grade = context.post.grade;
-  grade.drain = 0.06;
-  grade.grain = 0.05;
-  grade.vignette = 0.32;
-  grade.aberration = 0.002;
-  grade.distortion = 0.024;
-  grade.exposure = 1.12;
+  grade.drain = 0.02;
+  grade.grain = 0.035;
+  grade.vignette = 0.3;
+  grade.aberration = 0.0015;
+  grade.distortion = 0.02;
+  // A bright room needs less exposure than a dark one, not more: the gate's
+  // clipping bound is the thing that bites here, not its visibility floor.
+  grade.exposure = 0.95;
   grade.washColor = [1, 0.97, 0.93];
-  grade.washAmount = 0.02;
+  grade.washAmount = 0;
   grade.smear = 0;
-  context.post.setBloom(0.8, 0.72, 0.66);
+  // Bloom runs BEFORE the grade (CLAUDE.md § Gotchas), so in a room that is
+  // already bright a low threshold blooms the whole frame. Held high, it
+  // catches the ceiling runs and the lives and nothing else.
+  context.post.setBloom(0.5, 0.6, 0.88);
 
   context.audio.drone(0.17, 58, 9);
   context.audio.shimmer(0.22);
@@ -341,16 +344,15 @@ function buildAisle(context: SceneContext, config: AisleConfig): {
 
   return {
     update(delta, elapsed, held) {
-      setU(air.material, 'uTime', elapsed);
-      radiance.update(elapsed);
+      room.update(elapsed);
       motes.drift(delta, elapsed);
       for (const ware of wares) {
         ware.glow.update(elapsed, context.camera);
         // The held item flares: the preview is a thing you can see as well as read.
         const lifted = held?.id === ware.item.id ? 1 : 0;
         const breathe = 0.9 + Math.sin(elapsed * 0.6 + ware.phase) * 0.1;
-        setU(ware.glow.material, 'uIntensity', (ware.base + lifted * 1.6) * breathe);
-        ware.glow.mesh.position.y = 0.42 + lifted * 0.18 + Math.sin(elapsed * 0.5 + ware.phase) * 0.03;
+        setU(ware.glow.material, 'uIntensity', (ware.base + lifted * 1.5) * breathe);
+        ware.glow.mesh.position.y = ware.rest + lifted * 0.1 + Math.sin(elapsed * 0.5 + ware.phase) * 0.02;
       }
     },
   };
