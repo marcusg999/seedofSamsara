@@ -409,6 +409,37 @@
             and cannot be put back, which is what the brief specifies for unresolved karma.
           </li>
           <li>
+            <strong>The Market is a grocery aisle now, not shelves of light.</strong> The owner's
+            note was that &ldquo;the shopping aisle should look like an actual aisle in a grocery
+            store&rdquo;, against a reference photograph. The abstract plinths are gone. In their
+            place (<code>src/game/systems/grocery.ts</code>): a run of shelving down both sides with
+            uprights, five decks, a back panel and a pale price rail along every edge; a suspended
+            ceiling of square tiles with recessed runs of light receding to the vanishing point; a
+            polished speckled floor that returns those runs as streaks; a cross-aisle at the far end
+            so the room is not a sealed box; and a cart standing in the aisle. All packaging is
+            invented &mdash; abstract blocks, cans, bottles, jars and pouches in flat colour, with no
+            mark or text on anything.
+            <br>
+            It is built for SwiftShader, where the gate runs: one bay geometry instanced 36 times,
+            five product archetypes instanced once each, three shader-drawn planes for the shell,
+            and no lights at all &mdash; the overhead key is baked into vertex colours from the face
+            normal. 1,171 product facings and 36 shelf bays land in <strong>33 draw calls per
+            frame</strong> (29 before, for the abstract version) at about 78,000 triangles, and the
+            scene runs <strong>14.3 ms mean / 52 ms p95</strong> on software WebGL, against
+            19.1 ms / 66 ms for the plinths it replaced.
+            <br>
+            Seven aisles still share one builder and differ only by light and copy. Trauma is lit the
+            warmest room in the market, which is what the brief asks for: sacred, not grim.
+          </li>
+          <li>
+            <strong>The aisle panel was restyled for a bright scene.</strong> It was built for a dark
+            one: prices and the cart line sat where the panel's fade had run out and were close to
+            unreadable over a lit shelf. The fade now holds further, the dim greys were lifted, and
+            the whole panel carries a text shadow. On a short phone viewport the nav is pinned to the
+            foot of the panel &mdash; the longest aisle pushed it off the bottom edge, which is the
+            exact shape of the four scenes that shipped stuck.
+          </li>
+          <li>
             <strong>The seven &ldquo;Life Market aisle through checkout&rdquo; journeys now pass.</strong>
             They had skipped on every run since the first commit. This is the first time that part
             of the brief has been exercised at all.

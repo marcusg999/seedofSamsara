@@ -125,11 +125,11 @@ export const contentNotesScene: SceneDefinition = {
         {
           id: 'begin',
           label: 'Begin',
+          exit: 'begin',
           onPick: () => {
             // The audio context starts on this gesture, which is the first one
             // the player makes (CLAUDE.md § Gotchas).
             context.audio.start();
-            void context.takeExit('begin');
           },
         },
       ],
@@ -180,25 +180,25 @@ export const vignetteSelectScene: SceneDefinition = {
         {
           id: 'heart-attack',
           label: 'The heart attack',
+          exit: 'heart-attack',
           onPick: () => {
             context.audio.start();
-            void context.takeExit('heart-attack');
           },
         },
         {
           id: 'soldier',
           label: 'The ditch at the edge of the orchard',
+          exit: 'soldier',
           onPick: () => {
             context.audio.start();
-            void context.takeExit('soldier');
           },
         },
         {
           id: 'dmt',
           label: 'Smoke DMT',
+          exit: 'dmt',
           onPick: () => {
             context.audio.start();
-            void context.takeExit('dmt');
           },
         },
       ],

@@ -128,10 +128,16 @@ test.describe('playthrough', () => {
         `Scene "${sceneId}" took ${visit.loadSeconds.toFixed(1)}s to become playable, past the ${String(SOFTLOCK_LIMIT_SECONDS)}s softlock limit.`,
       ).toBeLessThan(SOFTLOCK_LIMIT_SECONDS);
 
+      // What the scene's definition promises. Kept, because a scene that does
+      // not even declare a reachable exit is broken wiring — but it is only half
+      // the guarantee, and the weaker half: this reads the declaration, and four
+      // scenes have satisfied it while holding the player forever. Whether the
+      // scene actually puts a way out in front of the player is walked and
+      // asserted in `offers.spec.ts`.
       const reachable = visit.exits.filter((exit) => exit.reachable);
       expect(
         visit.terminal || reachable.length > 0,
-        `Scene "${sceneId}" offers no reachable exit and is not terminal — softlock.`,
+        `Scene "${sceneId}" declares no reachable exit and is not terminal — softlock.`,
       ).toBe(true);
 
       // The scene must have put something on screen, not merely counted a frame.

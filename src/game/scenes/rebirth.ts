@@ -4,6 +4,7 @@ import { Director, ease, type Beat } from '../systems/director';
 import { airShell, moteField, radianceShell, volumetricGlow } from '../systems/forms';
 import { NOISE, setU } from '../systems/glsl';
 import { RELEASE_SECONDS, ThresholdPrompt } from './threshold-early';
+import { exitOffers } from '../systems/exit-offers';
 import {
   applyOpening,
   crossRiver,
@@ -153,6 +154,13 @@ export const riverOfForgettingScene: SceneDefinition = {
     let onward: ThresholdPrompt | undefined;
     let onwardAt: number | undefined;
     let leaving = false;
+    /**
+     * The scene's own clock, registered as a timed release the moment it starts
+     * (`systems/exit-offers.ts`). The prompt's own `releaseAfter` is not what is
+     * running here, so without this the registry — and the gate — would see a
+     * scene that only ever offered a button nobody has to click.
+     */
+    const clock = exitOffers.source('light.river-of-forgetting clock');
     context.resources.onDispose(() => {
       onward?.dispose();
       onward = undefined;
@@ -229,16 +237,23 @@ export const riverOfForgettingScene: SceneDefinition = {
           onward.settle(
             'The water took the particulars. What is left is the shape you will be born in.',
             'nothing decided here · the river keeps what it keeps',
-            { id: 'onward', label: 'The far bank', onPick: () => { void context.takeExit('onward'); } },
+            { label: 'The far bank', exit: 'onward' },
           );
           onwardAt = elapsed;
+          clock.set([
+            {
+              kind: 'timed-release',
+              exitId: 'onward',
+              label: `the river crosses by itself ${String(RELEASE_SECONDS)}s after the far bank`,
+            },
+          ]);
         }
         // `settle` marks the prompt answered, so the widget's own release will
         // not fire after it — the clock is kept here instead. Wall-clock, never
         // an accumulated delta (CLAUDE.md § Gotchas).
         if (onwardAt !== undefined && !leaving && elapsed - onwardAt >= RELEASE_SECONDS) {
           leaving = true;
-          void context.takeExit('onward');
+          clock.take('onward');
         }
       },
       beat() {
@@ -331,22 +346,28 @@ export const rebirthScene: SceneDefinition = {
       ? `The ${String(carried.opening.items.length)} things you chose are the conditions you wake into. Their names are already going.`
       : 'You chose nothing, so nothing goes with you but the fact of having been here.';
 
+    // This panel is this scene's own, not a `ThresholdPrompt` or an `Overlay`,
+    // so it registers its own offer (`systems/exit-offers.ts`).
+    const offers = exitOffers.source('light.rebirth panel');
     const nav = document.createElement('div');
     nav.className = 'market__nav';
     const next = document.createElement('button');
     next.type = 'button';
     next.className = 'overlay__button';
     next.textContent = 'Begin the next life';
+    next.dataset['exit'] = 'next-life';
     next.addEventListener('click', () => {
       // The cart becomes the opening conditions, and the run starts over.
       applyOpening(soul, carried);
-      void context.takeExit('next-life');
+      offers.take('next-life');
     });
     nav.append(next);
 
     panel.append(title, kept, note, nav);
     document.body.appendChild(panel);
+    offers.set([{ kind: 'control', exitId: 'next-life', label: 'Begin the next life', control: next }]);
     resources.onDispose(() => {
+      offers.clear();
       panel.remove();
     });
 
