@@ -13,7 +13,7 @@ import {
 } from '../systems/weighing-hall';
 import { setU } from '../systems/glsl';
 import { RELEASE_SECONDS, ThresholdPrompt } from './threshold-early';
-import type { CartItem } from '../soul';
+import { deathKind, obligationsFor } from '../systems/unfinished';
 
 /**
  * The Council — the guides weigh the life.
@@ -66,57 +66,6 @@ const BEAT_SECONDS: Readonly<Record<string, number>> = Object.fromEntries(
 const BEAT_ORDER: Readonly<Record<string, number>> = Object.fromEntries(
   BEATS.map((beat, index) => [beat.id, index]),
 );
-
-/**
- * What a karma debt obliges the next life to face.
- *
- * Deliberately small and specific rather than a difficulty slider: the brief
- * calls the Trauma aisle sacred rather than grim, and an obligation written as a
- * category ("hardship: 3") would make it a tax. Each of these is a thing that
- * happens to a person.
- *
- * Sourced as a design choice, not as a finding: `L-BETWEEN-04` (Schwartz) is
- * tier C — accounts of difficulties chosen before birth for what they teach.
- */
-const OBLIGATIONS: readonly { threshold: number; item: Omit<CartItem, 'locked'> }[] = [
-  {
-    threshold: -1,
-    item: {
-      aisle: 'trauma',
-      id: 'trauma.someone-waiting',
-      label: 'A person who waits for you',
-      // Negative cost: a challenge repays karma debt (GAME_BRIEF.md § economy).
-      karmaCost: -1,
-    },
-  },
-  {
-    threshold: -3,
-    item: {
-      aisle: 'trauma',
-      id: 'trauma.the-call-unreturned',
-      label: 'A call you will not return in time',
-      karmaCost: -2,
-    },
-  },
-  {
-    threshold: -6,
-    item: {
-      aisle: 'trauma',
-      id: 'trauma.estrangement',
-      label: 'Years of not speaking, and the wish to',
-      karmaCost: -3,
-    },
-  },
-];
-
-/** Which obligations a given karma reading locks into the cart. */
-export function obligationsFor(karma: number): CartItem[] {
-  return OBLIGATIONS.filter((entry) => karma <= entry.threshold).map((entry) => ({
-    ...entry.item,
-    // Locked: the life review set this, and the Market cannot put it back.
-    locked: true,
-  }));
-}
 
 /**
  * Where the five stand: an angle off straight-back, in degrees, around the
@@ -237,7 +186,7 @@ export const councilScene: SceneDefinition = {
     // What the reading will lock into the cart. Read once, here, so the scene
     // can show the right number of them — karma is not written anywhere in this
     // scene, so this is the same list the beat below commits.
-    const obligations = obligationsFor(soul.karma);
+    const obligations = obligationsFor(soul.karma, deathKind(soul.shards));
     const embers = emberCluster(resources, {
       count: obligations.length,
       radius: 0.075,
@@ -486,7 +435,7 @@ export const councilScene: SceneDefinition = {
         // and locked: the Market may add to the cart but cannot take these out.
         if (!readingDone && (beat.id === 'what-carries' || beat.id === 'wait')) {
           readingDone = true;
-          const locked = obligationsFor(soul.karma);
+          const locked = obligationsFor(soul.karma, deathKind(soul.shards));
           for (const item of locked) {
             if (!soul.cart.some((existing) => existing.id === item.id)) {
               soul.cart.push(item);
