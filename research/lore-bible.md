@@ -138,6 +138,24 @@ fragments, with a small number of verifiable details — not a free-flying camer
 vignette should give the player few details and make them count, because that is
 what the strongest reports look like.
 
+## 5a. The two blasts — which weapon is which
+
+Settled by the owner, and recorded because the two vignettes would otherwise
+drift back into each other:
+
+- `death.soldier` is a NUCLEAR detonation. The tell is structural, not stated:
+  `systems/overpressure.ts` takes an arrival delay, and the soldier's is four
+  seconds, so the sky goes white in silence and with heat, nothing in the ditch
+  is touched for four seconds, and the pressure and the sound then arrive
+  together and late. Light outruns sound by about a million to one; nothing
+  else puts that much empty time between the two.
+- `death.bomb-blast` (vignette 4, still unbuilt) **stays conventional**: arrival
+  delay 0, which is the close-range grammar the module was written for — flash,
+  pressure and sound inside the same half second.
+
+Whoever builds vignette 4 should leave the delay at its default and must not
+reach for the nuclear staging; the separation is the point.
+
 ## 6. DMT — the edge-case vignette and the hyperspace thread
 
 | Claim | Statement | Source | Tier |
@@ -294,12 +312,20 @@ Design notes:
   promotion either. In the source the work is unglamorous and the helper goes
   back down into the dark every time.
 
-  On the word: the owner's word for this role is "angel". The source's own term
-  is the Brotherhood of Hope, and the surrounding game is deliberately
-  syncretic — Plato, the Bardo, the Egyptian weighing, Newton, Franchezzo —
-  so a single tradition's vocabulary in the player-facing writing is a choice
-  worth making deliberately rather than by drift. The FUNCTION is settled and
-  sourced either way; only the noun is open.
+  On the word: **settled by the owner — the player-facing word is "angel".**
+  The source's own term is the Brotherhood of Hope, and the surrounding game
+  is deliberately syncretic, so this is one tradition's vocabulary used on
+  purpose rather than by drift. Two notes for whoever writes the scenes:
+
+  - The word has to be EARNED by the work rather than announced before it. A
+    soul told it is becoming an angel has been given a title; a soul that has
+    spent four scenes pulling people out of the dark and is then called one by
+    somebody it helped has been given a name for what it already is. The
+    second is the game this brief describes.
+  - Keep the iconography out. `L-FRAN-05`'s helpers are spirits who go back
+    down into the dark, and the spirit body in `L-FRAN-03` is emissive and
+    reports karma — that is already the visual language. No wings, no haloes,
+    no borrowed religious imagery; the brightness of the body is the halo.
 - `L-FRAN-02` conflicts with nothing in the brief but is more specific than it.
   Seven above and seven below is a lot of scenes; the manifest in
   `src/game/manifest.ts` currently plans three lower and two higher. Treat
