@@ -212,6 +212,22 @@ const OUTSIDE = GRAMMAR.outside;
  */
 const DAWN = new Vector3(0.34, 0.17, -0.92).normalize();
 
+/**
+ * Seconds between the flash and the arrival of pressure and sound.
+ *
+ * This is the whole tell. A shell, a charge or an ordinary bomb puts its light,
+ * its pressure and its noise inside the same half second, and the vignette used
+ * to stage it that way. Light outruns sound by a factor of about a million, so
+ * four seconds of silence between the two puts the thing that did it well over
+ * a kilometre off — and nothing a kilometre away lights a whole sky, burns at
+ * that distance, and then takes the orchard apart when the air finally gets
+ * here.
+ *
+ * Four seconds, not ten: far enough that the gap is unmistakable, close enough
+ * to stay consistent with what the ditch looks like afterwards.
+ */
+const ARRIVAL_SECONDS = 4;
+
 const BEATS: readonly Beat[] = [
   { id: 'cold', seconds: 11, caption: 'The fourth morning in this ditch. The sky is already going.' },
   /**
@@ -234,13 +250,27 @@ const BEATS: readonly Beat[] = [
   { id: 'the-orchard', seconds: 14 },
   { id: 'waiting', seconds: 16 },
   { id: 'first-light', seconds: 12 },
-  // The blast. Held open rather than cut through: time slowing is the treatment
-  // rule's first move, and seven seconds is how this vignette slows it. The
-  // sensory ordering inside the first second and a half of it — pressure, then
-  // light, then the ground, then hearing going — is `systems/overpressure.ts`,
-  // read off the wall clock rather than off this beat's `t`, because quarter-
-  // second phases are the first thing a bad frame rate loses.
-  { id: 'the-blast', seconds: 7 },
+  // The blast, in three beats, because what it is lives in the GAPS between
+  // them. The flash is silent and comes from the whole sky; then nothing
+  // happens for four seconds; then the pressure and the sound arrive together,
+  // late. Light outruns sound, so only one kind of weapon puts that much empty
+  // time between the two, and a viewer does not need to be told which. See
+  // ARRIVAL_SECONDS and `systems/overpressure.ts`.
+  //
+  // The beat lengths line up with that wall clock on purpose: `the-silence`
+  // opens after the glare has fallen enough to read a line, and `the-sound`
+  // opens exactly as the front lands.
+  { id: 'the-blast', seconds: 1.6 },
+  {
+    id: 'the-silence',
+    seconds: 2.4,
+    caption: 'The light came with the heat, from the whole sky. Nothing has made a sound yet.',
+  },
+  {
+    id: 'the-sound',
+    seconds: 7,
+    caption: 'The sound arrives afterwards. Late, and long, and it does not stop.',
+  },
   {
     id: 'sitting-down',
     seconds: 9,
@@ -251,7 +281,11 @@ const BEATS: readonly Beat[] = [
     seconds: 9,
     caption: 'The sound does not come back. Nobody says anything, and nobody is going to.',
   },
-  { id: 'lifting', seconds: 8 },
+  {
+    id: 'lifting',
+    seconds: 8,
+    caption: 'The wind turns around and goes back the way it came.',
+  },
   {
     id: 'above',
     seconds: 10,
@@ -2033,7 +2067,7 @@ export const deathSoldierScene: SceneDefinition = {
         // with nothing wrong with it for anything at or before zero, so this is
         // safe to read on every frame of the scene.
         const since = blastAt === undefined ? 0 : elapsed - blastAt;
-        const blast = overpressure(since);
+        const blast = overpressure(since, ARRIVAL_SECONDS);
 
         // Inside the plateau of the light — `whiteout` is at 1 from 0.12s to
         // 0.42s — which is the only stretch of this scene where the frame is
@@ -2055,8 +2089,13 @@ export const deathSoldierScene: SceneDefinition = {
         // way so the lighter things leave the floor rather than sliding.
         // Stops touching anything once it has settled, so the rest of the
         // vignette costs nothing for it.
-        if (blastAt !== undefined && heaveSettled < 1) {
-          const u = Math.min(1, since / 0.42);
+        // Keyed to the ARRIVAL, not to the flash: for four seconds after the
+        // sky goes white nothing in the ditch has been touched, because
+        // nothing has reached it yet. Kit that jumped on the flash would be
+        // reacting to light, and would quietly undo the one thing this
+        // staging exists to say.
+        if (blastAt !== undefined && since > ARRIVAL_SECONDS && heaveSettled < 1) {
+          const u = Math.min(1, (since - ARRIVAL_SECONDS) / 0.42);
           heaveSettled = 1 - Math.pow(1 - u, 3);
           const hop = Math.sin(Math.PI * u) * 0.16;
           for (const item of heaved) {
