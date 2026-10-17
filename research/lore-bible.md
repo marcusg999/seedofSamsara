@@ -312,16 +312,21 @@ Design notes:
   promotion either. In the source the work is unglamorous and the helper goes
   back down into the dark every time.
 
-  On the word: **settled by the owner — the player-facing word is "angel".**
-  The source's own term is the Brotherhood of Hope, and the surrounding game
-  is deliberately syncretic, so this is one tradition's vocabulary used on
-  purpose rather than by drift. Two notes for whoever writes the scenes:
+  On the word: **settled by the owner — the player-facing term is the
+  Brotherhood of Hope**, which is the source's own (`L-FRAN-05`,
+  `FRANCHEZZO-1896` Ch. IV). "Angel" was considered and set aside. The term
+  that won is the better fit anyway: the game is deliberately syncretic, and
+  "angel" would import one tradition's vocabulary into a frame built from
+  Plato, the Bardo, the Egyptian weighing, Newton and Franchezzo together.
+  Two notes for whoever writes the scenes:
 
-  - The word has to be EARNED by the work rather than announced before it. A
-    soul told it is becoming an angel has been given a title; a soul that has
-    spent four scenes pulling people out of the dark and is then called one by
-    somebody it helped has been given a name for what it already is. The
-    second is the game this brief describes.
+  - It has to be EARNED by the work rather than announced before it. A soul
+    told what it is becoming has been given a title; a soul that has spent
+    four scenes pulling people out of the dark and is then named by somebody
+    it helped has been given a word for what it already is. The second is the
+    game this brief describes. "Brotherhood" also does this better than
+    "angel" did — it is something you are let into, not something you turn
+    into, and being let in is an event a scene can actually play.
   - Keep the iconography out. `L-FRAN-05`'s helpers are spirits who go back
     down into the dark, and the spirit body in `L-FRAN-03` is emissive and
     reports karma — that is already the visual language. No wings, no haloes,
