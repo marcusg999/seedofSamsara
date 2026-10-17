@@ -280,6 +280,26 @@ Design notes:
   someone else, so the player's effect propagates past the moment of the rescue.
   That is HARMONY, mechanically — contribution to balance rather than a counter
   of good deeds.
+- **Where Path B ENDS, decided with the owner.** Refusing the Light leads, in
+  the end, to joining the Brotherhood: the soul stays, and spends itself
+  helping other spirits through the passage it refused. That is `L-FRAN-05`
+  read to its conclusion — the narrator does not escape the dark regions, he
+  turns around and works back down into them — and it is what makes Path A and
+  Path B two different goods rather than a reward and a punishment. Path A
+  takes another life and forgets. Path B keeps the memory and spends it on
+  everyone still arriving.
+
+  The structural consequence: the refusal path must not read as the losing
+  branch at any point before that ending, and the ending must not read as a
+  promotion either. In the source the work is unglamorous and the helper goes
+  back down into the dark every time.
+
+  On the word: the owner's word for this role is "angel". The source's own term
+  is the Brotherhood of Hope, and the surrounding game is deliberately
+  syncretic — Plato, the Bardo, the Egyptian weighing, Newton, Franchezzo —
+  so a single tradition's vocabulary in the player-facing writing is a choice
+  worth making deliberately rather than by drift. The FUNCTION is settled and
+  sourced either way; only the noun is open.
 - `L-FRAN-02` conflicts with nothing in the brief but is more specific than it.
   Seven above and seven below is a lot of scenes; the manifest in
   `src/game/manifest.ts` currently plans three lower and two higher. Treat
