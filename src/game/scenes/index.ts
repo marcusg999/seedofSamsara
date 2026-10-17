@@ -9,6 +9,7 @@ import { borderScene, choiceScene, lifeReviewScene } from './border-and-review';
 import { councilScene } from './council';
 import { marketAisleScenes, marketCheckoutScene } from './market';
 import { riverOfForgettingScene, rebirthScene } from './rebirth';
+import { birthScene } from './birth';
 import { earthboundScene, mistScene, voidScene } from './refuse-lower';
 
 /**
@@ -61,6 +62,7 @@ export function createSceneGraph(): SceneGraph {
     marketCheckoutScene,
     riverOfForgettingScene,
     rebirthScene,
+    birthScene,
     earthboundScene,
     mistScene,
     voidScene,
@@ -94,4 +96,5 @@ export const SLICE_PATH: readonly string[] = [
   'market.checkout',
   'light.river-of-forgetting',
   'light.rebirth',
+  'light.birth',
 ];

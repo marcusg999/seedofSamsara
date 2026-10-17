@@ -60,6 +60,7 @@ export const SCENE_MANIFEST: readonly ManifestEntry[] = [
   { id: 'market.checkout', act: 'pathA', status: 'implemented', note: 'The cart is weighed; the guides speak once.' },
   { id: 'light.river-of-forgetting', act: 'pathA', status: 'implemented', note: 'Myth of Er: souls drink and forget.' },
   { id: 'light.rebirth', act: 'pathA', status: 'implemented', note: 'Cart contents become the next run’s opening conditions.' },
+  { id: 'light.birth', act: 'pathA', status: 'implemented', note: 'The passage into a body, ending in a birth — hospital or home, read off the cart. Perception, never anatomy.' },
 
   // Path B — refusing the Light.
   { id: 'refuse.earthbound', act: 'pathB', status: 'implemented', note: 'Haunting the living.' },

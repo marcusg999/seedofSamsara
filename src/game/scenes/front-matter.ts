@@ -118,6 +118,13 @@ export const contentNotesScene: SceneDefinition = {
           + 'The experience only: nothing is obtained, prepared or taken on screen or in text, and no '
           + 'substance, quantity or method is named.',
         'A life review in which you feel a moment of your life as another person felt it.',
+        // The birth at the end of the loop. The notes say what it contains and,
+        // as with vignette 6, what it refuses — the refusals are the part a
+        // player may actually want to know in advance (CLAUDE.md § Content rules).
+        'A birth, at the end of a run, experienced from the inside by the child being born: '
+          + 'enclosure, pressure, and arriving in a room. It is perception only — no anatomy, no '
+          + 'nudity, nothing clinical or explicit, and no body is shown. The mother is present as '
+          + 'warmth, a heartbeat, a voice and a blurred face.',
         'Low, slow light. Bloom, a brief vertical smear at the moment of death, and in one vignette '
           + 'fast-moving geometric pattern and strong colour.',
       ],

@@ -277,6 +277,55 @@
       <h2>What changed this pass</h2>
       <div class="panel">
         <p style="margin:0 0 0.6rem">
+          <strong>The loop has its other door: <code>light.birth</code>.</strong> The run used to end
+          on an abstract fade &mdash; the river took the particulars, rebirth wrote down what
+          outlived the life, and then the game simply started again. The chain is now
+          <code>market.checkout</code> &rarr; <code>light.river-of-forgetting</code> &rarr;
+          <code>light.rebirth</code> &rarr; <code>light.birth</code> &rarr; <code>vignette-select</code>,
+          and the last of those is an actual birth, played from inside by the one being born.
+        </p>
+        <ul class="notes">
+          <li>
+            <strong>Perception, not anatomy.</strong> Same discipline as the deaths, mirrored. Six
+            beats &mdash; enclosure, the narrowing, the drawing-through, the threshold, first air,
+            held &mdash; carried by the camera, the light and the sound. No body, no anatomy, no
+            nudity, nothing clinical. The mother is warmth, a heartbeat heard through water, a
+            voice in a room and a presence that leans in; she is never a subject the camera looks
+            at from outside, for the same reason the soldier&rsquo;s killer never is. Content notes
+            updated to say exactly that, including what the scene refuses.
+          </li>
+          <li>
+            <strong>The room is read off the cart, never drawn at random.</strong> The economics and
+            place aisles vote: money within reach and a city near enough to reach it lean to a ward,
+            not-enough and a small town lean to a house, and a cart that chose neither is born at
+            home, because the hospital is the circumstance that has to be supplied. Neither room is
+            the better life &mdash; the ward is cold, hard and busy, the house is low, warm and
+            quiet, and both end on the same warmth and the same face.
+          </li>
+          <li>
+            <strong>Three things only a screenshot caught.</strong> The overhead light drawn as a
+            billboard glow bloomed its own streaking into a seven-pointed star, so the delivery room
+            came back as fog with sparkles in it &mdash; the light moved into the shell shader and
+            the people became <code>figureOfLight</code> presences, which have a silhouette for the
+            light to describe. The face and the figures were staged far enough overhead that none of
+            them was ever in frame. And the threshold, crossfaded straight from womb to room, metered
+            at mean luma 219 with 25% of the frame clipped and no picture in it; held to a widening
+            cone of emission with the tissue still dark around it, the same peak measures mean luma
+            129, std 79, 9% clipped.
+          </li>
+          <li>
+            <strong>The exit is offered, not declared.</strong> A <code>ThresholdPrompt</code> asks
+            the one question a newborn can answer &mdash; where the eyes go first &mdash; and either
+            answer settles to a live &ldquo;Begin the next life&rdquo; button registered through
+            <code>systems/exit-offers.ts</code>. Unanswered, the scene lets go by itself: measured at
+            51.5s, inside the 60s softlock budget. Verified by clicking the real control at 390&times;660,
+            never <code>takeExit</code>.
+          </li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <p style="margin:0 0 0.6rem">
           <strong>Scene coverage 23/39 &rarr; 26/39.</strong> Vignette 7 and the thread it opens:
           <code>death.dmt</code> &rarr; <code>dmt.hyperspace</code> &rarr; <code>dmt.sent-back</code>.
           Two of the seven deaths are now built, and one of them is the one the player survives.
