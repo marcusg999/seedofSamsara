@@ -23,6 +23,7 @@ import {
 import { Overlay } from '../systems/overlay';
 import { luminousPanel, rememberedMoment, type MomentSpec } from '../systems/remembered';
 import { RELEASE_SECONDS, ThresholdPrompt, clamp01 } from './threshold-early';
+import { deathKind, leftItsUnfinishedThing, reviewShard } from '../systems/unfinished';
 
 /**
  * The border, the choice, and the life review.
@@ -984,16 +985,7 @@ export const lifeReviewScene: SceneDefinition = {
      * missed. Each vignette writes shards under its own name, so the review
      * asks who it is reviewing and shows that person's unfinished thing.
      */
-    const died = ((): 'soldier' | 'dmt' | 'heart-attack' => {
-      const shards = context.soul.shards;
-      if (shards.some((shard) => shard.startsWith('soldier.'))) {
-        return 'soldier';
-      }
-      if (shards.some((shard) => shard.startsWith('dmt.'))) {
-        return 'dmt';
-      }
-      return 'heart-attack';
-    })();
+    const died = deathKind(context.soul.shards);
 
     const SPOKEN: Readonly<Record<string, string>> = died === 'soldier'
       ? {
@@ -1212,12 +1204,19 @@ export const lifeReviewScene: SceneDefinition = {
           // good/evil meter (GAME_BRIEF.md § Systems). The call she did not get
           // cost her a night, and feeling it from her side is what enters it.
           //
+          // The debit is this life's own unfinished thing, left undone: the
+          // call not returned, the letter kept in a pocket, the name not
+          // carried back. It used to read `!rang`, which only the widower
+          // could ever satisfy, so the soldier and the one who went out on DMT
+          // were docked a point for a phone call that does not exist in their
+          // story — and then the Council locked that phone call into their
+          // next life (see `systems/unfinished.ts`).
+          //
           // Automatic, and it must stay automatic: `tests/gate/brief.spec.ts`
-          // drives this scene with `advanceBeat()` and never clicks.
-          // The cost is the night she spent waiting without him. If he rang and
-          // reached her machine she still spent it, but he is not carrying a
-          // call he never made, so the debit belongs to the evening he left it.
-          if (!rang) {
+          // drives this scene with `advanceBeat()` and never clicks, and still
+          // requires the ledger to move. A run that chooses nothing has not
+          // settled anything either, so it still pays.
+          if (leftItsUnfinishedThing(context.soul.shards)) {
             context.soul.karma -= 1;
           }
           // HARMONY rises because the moment was faced rather than passed over.
@@ -1242,7 +1241,7 @@ export const lifeReviewScene: SceneDefinition = {
           // And it lets go by itself, recording nothing, so nobody is held here
           // again.
           onwardPrompt.releaseAfter(RELEASE_SECONDS, 'council');
-          context.soul.shards.push(rang ? 'review.the-call-he-made' : 'review.the-phone-call');
+          context.soul.shards.push(reviewShard(context.soul.shards));
         }
       },
       beat() {

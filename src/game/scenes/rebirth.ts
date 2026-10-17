@@ -6,7 +6,6 @@ import { NOISE, setU } from '../systems/glsl';
 import { RELEASE_SECONDS, ThresholdPrompt } from './threshold-early';
 import { exitOffers } from '../systems/exit-offers';
 import {
-  applyOpening,
   crossRiver,
   loadIncarnation,
   saveIncarnation,
@@ -280,7 +279,7 @@ export const rebirthScene: SceneDefinition = {
   id: 'light.rebirth',
   title: 'Rebirth',
   discarnate: true,
-  exits: [{ id: 'next-life', label: 'Begin the next life', to: 'content-notes' }],
+  exits: [{ id: 'next-life', label: 'Into the body', to: 'light.birth' }],
   create(context: SceneContext): SceneInstance {
     const { resources, scene, soul } = context;
 
@@ -354,18 +353,20 @@ export const rebirthScene: SceneDefinition = {
     const next = document.createElement('button');
     next.type = 'button';
     next.className = 'overlay__button';
-    next.textContent = 'Begin the next life';
+    next.textContent = 'Into the body';
     next.dataset['exit'] = 'next-life';
     next.addEventListener('click', () => {
-      // The cart becomes the opening conditions, and the run starts over.
-      applyOpening(soul, carried);
+      // On into the passage. The cart is still on the soul here and is spent at
+      // the other end: `light.birth` reads it for the circumstance it bought and
+      // then applies it as the next run's opening conditions, so the child is
+      // born already under them (`scenes/birth.ts`).
       offers.take('next-life');
     });
     nav.append(next);
 
     panel.append(title, kept, note, nav);
     document.body.appendChild(panel);
-    offers.set([{ kind: 'control', exitId: 'next-life', label: 'Begin the next life', control: next }]);
+    offers.set([{ kind: 'control', exitId: 'next-life', label: 'Into the body', control: next }]);
     resources.onDispose(() => {
       offers.clear();
       panel.remove();
