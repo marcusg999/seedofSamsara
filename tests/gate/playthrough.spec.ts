@@ -48,13 +48,26 @@ const VISIBILITY = {
 test.describe('playthrough', () => {
   test('renders every registered scene, drives its exits, and frees its resources', async ({ page }) => {
     // This test walks every scene, renders each, samples its frame and drives
-    // every declared exit — twelve scene builds and back again, on a software
-    // renderer in CI. The default per-test budget is sized for one scene's
-    // softlock window, not for the whole walk.
+    // every declared exit, on a software renderer in CI. The default per-test
+    // budget is sized for one scene's softlock window, not for the whole walk.
+    //
+    // The budget is derived from the number of scenes rather than written as a
+    // number, because a number goes stale silently. This was 420s with a
+    // comment describing "twelve scene builds"; by the time the game had grown
+    // to thirty-one it was failing as a timeout part-way down the list, which
+    // reads exactly like one scene hanging. It is not: measured on this
+    // container, goTo plus twenty frames costs 7.2-8.9s for EVERY scene, with
+    // the accused scene mid-pack, and the walk does more per scene than that.
+    // Diagnosing it meant timing all thirty-one to prove there was no outlier.
     //
     // This does NOT relax the softlock guarantee: that is asserted per scene
     // below against SOFTLOCK_LIMIT_SECONDS, on each scene's own load time, and
-    // is untouched. Only the wall clock for the entire traversal moves.
+    // is untouched. Only the wall clock for the entire traversal moves, and it
+    // stays a real backstop — a scene that genuinely hangs still fails here,
+    // because the allowance is per scene and roughly three times its measured
+    // cost, not an open-ended wait.
+    const SETUP_BUDGET_MS = 60_000;
+    const PER_SCENE_BUDGET_MS = 22_000;
     test.setTimeout(420_000);
     const watcher = new GateWatcher(page);
     await page.goto('/');
@@ -65,6 +78,8 @@ test.describe('playthrough', () => {
 
     const registered = await page.evaluate(() => globalThis.__game?.registeredScenes() ?? []);
     expect(registered.length, 'no scenes are registered; the gate has nothing to render').toBeGreaterThan(0);
+    // Now that the walk's length is known, size its clock to it.
+    test.setTimeout(SETUP_BUDGET_MS + PER_SCENE_BUDGET_MS * registered.length);
 
     for (const sceneId of registered) {
       watcher.attribute(sceneId);

@@ -115,4 +115,14 @@ If a test is wrong, fix the test and say why in the commit message.
   stuck, audit every scene for the same shape immediately — `takeExit` missing
   from a scene that declares exits is one grep — rather than fixing the one that
   was reported.
+- A fixed test timeout goes stale as the game grows, and when it blows it looks
+  exactly like a hang. The per-scene walk's budget was a hardcoded 420s with a
+  comment describing "twelve scene builds"; at thirty-one scenes it ran out
+  part-way down the list and Playwright blamed whichever scene was on screen.
+  Raising the number to get past it would have been weakening the gate if that
+  scene really was pathological. Timing all thirty-one proved there was no
+  outlier — every scene costs 7.2-8.9s for a load plus twenty frames and the
+  accused one was mid-pack. Before touching a timeout, measure the whole
+  population and show the suspect is not an outlier; then derive the budget
+  from the scene count instead of writing a new number that will go stale too.
 - Add to this section every time a mistake is made or narrowly avoided.
