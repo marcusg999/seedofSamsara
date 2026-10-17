@@ -38,6 +38,7 @@ fiction.
 | `PARNIA-2023` | Parnia, Sam, et al. AWARE-II. *Resuscitation*, 2023. | E |
 | `TIMMERMANN-2018` | Timmermann, Christopher, et al. "DMT Models the Near-Death Experience." *Frontiers in Psychology* 9:1424, 2018. | E |
 | `STRASSMAN-2001` | Strassman, Rick. *DMT: The Spirit Molecule*. Park Street Press, 2001. | C |
+| `MCKENNA-1993` | McKenna, Terence. *True Hallucinations*. HarperSanFrancisco, 1993. | C |
 | `STEVENSON-1997` | Stevenson, Ian. *Reincarnation and Biology: A Contribution to the Etiology of Birthmarks and Birth Defects*. Praeger, 1997. | P |
 | `TUCKER-2005` | Tucker, Jim B. *Life Before Life*. St. Martin's Press, 2005. (UVA Division of Perceptual Studies.) | P |
 | `NEWTON-1994` | Newton, Michael. *Journey of Souls: Case Studies of Life Between Lives*. Llewellyn, 1994. | C |
@@ -144,6 +145,7 @@ what the strongest reports look like.
 | `L-DMT-01` | In a within-subjects, placebo-controlled, single-blind study, 13 healthy volunteers received intravenous DMT; their experiences were scored on the Greyson NDE scale and compared with 67 age- and gender-matched people reporting actual NDEs. | `TIMMERMANN-2018` | E |
 | `L-DMT-02` | DMT experiences overlapped with actual NDEs on nearly all of the scale's phenomenological features, with the strongest convergence on transcendental and mystical items. | `TIMMERMANN-2018` | E |
 | `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | `dmt.hyperspace` |
+| `L-DMT-04` | Across independent accounts the reported entities recur in a small number of forms, among them insectoid or mantis-like presences, serpentine ones, and small, rapid, attentive figures. | `STRASSMAN-2001`, `MCKENNA-1993` | C | `death.dmt`, `dmt.hyperspace` |
 
 Design note: `L-DMT-02` is the licence for the DMT vignette to lead into the
 same Threshold as the six deaths — the overlap is measured, not asserted. The
@@ -306,6 +308,18 @@ Recorded so that nothing invented is later mistaken for sourced.
    awkwardly between Franchezzo's astral plane and the DMT hyperspace of
    `L-DMT-03`. Unassigned for now; collapsing them into one population would be
    a lore decision worth making consciously rather than by accident.
+
+   *Revisited, consciously, when `L-DMT-04` was added:* the three recurring
+   forms are now drawn on — but through `L-DMT-04`, which is DMT phenomenology
+   reported by Strassman's volunteers and by McKenna, and NOT through
+   `L-FRAN-09`. That matters because `L-FRAN-09`'s elves are astral-plane
+   inhabitants in a nineteenth-century spiritualist cosmology, and reading them
+   as the same population would be exactly the accidental collapse this entry
+   exists to prevent. The two stay separate: Franchezzo's astral entities
+   remain unassigned, and nothing in the DMT scenes claims a shared ontology.
+   The forms are also held to suggestion rather than depiction — the geometry
+   resolves towards a silhouette and lets it go — which keeps the original
+   decision's substance intact.
 
    *Decided, consciously, when `dmt.hyperspace` was built:* the entities in that
    scene are built from `L-DMT-03` alone, and are **not** Franchezzo's astral
