@@ -220,18 +220,30 @@ function whiteout(seconds: number): number {
  * Returns all zeroes for a negative time, so a scene can call it before the
  * blast with `elapsed - blastAt` and get the morning it already had.
  */
-export function overpressure(seconds: number): Overpressure {
+export function overpressure(seconds: number, arrivalSeconds = 0): Overpressure {
   if (!(seconds > 0)) {
     return { press: 0, light: 0, whiteout: 0, ground: 0, deaf: 0, sub: 0 };
   }
+  // Light travels; pressure and sound do not travel anything like as fast.
+  //
+  // With `arrivalSeconds` at 0 this is the close-range grammar the module was
+  // written for: everything inside a second and a half, the pressure first
+  // because the front is already on the body before the sound is doing
+  // anything useful to it. That is a shell, a charge, an ordinary bomb.
+  //
+  // Wind it out and the ordering inverts into the one sequence nothing else
+  // produces: the whole sky goes white in silence, nothing is heard or felt
+  // for seconds, and THEN the pressure and the sound arrive together, late.
+  // A viewer does not need to be told what that was. The gap is the fact.
+  const mechanical = seconds - Math.max(0, arrivalSeconds);
   return {
-    press: swell(seconds, 0, PHASE.press.peak, PHASE.press.end, PHASE.press.fall),
     light: arrival(seconds),
     whiteout: whiteout(seconds),
-    ground: swell(seconds, PHASE.ground.start, PHASE.ground.peak, PHASE.ground.end, PHASE.ground.fall),
+    press: mechanical > 0 ? swell(mechanical, 0, PHASE.press.peak, PHASE.press.end, PHASE.press.fall) : 0,
+    ground: mechanical > 0 ? swell(mechanical, PHASE.ground.start, PHASE.ground.peak, PHASE.ground.end, PHASE.ground.fall) : 0,
     // The one value with no fall in it. Hearing does not come back.
-    deaf: smoothstep(PHASE.deaf.start, PHASE.deaf.full, seconds),
-    sub: swell(seconds, PHASE.sub.start, PHASE.sub.peak, PHASE.sub.end, PHASE.sub.fall),
+    deaf: mechanical > 0 ? smoothstep(PHASE.deaf.start, PHASE.deaf.full, mechanical) : 0,
+    sub: mechanical > 0 ? swell(mechanical, PHASE.sub.start, PHASE.sub.peak, PHASE.sub.end, PHASE.sub.fall) : 0,
   };
 }
 

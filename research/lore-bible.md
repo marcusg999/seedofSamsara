@@ -38,6 +38,7 @@ fiction.
 | `PARNIA-2023` | Parnia, Sam, et al. AWARE-II. *Resuscitation*, 2023. | E |
 | `TIMMERMANN-2018` | Timmermann, Christopher, et al. "DMT Models the Near-Death Experience." *Frontiers in Psychology* 9:1424, 2018. | E |
 | `STRASSMAN-2001` | Strassman, Rick. *DMT: The Spirit Molecule*. Park Street Press, 2001. | C |
+| `MCKENNA-1993` | McKenna, Terence. *True Hallucinations*. HarperSanFrancisco, 1993. | C |
 | `STEVENSON-1997` | Stevenson, Ian. *Reincarnation and Biology: A Contribution to the Etiology of Birthmarks and Birth Defects*. Praeger, 1997. | P |
 | `TUCKER-2005` | Tucker, Jim B. *Life Before Life*. St. Martin's Press, 2005. (UVA Division of Perceptual Studies.) | P |
 | `NEWTON-1994` | Newton, Michael. *Journey of Souls: Case Studies of Life Between Lives*. Llewellyn, 1994. | C |
@@ -137,6 +138,24 @@ fragments, with a small number of verifiable details — not a free-flying camer
 vignette should give the player few details and make them count, because that is
 what the strongest reports look like.
 
+## 5a. The two blasts — which weapon is which
+
+Settled by the owner, and recorded because the two vignettes would otherwise
+drift back into each other:
+
+- `death.soldier` is a NUCLEAR detonation. The tell is structural, not stated:
+  `systems/overpressure.ts` takes an arrival delay, and the soldier's is four
+  seconds, so the sky goes white in silence and with heat, nothing in the ditch
+  is touched for four seconds, and the pressure and the sound then arrive
+  together and late. Light outruns sound by about a million to one; nothing
+  else puts that much empty time between the two.
+- `death.bomb-blast` (vignette 4, still unbuilt) **stays conventional**: arrival
+  delay 0, which is the close-range grammar the module was written for — flash,
+  pressure and sound inside the same half second.
+
+Whoever builds vignette 4 should leave the delay at its default and must not
+reach for the nuclear staging; the separation is the point.
+
 ## 6. DMT — the edge-case vignette and the hyperspace thread
 
 | Claim | Statement | Source | Tier |
@@ -144,6 +163,7 @@ what the strongest reports look like.
 | `L-DMT-01` | In a within-subjects, placebo-controlled, single-blind study, 13 healthy volunteers received intravenous DMT; their experiences were scored on the Greyson NDE scale and compared with 67 age- and gender-matched people reporting actual NDEs. | `TIMMERMANN-2018` | E |
 | `L-DMT-02` | DMT experiences overlapped with actual NDEs on nearly all of the scale's phenomenological features, with the strongest convergence on transcendental and mystical items. | `TIMMERMANN-2018` | E |
 | `L-DMT-03` | Reports commonly describe entering an apparently autonomous space and encountering entities that appear aware of, and responsive to, the experiencer. | `STRASSMAN-2001`, `TIMMERMANN-2018` | C/E | `dmt.hyperspace` |
+| `L-DMT-04` | Across independent accounts the reported entities recur in a small number of forms, among them insectoid or mantis-like presences, serpentine ones, and small, rapid, attentive figures. | `STRASSMAN-2001`, `MCKENNA-1993` | C | `death.dmt`, `dmt.hyperspace` |
 
 Design note: `L-DMT-02` is the licence for the DMT vignette to lead into the
 same Threshold as the six deaths — the overlap is measured, not asserted. The
@@ -278,6 +298,39 @@ Design notes:
   someone else, so the player's effect propagates past the moment of the rescue.
   That is HARMONY, mechanically — contribution to balance rather than a counter
   of good deeds.
+- **Where Path B ENDS, decided with the owner.** Refusing the Light leads, in
+  the end, to joining the Brotherhood: the soul stays, and spends itself
+  helping other spirits through the passage it refused. That is `L-FRAN-05`
+  read to its conclusion — the narrator does not escape the dark regions, he
+  turns around and works back down into them — and it is what makes Path A and
+  Path B two different goods rather than a reward and a punishment. Path A
+  takes another life and forgets. Path B keeps the memory and spends it on
+  everyone still arriving.
+
+  The structural consequence: the refusal path must not read as the losing
+  branch at any point before that ending, and the ending must not read as a
+  promotion either. In the source the work is unglamorous and the helper goes
+  back down into the dark every time.
+
+  On the word: **settled by the owner — the player-facing term is the
+  Brotherhood of Hope**, which is the source's own (`L-FRAN-05`,
+  `FRANCHEZZO-1896` Ch. IV). "Angel" was considered and set aside. The term
+  that won is the better fit anyway: the game is deliberately syncretic, and
+  "angel" would import one tradition's vocabulary into a frame built from
+  Plato, the Bardo, the Egyptian weighing, Newton and Franchezzo together.
+  Two notes for whoever writes the scenes:
+
+  - It has to be EARNED by the work rather than announced before it. A soul
+    told what it is becoming has been given a title; a soul that has spent
+    four scenes pulling people out of the dark and is then named by somebody
+    it helped has been given a word for what it already is. The second is the
+    game this brief describes. "Brotherhood" also does this better than
+    "angel" did — it is something you are let into, not something you turn
+    into, and being let in is an event a scene can actually play.
+  - Keep the iconography out. `L-FRAN-05`'s helpers are spirits who go back
+    down into the dark, and the spirit body in `L-FRAN-03` is emissive and
+    reports karma — that is already the visual language. No wings, no haloes,
+    no borrowed religious imagery; the brightness of the body is the halo.
 - `L-FRAN-02` conflicts with nothing in the brief but is more specific than it.
   Seven above and seven below is a lot of scenes; the manifest in
   `src/game/manifest.ts` currently plans three lower and two higher. Treat
@@ -306,6 +359,18 @@ Recorded so that nothing invented is later mistaken for sourced.
    awkwardly between Franchezzo's astral plane and the DMT hyperspace of
    `L-DMT-03`. Unassigned for now; collapsing them into one population would be
    a lore decision worth making consciously rather than by accident.
+
+   *Revisited, consciously, when `L-DMT-04` was added:* the three recurring
+   forms are now drawn on — but through `L-DMT-04`, which is DMT phenomenology
+   reported by Strassman's volunteers and by McKenna, and NOT through
+   `L-FRAN-09`. That matters because `L-FRAN-09`'s elves are astral-plane
+   inhabitants in a nineteenth-century spiritualist cosmology, and reading them
+   as the same population would be exactly the accidental collapse this entry
+   exists to prevent. The two stay separate: Franchezzo's astral entities
+   remain unassigned, and nothing in the DMT scenes claims a shared ontology.
+   The forms are also held to suggestion rather than depiction — the geometry
+   resolves towards a silhouette and lets it go — which keeps the original
+   decision's substance intact.
 
    *Decided, consciously, when `dmt.hyperspace` was built:* the entities in that
    scene are built from `L-DMT-03` alone, and are **not** Franchezzo's astral
