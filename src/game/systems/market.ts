@@ -120,6 +120,24 @@ export const CATALOGUE: readonly MarketItem[] = [
     flash: 'A road going straight for an hour. Weather you can watch arrive.' },
   { id: 'place.between', aisle: 'place', label: 'Between two languages', karmaCost: -1,
     flash: 'Translating for your father at a desk. You are nine.' },
+  /**
+   * The planet half of the aisle. GAME_BRIEF.md § The Life Market lists Place as
+   * "planet, culture, era", and until now every item in stock was Earth.
+   *
+   * Priced at 0, with the other circumstances, and the reasoning is the aisle's
+   * own: in this economy a positive price is a gift and a negative one is a
+   * lesson that repays debt, and another world is neither. Nothing about it is
+   * easier than a cold coast or harder than a city — `place.between` is the one
+   * Place item that costs anything, and it is priced for a specific labour a
+   * child does (translating at a desk at nine), not for being foreign. There is
+   * no equivalent labour claimed here. A price would also be the one place the
+   * market said one world is worth more than another, and the brief's tone does
+   * not allow the shelf to rank lives. Free has a practical virtue too: a soul
+   * already at the karma floor can still be born off-world, so the setting is
+   * reachable from any life the player has actually lived.
+   */
+  { id: 'place.another-sun', aisle: 'place', label: 'Another world, and a different sun', karmaCost: 0,
+    flash: 'Two shadows off every stone, and neither of them grey. Someone calls you in to eat.' },
 
   // --- Soul contracts -----------------------------------------------------
   { id: 'contracts.friend', aisle: 'contracts', label: 'One friend who stays', karmaCost: 2,
