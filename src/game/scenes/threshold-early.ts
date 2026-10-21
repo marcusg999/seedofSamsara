@@ -11,6 +11,7 @@ import {
   Vector3,
 } from 'three';
 import { setU } from '../systems/glsl';
+import { deathKind } from '../systems/unfinished';
 import type { SceneContext, SceneDefinition, SceneInstance } from '../scene';
 import { GRAMMAR } from '../systems/palette';
 import { Director, ease, type Beat } from '../systems/director';
@@ -358,32 +359,87 @@ function rememberedRoom(
   const { resources } = context;
   const group = new Group();
 
+  /**
+   * Whose death this is, and therefore what the player is looking down at.
+   *
+   * This function used to build one place: the widower's flat, with its window,
+   * its two cups and the steam off a kettle he had just filled. Every death
+   * reaches these two scenes, so a soldier who died in a ditch in an orchard
+   * floated above a kettle and was asked about the two people in the room with
+   * him. It is the same mistake the life review had, one layer upstream, and it
+   * survived longer because the text and the geometry agreed with each other —
+   * just not with the player.
+   */
+  const kind = deathKind(context.soul.shards);
+  /** The two flats are rooms. The ditch is not, and must not be drawn as one. */
+  const indoors = kind !== 'soldier';
+
   const width = 5.4;
   const depth = 6.2;
   const height = 2.7;
   const hw = width / 2;
   const hd = depth / 2;
 
-  // Only the edges. An outline carries a room with a fraction of the geometry and
-  // reads as recollection rather than as architecture.
-  const corners: [number, number, number][] = [
-    [-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd],
-    [-hw, height, -hd], [hw, height, -hd], [hw, height, hd], [-hw, height, hd],
-  ];
-  const edges: [number, number][] = [
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7],
-  ];
+  // Only the edges, whatever the place is. An outline carries somewhere with a
+  // fraction of the geometry and reads as recollection rather than architecture,
+  // and one LineSegments carries all of it in a single draw.
   const vertices: number[] = [];
-  for (const [a, b] of edges) {
-    const from = corners[a];
-    const to = corners[b];
-    if (!from || !to) {
-      continue;
-    }
+  const line = (from: readonly [number, number, number], to: readonly [number, number, number]): void => {
     vertices.push(...from, ...to);
+  };
+
+  if (indoors) {
+    const corners: [number, number, number][] = [
+      [-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd],
+      [-hw, height, -hd], [hw, height, -hd], [hw, height, hd], [-hw, height, hd],
+    ];
+    const edges: [number, number][] = [
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [4, 5], [5, 6], [6, 7], [7, 4],
+      [0, 4], [1, 5], [2, 6], [3, 7],
+    ];
+    for (const [a, b] of edges) {
+      const from = corners[a];
+      const to = corners[b];
+      if (from && to) {
+        line(from, to);
+      }
+    }
+  } else {
+    // The ditch, and the orchard it was dug in. A trench has no ceiling and no
+    // far wall, so the outline runs away from the player instead of closing
+    // around him — which is most of why it does not read as a room.
+    const trenchRng = context.rng.stream('remembered-trench');
+    const far = 11;
+    for (const x of [-1.15, 1.15]) {
+      line([x, 0, -far], [x, 0, hd + 2]);
+      line([x * 0.5, -0.62, -far], [x * 0.5, -0.62, hd + 2]);
+    }
+    for (let z = -far; z <= hd + 2; z += 1.6) {
+      line([-1.15, 0, z], [-0.575, -0.62, z]);
+      line([1.15, 0, z], [0.575, -0.62, z]);
+    }
+    // Rows of trees, receding. One stretch has no tops left (`death.soldier`
+    // says so out loud at the end of the vignette), so the row heights break
+    // where the blast went through rather than running evenly to the horizon.
+    for (const x of [-3.5, -2.3, 2.3, 3.5]) {
+      for (let z = -far; z <= hd; z += 1.9) {
+        const stripped = z > -5.5 && z < 0.5;
+        const h = stripped ? trenchRng.range(0.5, 0.9) : trenchRng.range(1.9, 2.6);
+        line([x, 0, z], [x, h, z]);
+        if (!stripped) {
+          line([x - 0.42, h * 0.78, z], [x + 0.42, h * 0.84, z]);
+        }
+      }
+    }
+    // The groundsheet, lying flat four feet away, with nothing under it.
+    const g = { x: 1.25, z: 1.2, w: 0.78, l: 1.75 };
+    line([g.x - g.w, 0.02, g.z - g.l], [g.x + g.w, 0.02, g.z - g.l]);
+    line([g.x + g.w, 0.02, g.z - g.l], [g.x + g.w, 0.02, g.z + g.l]);
+    line([g.x + g.w, 0.02, g.z + g.l], [g.x - g.w, 0.02, g.z + g.l]);
+    line([g.x - g.w, 0.02, g.z + g.l], [g.x - g.w, 0.02, g.z - g.l]);
   }
+
   const lineGeometry = resources.track(new BufferGeometry());
   lineGeometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
   const lineMaterial = resources.track(
@@ -392,43 +448,67 @@ function rememberedRoom(
   const outline = new LineSegments(lineGeometry, lineMaterial);
   group.add(outline);
 
-  // The details that survive: the window, the two cups, the kettle's steam, and a
-  // soft warmth on the floor where he is. The form on the floor is a glow and
-  // nothing else — there is no body model in this game.
-  const windowGlow = volumetricGlow(resources, { radius: 1.6, color: 0xa8d0ec, intensity: 2.2, softness: 2.0 });
-  windowGlow.mesh.position.set(0, 1.62, -hd);
+  // The one bright thing above: a window for the flats, and for the ditch the
+  // strip of sky over the rows that the vignette has him looking at.
+  const windowGlow = indoors
+    ? volumetricGlow(resources, { radius: 1.6, color: 0xa8d0ec, intensity: 2.2, softness: 2.0 })
+    : volumetricGlow(resources, { radius: 3.4, color: 0xbcd0e0, intensity: 1.5, softness: 3.2 });
+  if (indoors) {
+    windowGlow.mesh.position.set(0, 1.62, -hd);
+  } else {
+    windowGlow.mesh.position.set(0, 4.2, -3.2);
+    windowGlow.mesh.scale.set(1.0, 0.42, 2.2);
+  }
   group.add(windowGlow.mesh);
 
+  // The two cups and the kettle's steam belong to one man's morning. They are
+  // the detail that made this room his, so they appear for his death only.
   const cupMaterial = resources.track(
     new MeshBasicMaterial({ color: 0xe8dfd2, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false }),
   );
-  const cupGeometry = resources.track(new CylinderGeometry(0.05, 0.042, 0.1, 14));
-  for (const [x, z] of [[-0.26, 0.66], [0.46, 0.84]] as const) {
-    const cup = new Mesh(cupGeometry, cupMaterial);
-    cup.position.set(x, 0.84, z);
-    group.add(cup);
+  const steam = moteField(resources, context.rng.stream('remembered-steam'), {
+    count: kind === 'heart-attack' ? 70 : 34,
+    radius: kind === 'heart-attack' ? 0.34 : 1.5,
+    color: kind === 'heart-attack' ? 0xcfe2ef : 0xb9b0a2,
+    size: 0.03,
+  });
+  if (kind === 'heart-attack') {
+    const cupGeometry = resources.track(new CylinderGeometry(0.05, 0.042, 0.1, 14));
+    for (const [x, z] of [[-0.26, 0.66], [0.46, 0.84]] as const) {
+      const cup = new Mesh(cupGeometry, cupMaterial);
+      cup.position.set(x, 0.84, z);
+      group.add(cup);
+    }
+    steam.points.position.set(-1.1, 1.3, -hd + 0.42);
+  } else if (indoors) {
+    steam.points.position.set(0, 1.1, -hd + 0.9);
+  } else {
+    // Not steam: what the blast put in the air, still coming down.
+    steam.points.position.set(0, 1.4, -1.5);
   }
+  group.add(steam.points);
 
   const restingGlow = volumetricGlow(resources, { radius: 1.25, color: 0xffc89a, intensity: 1.5, softness: 2.8 });
-  restingGlow.mesh.position.set(0.35, 0.16, 1.4);
+  restingGlow.mesh.position.set(indoors ? 0.35 : 0, 0.16, indoors ? 1.4 : 0.1);
   restingGlow.mesh.scale.set(1.5, 0.35, 0.95);
   group.add(restingGlow.mesh);
 
-  const steam = moteField(resources, context.rng.stream('remembered-steam'), {
-    count: 70,
-    radius: 0.34,
-    color: 0xcfe2ef,
-    size: 0.03,
-  });
-  steam.points.position.set(-1.1, 1.3, -hd + 0.42);
-  group.add(steam.points);
-
-  // The two who are still alive in it: one at his side, one stopped in the
-  // doorway. Abstract presences, never characters — and they are here before the
-  // player is asked anything about them, because a choice between the body and
-  // the living is only legible if both are already in frame (`L-THRESH-03`).
+  /**
+   * Who is still alive in it.
+   *
+   * Two for the widower: one at his side, one stopped in the doorway, both
+   * abstract presences and never characters, and both in frame before the
+   * player is asked anything about them, because a choice between the body and
+   * the living is only legible if both are already there (`L-THRESH-03`).
+   *
+   * NOBODY for the soldier. The man four feet away went in the same flash, the
+   * nearest living person is a long way off, and inventing attendants to stand
+   * in an orchard so the scene keeps its shape would be the same lie in a new
+   * costume. `threshold.out-of-body` asks a different question when this is
+   * empty.
+   */
   const livingRng = context.rng.stream('remembered-living');
-  const living = options.living !== true
+  const living = options.living !== true || kind !== 'heart-attack'
     ? []
     : ([
       { x: 1.05, z: 1.15, height: 1.44, color: 0xffd2a8, accent: 0xc08a58 },
@@ -481,7 +561,7 @@ function rememberedRoom(
       presence = Math.max(0, value);
       lineMaterial.opacity = Math.min(1, 0.85 * presence);
       cupMaterial.opacity = Math.min(1, 0.9 * presence);
-      setU(windowGlow.material, 'uIntensity', 2.2 * presence);
+      setU(windowGlow.material, 'uIntensity', (indoors ? 2.2 : 1.5) * presence);
       setU(restingGlow.material, 'uIntensity', 1.5 * presence * bodyGlow);
     },
     setBody(value) {
@@ -843,7 +923,7 @@ export const outOfBodyScene: SceneDefinition = {
   title: 'From above',
   exits: [
     { id: 'the-body', label: 'Stay with your own body', to: 'threshold.tunnel' },
-    { id: 'the-living', label: 'Stay with the ones in the room', to: 'threshold.tunnel' },
+    { id: 'the-living', label: 'Stay with whoever this is costing', to: 'threshold.tunnel' },
     { id: 'unanswered', label: 'Go on', to: 'threshold.tunnel' },
   ],
   discarnate: true,
@@ -852,9 +932,47 @@ export const outOfBodyScene: SceneDefinition = {
     const air = airShell(context.resources, { radius: 90, ground: grammar.ground, glow: 0x24384a, density: 1 });
     context.scene.add(air.mesh);
 
-    // The room with the living still in it, because this is the scene whose
-    // question is which of the two the player attends to (`L-THRESH-03`).
+    // The place, with whoever is still alive in it, because this is the scene
+    // whose question is which of the two the player attends to (`L-THRESH-03`).
     const room = rememberedRoom(context, grammar.glow, { living: true });
+
+    /**
+     * The second half of the question, which is not the same question for
+     * everybody.
+     *
+     * The widower's flat has two people standing in it and the choice is
+     * whether to look at them. The ditch has nobody: the man four feet away
+     * went in the same flash and the nearest living person is a long way off.
+     * The pull is the same either way — attend to the cost to somebody else
+     * rather than to your own body — so the ledger entry is unchanged and only
+     * who is on the other end of it moves.
+     */
+    const WATCHED: Readonly<Record<'heart-attack' | 'soldier' | 'dmt', {
+      readonly label: string;
+      readonly detail: string;
+      readonly settled: string;
+      readonly bodyDetail: string;
+    }>> = {
+      'heart-attack': {
+        label: 'The two still in the room',
+        detail: 'Feel what this is doing to them. It goes in the ledger, and it is not free.',
+        settled: 'You stay with them instead. They resolve, and what this is costing them arrives all at once.',
+        bodyDetail: 'The shape on the floor. The tie holds: grip, and weight.',
+      },
+      soldier: {
+        label: 'The ones who will be told',
+        detail: 'Nobody here is alive to feel it yet. Go to the ones who will be. It goes in the ledger, and it is not free.',
+        settled: 'You go to them instead. They are hundreds of miles from here and still asleep, and it arrives anyway.',
+        bodyDetail: 'What is left in the ditch. The tie holds: grip, and weight.',
+      },
+      dmt: {
+        label: 'The one who is coming on Tuesday',
+        detail: 'She does not know yet. Feel it from her side. It goes in the ledger, and it is not free.',
+        settled: 'You go to her instead. She is not here, and what this will cost her arrives all at once.',
+        bodyDetail: 'The shape on the carpet. The tie holds: grip, and weight.',
+      },
+    };
+    const watched = WATCHED[deathKind(context.soul.shards)];
     context.scene.add(room.group);
 
     // Other lights, further off. A city of other lives, none of them aware.
@@ -946,7 +1064,7 @@ export const outOfBodyScene: SceneDefinition = {
           context.soul.shards.push(WITNESSED);
         }
         prompt?.settle(
-          'You stay with them instead. They resolve, and what this is costing them arrives all at once.',
+          watched.settled,
           'karma −1 · harmony +1 · look down: your own light has changed',
           { label: 'Let it fall away', exit: 'the-living' },
         );
@@ -958,13 +1076,13 @@ export const outOfBodyScene: SceneDefinition = {
       {
         id: 'the-body',
         label: 'Your own body',
-        detail: 'The shape on the floor. The tie holds: grip, and weight.',
+        detail: watched.bodyDetail,
         onPick: () => { choose('the-body'); },
       },
       {
         id: 'the-living',
-        label: 'The two still in the room',
-        detail: 'Feel what this is doing to them. It goes in the ledger, and it is not free.',
+        label: watched.label,
+        detail: watched.detail,
         onPick: () => { choose('the-living'); },
       },
     ]);
