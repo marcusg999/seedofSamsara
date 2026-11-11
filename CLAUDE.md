@@ -125,4 +125,13 @@ If a test is wrong, fix the test and say why in the commit message.
   accused one was mid-pack. Before touching a timeout, measure the whole
   population and show the suspect is not an outlier; then derive the budget
   from the scene count instead of writing a new number that will go stale too.
+- The pin follows the BROWSER, not the other way round. The container image
+  was rebuilt between sessions and shipped Chromium 1243 while the pin was
+  still 1.56.1, which wants 1194 — the gate would have failed on a missing
+  executable before testing a line of game code, and looked like a total
+  regression. Before any gate run in a fresh container, launch Playwright once
+  to prove it finds its browser. To find the release that matches what is
+  installed, read `browsers.json` from `npm pack playwright-core@<version>`
+  for each candidate: exactly one release ships a given Chromium revision
+  (1243 is 1.63.0). Pin that one, exactly, with no caret.
 - Add to this section every time a mistake is made or narrowly avoided.

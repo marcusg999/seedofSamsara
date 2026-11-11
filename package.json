@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Seed of Samsara \u2014 a browser game about death, the afterlife and reincarnation.",
+  "description": "Seed of Samsara — a browser game about death, the afterlife and reincarnation.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",
@@ -18,7 +18,7 @@
     "three": "^0.180.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "^22.18.0",
     "@types/three": "^0.180.0",
     "eslint": "^9.37.0",
